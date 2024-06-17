@@ -21,7 +21,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/util/status.h"
-#include "llm-cache/ds/kv_state_cache_block.h"
+#include "llm-cache/ds/kv_cache_block.h"
 
 namespace vineyard {
 
@@ -31,7 +31,7 @@ class IStorage {
 
   virtual Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) = 0;
 
   virtual Status Update(
@@ -40,16 +40,21 @@ class IStorage {
 
   virtual Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) = 0;
 
   virtual Status Query(
       const std::vector<int>& tokenList,
-      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& matched) = 0;
 
-  virtual Status Query(const std::vector<int>& tokenList, int nextToken,
+  virtual Status Query(const std::vector<int>& prefix, int nextToken,
                        std::vector<std::pair<LLMKV, LLMKV>>& kvState) = 0;
+
+  virtual Status Query(
+      const std::vector<int>& prefix, const std::vector<int>& tokenList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& matched) = 0;
 
   virtual void CloseCache() = 0;
 

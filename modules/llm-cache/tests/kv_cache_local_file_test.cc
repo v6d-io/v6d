@@ -20,12 +20,12 @@ limitations under the License.
 
 #include "gulrak/filesystem.hpp"
 #include "llm-cache/ds/config.h"
-#include "llm-cache/ds/kv_state_cache_manager.h"
+#include "llm-cache/ds/kv_cache_manager.h"
 #include "rax/radix.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
-int tensorBytes = 80;
+int tensorNBytes = 80;
 int capacity = 20;
 int layer = 3;
 
@@ -43,10 +43,10 @@ std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
 std::vector<std::vector<int>> tokens_list = {round_1_tokens, round_2_tokens,
                                              round_3_tokens, round_4_tokens};
 
-std::shared_ptr<KVStateCacheManager> init() {
-  std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
-  VINEYARD_CHECK_OK(KVStateCacheManager::Make(kv_state_cache_manager, config));
-  return kv_state_cache_manager;
+std::shared_ptr<KVCacheManager> init() {
+  std::shared_ptr<KVCacheManager> kv_cache_manager;
+  VINEYARD_CHECK_OK(KVCacheManager::Make(kv_cache_manager, config));
+  return kv_cache_manager;
 }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
@@ -65,10 +65,10 @@ void print_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state) {
         reinterpret_cast<uint8_t*>(kv_state[i].first.data);
     uint8_t* value_state_data =
         reinterpret_cast<uint8_t*>(kv_state[i].second.data);
-    // print the first tensorBytes bytes
+    // print the first tensorNBytes bytes
     std::string key_state_str = "";
     std::string value_state_str = "";
-    for (int j = 0; j < tensorBytes; j++) {
+    for (int j = 0; j < tensorNBytes; j++) {
       key_state_str += std::to_string(key_state_data[j]) + " ";
       value_state_str += std::to_string(value_state_data[j]) + " ";
     }
@@ -85,13 +85,13 @@ std::vector<std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
   for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
     LLMKV key_state;
     LLMKV value_state;
-    key_state.data = malloc(tensorBytes);
-    value_state.data = malloc(tensorBytes);
+    key_state.data = malloc(tensorNBytes);
+    value_state.data = malloc(tensorNBytes);
 
-    key_state.length = tensorBytes;
-    value_state.length = tensorBytes;
+    key_state.length = tensorNBytes;
+    value_state.length = tensorNBytes;
 
-    for (int i = 0; i < tensorBytes; ++i) {
+    for (int i = 0; i < tensorNBytes; ++i) {
       (reinterpret_cast<uint8_t*>(key_state.data))[i] =
           (static_cast<uint8_t>(token)) + i + currentLayer;
       (reinterpret_cast<uint8_t*>(value_state.data))[i] =
@@ -108,13 +108,13 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
   VINEYARD_ASSERT(kv_state.size() == (size_t) layer);
   for (size_t index = 0; index < kv_state.size(); ++index) {
     LOG(INFO) << "kv_state length: " << kv_state[index].first.length
-              << "tensorBytes: " << tensorBytes << "layer: " << layer;
-    VINEYARD_ASSERT(kv_state[index].first.length == (size_t) tensorBytes);
-    VINEYARD_ASSERT(kv_state[index].second.length == (size_t) tensorBytes);
-    for (int i = 0; i < tensorBytes; ++i) {
+              << "tensorNBytes: " << tensorNBytes << "layer: " << layer;
+    VINEYARD_ASSERT(kv_state[index].first.length == (size_t) tensorNBytes);
+    VINEYARD_ASSERT(kv_state[index].second.length == (size_t) tensorNBytes);
+    for (int i = 0; i < tensorNBytes; ++i) {
       if ((reinterpret_cast<uint8_t*>(kv_state[index].first.data))[i] !=
           (static_cast<uint8_t>(token)) + i + index) {
-        LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
+        LOG(INFO) << "token:" << token << " tensorNBytes" << tensorNBytes
                   << " layer:" << index;
         LOG(INFO) << "key_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(kv_state[index].first.data))[i]
@@ -124,7 +124,7 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
       }
       if (reinterpret_cast<uint8_t*>(kv_state[index].second.data)[i] !=
           (static_cast<uint8_t>(token)) + i + index) {
-        LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
+        LOG(INFO) << "token:" << token << " tensorNBytes" << tensorNBytes
                   << " layer:" << index;
         LOG(INFO) << "value_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(
@@ -137,7 +137,7 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
   }
 }
 
-void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
+void inference(std::shared_ptr<KVCacheManager>& kv_cache_manager,
                std::vector<int> tokens, bool block = false) {
   std::vector<int> inference_tokens;
   std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kv_state;
@@ -150,8 +150,7 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
   }
 
   size_t updated = 0;
-  Status result =
-      kv_state_cache_manager->Update(inference_tokens, kv_state, updated);
+  Status result = kv_cache_manager->Update(inference_tokens, kv_state, updated);
 
   std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kv_state_to_query;
   for (size_t i = 0; i < tokens.size(); ++i) {
@@ -160,8 +159,8 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
     kv_state_to_query.push_back(current_kv_state);
   }
   size_t matched = 0;
-  Status query_result = kv_state_cache_manager->Query(
-      inference_tokens, kv_state_to_query, matched);
+  Status query_result =
+      kv_cache_manager->Query(inference_tokens, kv_state_to_query, matched);
   if (!query_result.ok()) {
     LOG(INFO) << "Query failed!";
   }
@@ -180,7 +179,7 @@ void checkFilesNotExist(std::string dir) {
 }
 
 void threadFunc(int sleep_time) {
-  std::shared_ptr<KVStateCacheManager> manager = init();
+  std::shared_ptr<KVCacheManager> manager = init();
 
   for (size_t i = 0; i < tokens_list.size(); i++) {
     LOG(INFO) << "Round " << i << " :";
@@ -193,10 +192,10 @@ void threadFunc(int sleep_time) {
 }
 
 int main(int argc, char** argv) {
-  LOG(INFO) << "Test KVStateCache with tensorBytes: " << tensorBytes
+  LOG(INFO) << "Test KVCache with tensorNBytes: " << tensorNBytes
             << ", capacity: " << capacity << ", layer: " << layer;
 
-  config = FileCacheConfig(tensorBytes, capacity, layer, 4, 2,
+  config = FileCacheConfig(tensorNBytes, capacity, layer, 4, 2,
                            "/tmp/llm_cache/", LOCAL, 1, 1, false, 3, 5);
 
   std::vector<std::thread> threads;
@@ -211,7 +210,7 @@ int main(int argc, char** argv) {
 
   checkFilesNotExist("/tmp/llm_cache/");
 
-  config = FileCacheConfig(tensorBytes, capacity, layer, 4, 2,
+  config = FileCacheConfig(tensorNBytes, capacity, layer, 4, 2,
                            "/tmp/llm_cache/", LOCAL, 10, 20, true, 1, 2);
 
   threads.clear();
@@ -227,6 +226,6 @@ int main(int argc, char** argv) {
   sleep(3);
   checkFilesNotExist("/tmp/llm_cache/");
 
-  LOG(INFO) << "Passed KVStateCache tests...";
+  LOG(INFO) << "Passed KVCache tests...";
   return 0;
 }

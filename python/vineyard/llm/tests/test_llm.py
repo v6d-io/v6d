@@ -35,8 +35,8 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
     )
     cache = KVCache(
         cache_config=vineyard_cache_config,
-        tensor_bytes=16,  # should be the same as the nbytes of the tensor
-        cache_capacity=10,
+        tensor_nbytes=16,  # should be the same as the nbytes of the tensor
+        cache_capacity=1024,
         layer=2,
     )
 
@@ -100,13 +100,13 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
 def test_kv_cache_update_and_query_on_fs():
     file_cache_config = FileCacheConfig(
         chunk_size=2,
-        split_number=2,
+        hash_chunk_size=2,
         root="/tmp/vineyard/llm_cache",
     )
     cache = KVCache(
         cache_config=file_cache_config,
-        tensor_bytes=16,  # should be the same as the nbytes of the tensor
-        cache_capacity=10,
+        tensor_nbytes=16,  # should be the same as the nbytes of the tensor
+        cache_capacity=1024,
         layer=2,
     )
 

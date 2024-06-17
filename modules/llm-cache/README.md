@@ -31,7 +31,7 @@ In this section, we will compare the two methods in terms of latency and suitabl
 
 ## Usage
 
-We provide [C++](https://github.com/v6d-io/v6d/blob/main/modules/llm-cache/ds/kv_state_cache_manager.h) and [Python](https://github.com/v6d-io/v6d/blob/main/python/vineyard/llm/__init__.py) APIs for Vineyard LLM KV Cache. Based on the inference framework, you can use the corresponding API to integrate the Vineyard LLM KV Cache.
+We provide [C++](https://github.com/v6d-io/v6d/blob/main/modules/llm-cache/ds/kv_cache_manager.h) and [Python](https://github.com/v6d-io/v6d/blob/main/python/vineyard/llm/__init__.py) APIs for Vineyard LLM KV Cache. Based on the inference framework, you can use the corresponding API to integrate the Vineyard LLM KV Cache.
 
 ### C++ API
 
@@ -90,10 +90,10 @@ $ ./build/bin/vineyardd --socket /tmp/vineyard_test.sock
 Then open another terminal to run the vineyard llm kv cache test.
 
 ```bash
-$ ./bin/kv_state_cache_test --client-num 1 --vineyard-ipc-sockets /tmp/vineyard_test.sock
+$ ./bin/kv_cache_test --client-num 1 --vineyard-ipc-sockets /tmp/vineyard_test.sock
 ```
 
-For more information about how to use the C++ API, you can refer to the the [C++ API implementation](https://github.com/v6d-io/v6d/blob/main/modules/llm-cache/ds/kv_state_cache_manager.cc) and the [related tests](https://github.com/v6d-io/v6d/tree/main/modules/llm-cache/tests).
+For more information about how to use the C++ API, you can refer to the the [C++ API implementation](https://github.com/v6d-io/v6d/blob/main/modules/llm-cache/ds/kv_cache_manager.cc) and the [related tests](https://github.com/v6d-io/v6d/tree/main/modules/llm-cache/tests).
 
 
 ### Python API
@@ -165,8 +165,8 @@ vineyard_cache_config = VineyardCacheConfig(
 )
 cache = KVCache(
     cache_config=vineyard_cache_config,
-    tensor_bytes=16,  # should be the same as the nbytes of the tensor
-    cache_capacity=10,
+    tensor_nbytes=16,  # should be the same as the nbytes of the tensor
+    cache_capacity=1024,
     layer=2,
 )
 
@@ -248,13 +248,13 @@ from vineyard.llm.config import VineyardCacheConfig
 
 file_cache_config = FileCacheConfig(
     chunk_size=2,
-    split_number=2,
+    hash_chunk_size=2,
     root="/tmp/vineyard/llm_cache",
 )
 cache = KVCache(
     cache_config=file_cache_config,
-    tensor_bytes=16,  # should be the same as the nbytes of the tensor
-    cache_capacity=10,
+    tensor_nbytes=16,  # should be the same as the nbytes of the tensor
+    cache_capacity=1024,
     layer=2,
 )
 

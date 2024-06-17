@@ -28,7 +28,7 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 
-#include "llm-cache/ds/kv_state_cache.h"
+#include "llm-cache/ds/kv_cache.h"
 #include "llm-cache/ds/refcnt_map.h"
 #include "llm-cache/storage/storage.h"
 
@@ -37,8 +37,8 @@ namespace vineyard {
 class BlobStorage : public IStorage {
  private:
   Client& client;
-  std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
-  std::shared_ptr<KVStateCache> kvStateCache = nullptr;
+  std::shared_ptr<KVCacheBuilder> kvCacheBuilder = nullptr;
+  std::shared_ptr<KVCache> kvCache = nullptr;
   std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder = nullptr;
   std::string llmCacheSyncLock;
   std::string llmCacheObjectName;
@@ -52,13 +52,13 @@ class BlobStorage : public IStorage {
   bool isClosed = false;
 
  public:
-  BlobStorage(Client& client, std::shared_ptr<KVStateCacheBuilder>& cache,
+  BlobStorage(Client& client, std::shared_ptr<KVCacheBuilder>& cache,
               int syncInterval, std::string& llmCacheSyncLock,
               std::string& llmCacheObjectName,
               std::string& llmRefcntObjectName);
 
   static Status Make(Client& client, std::shared_ptr<BlobStorage>& storage,
-                     int tensorBytes = 10, int cacheCapacity = 10,
+                     int tensorNBytes = 10, int cacheCapacity = 10,
                      int layer = 1, int blockSize = 5, int syncInterval = 3,
                      std::string llmCacheSyncLock = "llmCacheSyncLock",
                      std::string llmCacheObjectName = "llm_cache_object",
@@ -69,25 +69,30 @@ class BlobStorage : public IStorage {
 
   Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) override;
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) override;
 
-  Status Query(const std::vector<int>& tokenList, int token,
+  Status Query(const std::vector<int>& tokenList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+               size_t& matched) override;
+
+  Status Query(const std::vector<int>& prefix, int token,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
-  Status Query(const std::vector<int>& tokenList,
-               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+  Status Query(const std::vector<int>& prefix,
+               const std::vector<int>& tokenList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched) override;
 
   void CloseCache() override;
 
-  std::shared_ptr<KVStateCacheBuilder>& GetKVStateCacheBuilder() {
-    return this->kvStateCacheBuilder;
+  std::shared_ptr<KVCacheBuilder>& GetKVCacheBuilder() {
+    return this->kvCacheBuilder;
   }
 
   std::shared_ptr<RefcntMapObjectBuilder>& GetRefcntMapObjectBuilder() {

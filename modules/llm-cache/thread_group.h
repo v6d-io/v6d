@@ -42,13 +42,10 @@ namespace vineyard {
 namespace parallel {
 
 class ThreadGroup {
-  using tid_t = uint32_t;
-  // Returns the path index and task status for parallel execution.
-  // The path index is used to identify and delete results of unsuccessful
-  // tasks.
-  using return_t = std::pair<int, Status>;
-
  public:
+  using tid_t = uint32_t;
+  using return_t = Status;
+
   explicit ThreadGroup(
       uint32_t parallelism = std::thread::hardware_concurrency());
 
@@ -67,7 +64,7 @@ class ThreadGroup {
       try {
         return std::move(_f(std::forward<Args>(_args)...));
       } catch (std::exception& e) {
-        return std::pair(-1, Status(StatusCode::kUnknownError, e.what()));
+        return Status(StatusCode::kUnknownError, e.what());
       }
     };
 
@@ -114,10 +111,10 @@ class ThreadGroup {
  * @AddTask@ will be blocked until there are spare thread resources.
  */
 class DynamicThreadGroup {
+ public:
   using tid_t = uint32_t;
   using return_t = Status;
 
- public:
   explicit DynamicThreadGroup(
       tid_t parallelism = std::thread::hardware_concurrency());
 

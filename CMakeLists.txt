@@ -856,49 +856,54 @@ if(BUILD_VINEYARD_CLIENT)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
 endif()
 
-if(BUILD_VINEYARD_PYTHON_BINDINGS)
+if (BUILD_VINEYARD_PYTHON_BINDINGS)
     set(PYBIND11_PYTHON_VERSION 3)
     if(NOT (CMAKE_VERSION VERSION_LESS "3.27"))
         set(PYBIND11_FINDPYTHON ON)
     endif()
     add_subdirectory_static(thirdparty/pybind11)
-    set(PYTHON_BIND_FILES "python/client.cc"
-                          "python/core.cc"
-                          "python/error.cc"
-                          "python/pybind11_docs.cc"
-                          "python/pybind11_utils.cc"
-                          "python/vineyard.cc")
-    pybind11_add_module(_C MODULE ${PYTHON_BIND_FILES})
-    target_add_debuginfo(_C)
-    target_link_libraries(_C PRIVATE vineyard_client)
-    target_include_directories(_C PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include")
-    target_compile_options(_C PRIVATE -Wno-unused-value)
-    set_target_properties(_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
+endif()
+
+macro(setup_pybind11_module target relpath)
+    target_add_debuginfo(${target})
+    target_link_libraries(${target} PRIVATE vineyard_client)
+    target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include")
+    target_compile_options(${target} PRIVATE -Wno-unused-value)
+    set_target_properties(${target} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
-        target_add_link_options(_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
+        target_add_link_options(${target} PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
     endif()
     if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        target_compile_options(_C PRIVATE -static)
-        target_add_link_options(_C PRIVATE OPTIONS -static)
+        target_compile_options(${target} PRIVATE -static)
+        target_add_link_options(${target} PRIVATE OPTIONS -static)
     else()
-        target_compile_options(_C PRIVATE -Os)
-        target_add_link_options(_C PRIVATE OPTIONS -Os)
+        target_compile_options(${target} PRIVATE -Os)
+        target_add_link_options(${target} PRIVATE OPTIONS -Os)
     endif()
 
-    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
-        set_target_properties(_C PROPERTIES
+        set_target_properties(${target} PROPERTIES
                               BUILD_WITH_INSTALL_RPATH TRUE
                               INSTALL_RPATH_USE_LINK_PATH TRUE
-                              INSTALL_RPATH ".:\$ORIGIN:\$ORIGIN/${RELATIVE_BUILD_PATH}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
+                              INSTALL_RPATH ".:\$ORIGIN:\$ORIGIN/${relpath}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
     endif()
     if(APPLE)
-        set_target_properties(_C PROPERTIES
+        set_target_properties(${target} PROPERTIES
                               BUILD_WITH_INSTALL_RPATH TRUE
                               INSTALL_RPATH_USE_LINK_PATH TRUE
-                              INSTALL_RPATH ".;@loader_path;@loader_path/${RELATIVE_BUILD_PATH}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
+                              INSTALL_RPATH ".;@loader_path;@loader_path/${relpath}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
     endif()
+endmacro()
 
+if(BUILD_VINEYARD_PYTHON_BINDINGS)
+    pybind11_add_module(_C MODULE "python/client.cc"
+                                  "python/core.cc"
+                                  "python/error.cc"
+                                  "python/pybind11_docs.cc"
+                                  "python/pybind11_utils.cc"
+                                  "python/vineyard.cc")
+    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
+    setup_pybind11_module(_C ${RELATIVE_BUILD_PATH})
     add_custom_target(vineyard_client_python
         ALL
         COMMAND cp "$<TARGET_FILE:_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
@@ -909,47 +914,16 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
 endif()
 
 if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
-    set(PYBIND11_PYTHON_VERSION 3)
-    if(NOT (CMAKE_VERSION VERSION_LESS "3.27"))
-        set(PYBIND11_FINDPYTHON ON)
-    endif()
-    file(GLOB PYTHON_BIND_FILES "python/vineyard/llm/kv_state_cache.cc")
-    pybind11_add_module(llm_C MODULE ${PYTHON_BIND_FILES})
-    # make sure `vineyard_llm_cache` been built.
-    add_dependencies(llm_C vineyard_llm_cache)
-    target_link_libraries(llm_C PRIVATE vineyard_client vineyard_llm_cache)
-    target_include_directories(llm_C PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include")
-    target_compile_options(llm_C PRIVATE -Wno-unused-value)
-    set_target_properties(llm_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
-    if(UNIX AND NOT APPLE)
-        target_add_link_options(llm_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
-    endif()
-    if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        target_compile_options(llm_C PRIVATE -static)
-        target_add_link_options(llm_C PRIVATE OPTIONS -static)
-    else()
-        target_compile_options(llm_C PRIVATE -Os)
-        target_add_link_options(llm_C PRIVATE OPTIONS -Os)
-    endif()
-
+    pybind11_add_module(_llm_C MODULE "python/vineyard/llm/cache.cc")
     file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard/llm" "${CMAKE_BINARY_DIR}/shared-lib")
-    if(UNIX AND NOT APPLE)
-        set_target_properties(llm_C PROPERTIES
-                            BUILD_WITH_INSTALL_RPATH TRUE
-                            INSTALL_RPATH_USE_LINK_PATH TRUE
-                            INSTALL_RPATH ".:\$ORIGIN:\$ORIGIN/${RELATIVE_BUILD_PATH}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
-    endif()
-    if(APPLE)
-        set_target_properties(llm_C PROPERTIES
-                            BUILD_WITH_INSTALL_RPATH TRUE
-                            INSTALL_RPATH_USE_LINK_PATH TRUE
-                            INSTALL_RPATH ".;@loader_path;@loader_path/${RELATIVE_BUILD_PATH}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
-    endif()
-
+    setup_pybind11_module(_llm_C ${RELATIVE_BUILD_PATH})
+    # make sure `vineyard_llm_cache` been built.
+    add_dependencies(_llm_C vineyard_llm_cache)
+    target_link_libraries(_llm_C PRIVATE vineyard_client vineyard_llm_cache)
     add_custom_target(vineyard_llm_python
         ALL
-        COMMAND cp "$<TARGET_FILE:llm_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/llm/"
-        DEPENDS llm_C
+        COMMAND cp "$<TARGET_FILE:_llm_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/llm/"
+        DEPENDS _llm_C
         COMMENT "Copying llm kv cache python extensions."
         VERBATIM)
     add_dependencies(vineyard_llm_python vineyard_client_python)

@@ -22,19 +22,19 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
-#include "llm-cache/ds/kv_state_cache_block.h"
+#include "llm-cache/ds/kv_cache_block.h"
 #include "llm-cache/radix-tree/radix-tree.h"
 
-#ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_
-#define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_
+#ifndef MODULES_LLM_CACHE_DS_KV_CACHE_H_
+#define MODULES_LLM_CACHE_DS_KV_CACHE_H_
 
 namespace vineyard {
 
-class KVStateCache : public vineyard::Registered<KVStateCache> {
+class KVCache : public vineyard::Registered<KVCache> {
  private:
-  std::vector<std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockList;
+  std::vector<std::shared_ptr<KVCacheBlock>> kvCacheBlockList;
   std::shared_ptr<RadixTree> rootTree;
-  int tensorBytes;
+  int tensorNBytes;
   int cacheCapacity;
   int layer;
   uint64_t version;
@@ -42,7 +42,7 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
  public:
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
-        std::unique_ptr<KVStateCache>{new KVStateCache()});
+        std::unique_ptr<KVCache>{new KVCache()});
   }
 
   void Construct(const ObjectMeta& meta) override;
@@ -50,11 +50,11 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
   void Resolve();
 
   // for test
-  std::vector<std::shared_ptr<KVStateCacheBlock>>& GetKVStateCacheBlockList() {
-    return this->kvStateCacheBlockList;
+  std::vector<std::shared_ptr<KVCacheBlock>>& GetKVCacheBlockList() {
+    return this->kvCacheBlockList;
   }
 
-  int GetTensorBytes() { return this->tensorBytes; }
+  int GetTensorNBytes() { return this->tensorNBytes; }
 
   int GetCacheCapacity() { return this->cacheCapacity; }
 
@@ -66,37 +66,37 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 
   void GetCurrentBlockIDSet(std::set<ObjectID>& objectIDSet);
 
-  ~KVStateCache();
+  ~KVCache();
 
-  friend class KVStateCacheBuilder;
+  friend class KVCacheBuilder;
 };
 
-class KVStateCacheBuilder : public vineyard::ObjectBuilder {
+class KVCacheBuilder : public vineyard::ObjectBuilder {
   Client& client;
   std::shared_ptr<RadixTree> rootTree;
   std::set<ObjectID> blockIDSetToDelete;
-  int tensorBytes;
+  int tensorNBytes;
   int layer;
   uint64_t version;
   int blockSize;
   int cacheCapacity;
 
  public:
-  KVStateCacheBuilder(Client& client, int tensorBytes, int layer,
-                      std::shared_ptr<RadixTree>& rootTree);
+  KVCacheBuilder(Client& client, int tensorNBytes, int layer,
+                 std::shared_ptr<RadixTree>& rootTree);
 
   static Status Make(Client& client,
-                     std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
-                     int tensorBytes = 10, int cacheCapacity = 10,
+                     std::shared_ptr<KVCacheBuilder>& kvCacheBuilder,
+                     int tensorNBytes = 10, int cacheCapacity = 10,
                      int layer = 1, int blockSize = DEFAULT_BLOCK_SIZE);
 
   static Status Make(Client& client,
-                     std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
-                     std::shared_ptr<KVStateCache>& cache);
+                     std::shared_ptr<KVCacheBuilder>& kvCacheBuilder,
+                     std::shared_ptr<KVCache>& cache);
 
-  Status Split(KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
+  Status Split(KVCacheBlockBuilder* kvCacheBlockBuilder,
                std::vector<std::shared_ptr<NodeData>> nodeDataList,
-               KVStateCacheBlockBuilder*& childKVStateCacheBlockBuilder);
+               KVCacheBlockBuilder*& childKVCacheBlockBuilder);
 
   Status Update(const std::vector<int>& token_list, int next_token,
                 const std::vector<std::pair<LLMKV, LLMKV>>& kv_state);
@@ -106,7 +106,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   void Delete(std::shared_ptr<NodeData> evicted_node);
 
-  Status Merge(std::shared_ptr<KVStateCache> kv_state_cache);
+  Status Merge(std::shared_ptr<KVCache> kv_cache);
 
   uint64_t GetVersion() { return this->version; }
 
@@ -118,7 +118,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  uint64_t GetTensorBytes() { return this->tensorBytes; }
+  uint64_t GetTensorNBytes() { return this->tensorNBytes; }
 
   std::shared_ptr<RadixTree> GetRootTree() { return this->rootTree; }
 
@@ -134,9 +134,9 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   void ClearBlockIDSetToDelete() { this->blockIDSetToDelete.clear(); }
 
-  ~KVStateCacheBuilder();
+  ~KVCacheBuilder();
 };
 
 }  // namespace vineyard
 
-#endif  // MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_
+#endif  // MODULES_LLM_CACHE_DS_KV_CACHE_H_

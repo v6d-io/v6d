@@ -30,29 +30,13 @@ limitations under the License.
 #include "llm-cache/storage/file_storage.h"
 #include "llm-cache/thread_group.h"
 
-#define RETURN_ON_ERROR_WITH_PATH_INDEX(index, status) \
-  do {                                                 \
-    auto _ret = (status);                              \
-    if (!_ret.ok()) {                                  \
-      return std::pair(index, _ret);                   \
-    }                                                  \
-  } while (0)
-
-#define RETURN_ON_ASSERT_WITH_PATH_INDEX(index, condition, message)         \
-  do {                                                                      \
-    if (!(condition)) {                                                     \
-      return std::pair(index, vineyard::Status::AssertionFailed(            \
-                                  std::string(#condition ": ") + message)); \
-    }                                                                       \
-  } while (0)
-
 namespace vineyard {
 
 /**
  * @brief Update the kv state with the given token list in the file storage.
  *
  * @param tokenList The token list to be updated.
- * @param kvStateList The kv state list of the token list.
+ * @param kvCacheList The kv state list of the token list.
  *                    It's a 2D vector, the first dimension is the token index,
  *                    and the second dimension is the layer index.
  *                    The kv state is a pair of LLMKV, the first is the K tensor
@@ -68,58 +52,63 @@ namespace vineyard {
  *           *                                                               *
  *           * Assume the layer is 2, and the token list is [1,2] you should *
  *           * allocate the memory for the kv state like this:               *
- *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvCacheList;*
  *           * for (int i = 0; i < 2; i++) {                                 *
  *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
  *           *   for (int j = 0; j < 2; j++) {                               *
  *           *     LLMKV key_state;                                          *
  *           *     LLMKV value_state;                                        *
- *           *     key_state.data = malloc(tensorBytes);                     *
- *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     key_state.data = malloc(tensorNBytes);                     *
+ *           *     value_state.data = malloc(tensorNBytes)                    *
  *           *     // Copy the k_state of LLM KV Cache to key_state.data     *
  *           *     // Copy the v_state of LLM KV Cache to value_state.data   *
- *           *     key_state.length = tensorBytes;                           *
- *           *     value_state.length = tensorBytes;                         *
+ *           *     key_state.length = tensorNBytes;                           *
+ *           *     value_state.length = tensorNBytes;                         *
  *           *     kvState.emplace_back(key_state, value_state);             *
  *           *   }                                                           *
- *           *   kvStateList.push_back(kvState);                             *
+ *           *   kvCacheList.push_back(kvState);                             *
  *           *}                                                              *
  *           *                                                               *
  *           * After calling this function, you must release(free) the       *
- *           * kv buffer of the kvStateList manually                         *
+ *           * kv buffer of the kvCacheList manually                         *
  *           *                                                               *
  *           *****************************************************************
  *
  * @note The length of the token list should be as same as the length of the
- * kvStateList.
+ * kvCacheList.
  *
  *
  * @example Suppose the token list is [1, 2, 3, 4], the layer is 2,
- *          then the kvStateList should be a 2D vector with size 4 * 2.
+ *          then the kvCacheList should be a 2D vector with size 4 * 2.
  *
  * @return Status
  */
 Status FileStorage::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& updated) {
   if (this->exitFlag) {
     return Status::Invalid("The file storage has been closed!");
   }
+  if (tokenList.size() % chunkSize != 0) {
+    return Status::Invalid("Tokens size " + std::to_string(tokenList.size()) +
+                           " should be multiple of batch size " +
+                           std::to_string(chunkSize) + "!");
+  }
+
   std::vector<std::string> pathList;
   std::set<std::string> createFileSet;
   std::mutex createFileSetMutex;
-  RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
-                                               splitNumber, pathList));
+  RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, chunkSize,
+                                               hashChunkSize, pathList));
   if (pathList.size() == 0) {
     return Status::OK();
   }
 
   std::vector<std::string> tempFilePaths(pathList.size());
-  auto fn = [this, &tempFilePaths, &pathList, &tokenList, &kvStateList,
-             &createFileSet,
-             &createFileSetMutex](int i) -> std::pair<int, Status> {
-    int tokenLength = (i + 1) * batchSize;
+  auto fn = [this, &tempFilePaths, &pathList, &tokenList, &kvCacheList,
+             &createFileSet, &createFileSetMutex](int i) -> Status {
+    int tokenLength = (i + 1) * chunkSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
@@ -127,47 +116,42 @@ Status FileStorage::Update(
     std::string pathStr = this->rootPath + pathList[i];
     ghc::filesystem::path path(pathStr);
 
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(path.parent_path().string()));
+    RETURN_ON_ERROR(Mkdir(path.parent_path().string()));
 
     if (Open(pathStr, fd, FileOperationType::READ).ok()) {
       int tokenLengthInFile;
-      RETURN_ON_ERROR_WITH_PATH_INDEX(
-          i, Read(fd, &tokenLengthInFile, sizeof(int)));
+      RETURN_ON_ERROR(Read(fd, &tokenLengthInFile, sizeof(int)));
       std::vector<int> tokens;
       tokens.resize(tokenLengthInFile);
-      RETURN_ON_ERROR_WITH_PATH_INDEX(
-          i, Read(fd, tokens.data(), tokenLengthInFile * sizeof(int)));
+      RETURN_ON_ERROR(Read(fd, tokens.data(), tokenLengthInFile * sizeof(int)));
       if (!CompareTokenList(tokenList, tokens, tokenLengthInFile)) {
         // Token list not match
         VINEYARD_DISCARD(Close(fd));
-        return std::pair(
-            i, Status::ObjectExists("File exists for another token sequence"));
+        return Status::ObjectExists("File exists for another token sequence");
       }
       // Skip this kv state
       VINEYARD_DISCARD(Close(fd));
-      return std::pair(i, Status::OK());
+      return Status::OK();
     }
 
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(tmpPath.parent_path().string()));
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
     auto status = Open(tmpPathStr, fd, FileOperationType::WRITE);
     if (!status.ok()) {
       LOG(WARNING) << "Failed to create temporary cache entry: "
                    << status.ToString();
-      return std::pair(
-          i, Status::Wrap(status, "Failed to create temporary cache entry"));
+      return Status::Wrap(status, "Failed to create temporary cache entry");
     }
 
     // Currently we do not consider delete.
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Write(fd, &tokenLength, sizeof(int)));
-    RETURN_ON_ERROR_WITH_PATH_INDEX(
-        i, Write(fd, tokenList.data(), tokenLength * sizeof(int)));
-    for (int currentTokenIndex = i * batchSize;
-         currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
+    RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
+    for (int currentTokenIndex = i * chunkSize;
+         currentTokenIndex < (i + 1) * chunkSize; currentTokenIndex++) {
       for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        const LLMKV& k = kvStateList[currentTokenIndex][currentLayer].first;
-        const LLMKV& v = kvStateList[currentTokenIndex][currentLayer].second;
-        RETURN_ON_ERROR_WITH_PATH_INDEX(i, Write(fd, k.data, k.length));
-        RETURN_ON_ERROR_WITH_PATH_INDEX(i, Write(fd, v.data, k.length));
+        const LLMKV& k = kvCacheList[currentTokenIndex][currentLayer].first;
+        const LLMKV& v = kvCacheList[currentTokenIndex][currentLayer].second;
+        RETURN_ON_ERROR(Write(fd, k.data, k.length));
+        RETURN_ON_ERROR(Write(fd, v.data, k.length));
       }
     }
 
@@ -178,34 +162,31 @@ Status FileStorage::Update(
       // Move failed. There exists a file with the same name.
       LOG(WARNING) << "Failed to move cache entry: " << status.ToString();
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
-      return std::pair(i, Status::Wrap(status, "Failed to move cache entry"));
+      return Status::Wrap(status, "Failed to move cache entry");
     }
     std::lock_guard<std::mutex> lock(createFileSetMutex);
     createFileSet.insert(pathStr);
-    return std::pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(
       std::min(pathList.size(),
                static_cast<size_t>(std::thread::hardware_concurrency())));
-  for (size_t i = 0; i < pathList.size(); i++) {
-    tg.AddTask(fn, i);
+  std::vector<parallel::ThreadGroup::tid_t> tids(pathList.size());
+  for (size_t i = 0; i < pathList.size(); ++i) {
+    tids[i] = tg.AddTask(fn, i);
+  }
+  std::vector<Status> taskResults(pathList.size(), Status::OK());
+  for (size_t i = 0; i < pathList.size(); ++i) {
+    taskResults[i] = tg.TaskResult(tids[i]);
   }
 
-  std::vector<std::pair<int, Status>> ss = tg.TakeResults();
-  std::map<int, bool> pathIndexMap;
-  for (size_t i = 0; i < pathList.size(); i++) {
-    if (ss[i].second.ok()) {
-      pathIndexMap[ss[i].first] = true;
-    }
-  }
-
-  int j = 0;
+  size_t upper_bound = 0;
   {
     std::lock_guard<std::mutex> lock(gcMutex);
     for (size_t i = 0; i < pathList.size(); i++) {
-      if (pathIndexMap.find(i) != pathIndexMap.end()) {
-        j += 1;
+      if (taskResults[i].ok()) {
+        upper_bound += 1;
         if (createFileSet.find(this->rootPath + pathList[i]) !=
             createFileSet.end()) {
           TouchFile(this->rootPath + pathList[i]);
@@ -216,12 +197,11 @@ Status FileStorage::Update(
       }
     }
   }
-  updated = ((size_t) j) * batchSize;
-  for (size_t i = j; i < pathList.size(); i++) {
+  updated = upper_bound * chunkSize;
+  for (size_t i = upper_bound; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
   }
-
   return Status::OK();
 }
 
@@ -232,7 +212,7 @@ Status FileStorage::Update(
  * @param prefix The prefix token list. It should be a multiple of the batch
  * size.
  * @param tokenList The token list to be updated.
- * @param kvStateList The kv state list of the token list.
+ * @param kvCacheList The kv state list of the token list.
  *                    It's a 2D vector, the first dimension is the token index,
  *                    and the second dimension is the layer index.
  *                    The kv state is a pair of LLMKV, the first is the K tensor
@@ -248,47 +228,52 @@ Status FileStorage::Update(
  *           *                                                               *
  *           * Assume the layer is 2, and the token list is [1,2] you should *
  *           * allocate the memory for the kv state like this:               *
- *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvCacheList;*
  *           * for (int i = 0; i < 2; i++) {                                 *
  *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
  *           *   for (int j = 0; j < 2; j++) {                               *
  *           *     LLMKV key_state;                                          *
  *           *     LLMKV value_state;                                        *
- *           *     key_state.data = malloc(tensorBytes);                     *
- *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     key_state.data = malloc(tensorNBytes);                     *
+ *           *     value_state.data = malloc(tensorNBytes)                    *
  *           *     // Copy the k_state of LLM KV Cache to key_state.data     *
  *           *     // Copy the v_state of LLM KV Cache to value_state.data   *
- *           *     key_state.length = tensorBytes;                           *
- *           *     value_state.length = tensorBytes;                         *
+ *           *     key_state.length = tensorNBytes;                           *
+ *           *     value_state.length = tensorNBytes;                         *
  *           *     kvState.emplace_back(key_state, value_state);             *
  *           *   }                                                           *
- *           *   kvStateList.push_back(kvState);                             *
+ *           *   kvCacheList.push_back(kvState);                             *
  *           *}                                                              *
  *           *                                                               *
  *           * After calling this function, you must release(free) the       *
- *           * kv buffer of the kvStateList manually                         *
+ *           * kv buffer of the kvCacheList manually                         *
  *           *                                                               *
  *           *****************************************************************
  *
  * @note The length of the token list should be as same as the length of the
- * kvStateList.
+ * kvCacheList.
  *
  * @example Suppose the prefix is [1, 2], the token list is [3, 4], the layer is
- * 2, then the kvStateList should be a 2D vector with size 2 * 2.
+ * 2, then the kvCacheList should be a 2D vector with size 2 * 2.
  *
  * @return Status
  */
 Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& updated) {
   if (this->exitFlag) {
     return Status::Invalid("The file storage has been closed!");
   }
-  if (prefix.size() % batchSize != 0) {
+  if (prefix.size() % chunkSize != 0) {
     return Status::Invalid("Prefix size " + std::to_string(prefix.size()) +
                            " should be multiple of batch size " +
-                           std::to_string(batchSize) + "!");
+                           std::to_string(chunkSize) + "!");
+  }
+  if (tokenList.size() % chunkSize != 0) {
+    return Status::Invalid("Tokens size " + std::to_string(tokenList.size()) +
+                           " should be multiple of batch size " +
+                           std::to_string(chunkSize) + "!");
   }
 
   std::vector<std::string> pathList;
@@ -298,17 +283,17 @@ Status FileStorage::Update(
   totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
                         tokenList.end());
 
-  RETURN_ON_ERROR(hasher->computePathForTokens(totalTokenList, batchSize,
-                                               splitNumber, pathList));
+  RETURN_ON_ERROR(hasher->computePathForTokens(totalTokenList, chunkSize,
+                                               hashChunkSize, pathList));
   if (pathList.size() == 0) {
     return Status::OK();
   }
 
   std::vector<std::string> tempFilePaths(pathList.size());
   auto fn = [this, &tempFilePaths, &pathList, &prefix, &totalTokenList,
-             &kvStateList, &createFileSet,
-             &createFileSetMutex](size_t i) -> std::pair<int, Status> {
-    int tokenLength = (i + 1) * batchSize;
+             &kvCacheList, &createFileSet,
+             &createFileSetMutex](size_t i) -> Status {
+    int tokenLength = (i + 1) * chunkSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
@@ -316,52 +301,47 @@ Status FileStorage::Update(
     std::string pathStr = this->rootPath + pathList[i];
     ghc::filesystem::path path(pathStr);
 
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(path.parent_path().string()));
+    RETURN_ON_ERROR(Mkdir(path.parent_path().string()));
 
     if (Open(pathStr, fd, FileOperationType::READ).ok()) {
       int tokenLength;
-      RETURN_ON_ERROR_WITH_PATH_INDEX(i, Read(fd, &tokenLength, sizeof(int)));
-      std::vector<int> tokens;
-      tokens.resize(tokenLength);
-      RETURN_ON_ERROR_WITH_PATH_INDEX(
-          i, Read(fd, tokens.data(), tokenLength * sizeof(int)));
+      RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
+      std::vector<int> tokens(tokenLength, -1);
+      RETURN_ON_ERROR(Read(fd, tokens.data(), tokenLength * sizeof(int)));
       if (!CompareTokenList(totalTokenList, tokens, tokenLength)) {
         // Token list not match
         VINEYARD_DISCARD(Close(fd));
-        return std::pair(
-            i, Status::ObjectExists("File exists for another token sequence"));
+        return Status::ObjectExists("File exists for another token sequence");
       }
       // Skip this kv state
       VINEYARD_DISCARD(Close(fd));
-      return std::pair(i, Status::OK());
+      return Status::OK();
     }
 
-    if ((i + 1) * batchSize <= prefix.size()) {
-      return std::pair(
-          i, Status::ObjectNotExists("The prefix is not in the file cache"));
+    if ((i + 1) * chunkSize <= prefix.size()) {
+      return Status::ObjectNotExists("The prefix is not in the file cache");
     }
 
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(tmpPath.parent_path().string()));
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
     auto status = Open(tmpPathStr, fd, FileOperationType::WRITE);
     if (!status.ok()) {
-      return std::pair(
-          i, Status::Wrap(status, "Failed to create temporary cache entry"));
+      return Status::Wrap(status, "Failed to create temporary cache entry");
     }
 
     // Currently we do not consider delete.
 
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Write(fd, &tokenLength, sizeof(int)));
-    RETURN_ON_ERROR_WITH_PATH_INDEX(
-        i, Write(fd, totalTokenList.data(), tokenLength * sizeof(int)));
+    RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(
+        Write(fd, totalTokenList.data(), tokenLength * sizeof(int)));
     size_t kvStatePos =
-        (i * batchSize) < prefix.size() ? 0 : (i * batchSize) - prefix.size();
+        (i * chunkSize) < prefix.size() ? 0 : (i * chunkSize) - prefix.size();
     for (size_t currentTokenIndex = kvStatePos;
-         currentTokenIndex < kvStatePos + batchSize; currentTokenIndex++) {
+         currentTokenIndex < kvStatePos + chunkSize; currentTokenIndex++) {
       for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        const LLMKV& k = kvStateList[currentTokenIndex][currentLayer].first;
-        const LLMKV& v = kvStateList[currentTokenIndex][currentLayer].second;
-        RETURN_ON_ERROR_WITH_PATH_INDEX(i, Write(fd, k.data, k.length));
-        RETURN_ON_ERROR_WITH_PATH_INDEX(i, Write(fd, v.data, k.length));
+        const LLMKV& k = kvCacheList[currentTokenIndex][currentLayer].first;
+        const LLMKV& v = kvCacheList[currentTokenIndex][currentLayer].second;
+        RETURN_ON_ERROR(Write(fd, k.data, k.length));
+        RETURN_ON_ERROR(Write(fd, v.data, k.length));
       }
     }
 
@@ -370,35 +350,32 @@ Status FileStorage::Update(
     if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
       // Move failed. There exists a file with the same name.
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
-      return std::pair(i, Status::Wrap(status, "Failed to move cache entry"));
+      return Status::Wrap(status, "Failed to move cache entry");
     }
     std::lock_guard<std::mutex> lock(createFileSetMutex);
     createFileSet.insert(pathStr);
-    return std::pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(
       std::min(pathList.size(),
                static_cast<size_t>(std::thread::hardware_concurrency())));
-  for (size_t i = 0; i < pathList.size(); i++) {
-    tg.AddTask(fn, i);
+  std::vector<parallel::ThreadGroup::tid_t> tids(pathList.size());
+  for (size_t i = 0; i < pathList.size(); ++i) {
+    tids[i] = tg.AddTask(fn, i);
+  }
+  std::vector<Status> taskResults(pathList.size(), Status::OK());
+  for (size_t i = 0; i < pathList.size(); ++i) {
+    taskResults[i] = tg.TaskResult(tids[i]);
   }
 
-  std::vector<std::pair<int, Status>> ss = tg.TakeResults();
-  std::map<int, bool> pathIndexMap;
-  for (size_t i = 0; i < pathList.size(); i++) {
-    if (ss[i].second.ok()) {
-      pathIndexMap[ss[i].first] = true;
-    }
-  }
-
-  int j = 0;
+  size_t upper_bound = 0;
   {
     std::lock_guard<std::mutex> lock(gcMutex);
     for (size_t i = 0; i < pathList.size(); i++) {
-      if (pathIndexMap.find(i) != pathIndexMap.end()) {
-        j += 1;
-        if (((size_t) j) * batchSize > prefix.size() &&
+      if (taskResults[i].ok()) {
+        upper_bound += 1;
+        if (upper_bound * chunkSize > prefix.size() &&
             createFileSet.find(this->rootPath + pathList[i]) !=
                 createFileSet.end()) {
           // Only this part is created.
@@ -410,13 +387,13 @@ Status FileStorage::Update(
       }
     }
   }
-  updated =
-      size_t(j * batchSize) < prefix.size() ? 0 : j * batchSize - prefix.size();
-  for (size_t i = j; i < pathList.size(); i++) {
+  updated = upper_bound * chunkSize <= prefix.size()
+                ? 0
+                : upper_bound * chunkSize - prefix.size();
+  for (size_t i = upper_bound; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
   }
-
   return Status::OK();
 }
 
@@ -431,7 +408,7 @@ Status FileStorage::Update(
  * @brief Query the kv state with the given token list in the file storage.
  *
  * @param tokenList The token list to be queried.
- * @param kvStateList The kv state list of the token list to be fulfilled.
+ * @param kvCacheList The kv state list of the token list to be fulfilled.
  *                    It's a 2D vector, the first dimension is the token index,
  *                    and the second dimension is the layer index. The kv state
  *                    is a pair of LLMKV, the first is the K tensor and the
@@ -447,19 +424,19 @@ Status FileStorage::Update(
  *           *                                                               *
  *           * Assume the layer is 2, and the token list is [1,2] you should *
  *           * allocate the memory for the kv state like this:               *
- *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvCacheList;*
  *           * for (int i = 0; i < 2; i++) {                                 *
  *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
  *           *   for (int j = 0; j < 2; j++) {                               *
  *           *     LLMKV key_state;                                          *
  *           *     LLMKV value_state;                                        *
- *           *     key_state.data = malloc(tensorBytes);                     *
- *           *     value_state.data = malloc(tensorBytes)                    *
- *           *     key_state.length = tensorBytes;                           *
- *           *     value_state.length = tensorBytes;                         *
+ *           *     key_state.data = malloc(tensorNBytes);                     *
+ *           *     value_state.data = malloc(tensorNBytes)                    *
+ *           *     key_state.length = tensorNBytes;                           *
+ *           *     value_state.length = tensorNBytes;                         *
  *           *     kvState.emplace_back(key_state, value_state);             *
  *           *   }                                                           *
- *           *   kvStateList.push_back(kvState);                             *
+ *           *   kvCacheList.push_back(kvState);                             *
  *           *}                                                              *
  *           *                                                               *
  *           * After calling this function, the key_state and value_state    *
@@ -469,97 +446,90 @@ Status FileStorage::Update(
  *           *                                                               *
  *           *****************************************************************
  *
- * @note The kvStateList must be initialized before calling this function,
+ * @note The kvCacheList must be initialized before calling this function,
  * including the data and length of the kv tensor.
  *
  * @return Status
  */
 Status FileStorage::Query(
     const std::vector<int>& tokenList,
-    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& matched) {
   if (this->exitFlag) {
     return Status::Invalid("The file storage has been closed!");
   }
+
   std::vector<std::string> paths;
   std::string dir = rootPath;
   RETURN_ON_ERROR(
-      hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
+      hasher->computePathForTokens(tokenList, chunkSize, hashChunkSize, paths));
 
-  auto fn = [&](size_t i, size_t matched_start) -> std::pair<int, Status> {
+  auto fn = [&](size_t i, size_t matched_start) -> Status {
     ghc::filesystem::path filePath(dir + paths[i]);
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
 
     // If open failed, it means the kv state is not in the cache(file not exist)
     if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
-      return std::pair(i, Status::ObjectNotExists("file doesn't exist"));
+      return Status::ObjectNotExists("file doesn't exist");
     }
     size_t file_size = 0;
     auto s = GetFileSize(fd, file_size);
     if (!s.ok()) {
       VINEYARD_DISCARD(Close(fd));
-      return std::pair(i, Status::ObjectNotExists("cannot get file size"));
+      return Status::ObjectNotExists("cannot get file size");
     }
     if (file_size == 0) {
       VINEYARD_DISCARD(Close(fd));
       VINEYARD_DISCARD(Delete(filePath.string()));
-      return std::pair(i, Status::ObjectNotExists("file is empty"));
+      return Status::ObjectNotExists("file is empty");
     }
 
-    int tokenLength;
-    RETURN_ON_ERROR_WITH_PATH_INDEX(i, Read(fd, &tokenLength, sizeof(int)));
-    std::vector<int> prefix;
-    prefix.resize(tokenLength);
-    RETURN_ON_ERROR_WITH_PATH_INDEX(
-        i, Read(fd, prefix.data(), tokenLength * sizeof(int)));
+    int tokenLength = 0;
+    RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
+    std::vector<int> blockTokenList(tokenLength, 0);
+    RETURN_ON_ERROR(Read(fd, blockTokenList.data(), tokenLength * sizeof(int)));
 
-    if (!CompareTokenList(tokenList, prefix, prefix.size())) {
+    if (!CompareTokenList(tokenList, blockTokenList, tokenLength)) {
       VINEYARD_DISCARD(Close(fd));
-      return std::pair(i, Status::ObjectNotExists("token mismatch"));
-    } else {
-      for (int j = 0; j < batchSize; j++) {
-        if (matched_start + j >= tokenList.size() ||
-            matched_start + j >= kvStateList.size()) {
-          break;
-        }
-        auto& kvState = kvStateList[matched_start + j];
-        for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-          RETURN_ON_ASSERT_WITH_PATH_INDEX(
-              i, static_cast<int>(kvState.size()) == layer,
-              "The size of kvState is not equal to layer");
-          LLMKV& k = kvState[currentLayer].first;
-          LLMKV& v = kvState[currentLayer].second;
-          RETURN_ON_ASSERT_WITH_PATH_INDEX(
-              i, k.length == tensorBytes && v.length == tensorBytes,
-              "The size of kv tensor doesn't match with the tensorBytes");
-          RETURN_ON_ERROR_WITH_PATH_INDEX(i, Read(fd, k.data, k.length));
-          RETURN_ON_ERROR_WITH_PATH_INDEX(i, Read(fd, v.data, v.length));
-        }
+      return Status::ObjectNotExists("token mismatch");
+    }
+    for (int j = 0; j < chunkSize; j++) {
+      if (matched_start + j >= tokenList.size() ||
+          matched_start + j >= kvCacheList.size()) {
+        break;
+      }
+      auto& kvState = kvCacheList[matched_start + j];
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        RETURN_ON_ASSERT(static_cast<int>(kvState.size()) == layer,
+                         "The size of kvState is not equal to layer");
+        LLMKV& k = kvState[currentLayer].first;
+        LLMKV& v = kvState[currentLayer].second;
+        RETURN_ON_ASSERT(
+            k.length == tensorNBytes && v.length == tensorNBytes,
+            "The size of kv tensor doesn't match with the tensorNBytes");
+        RETURN_ON_ERROR(Read(fd, k.data, k.length));
+        RETURN_ON_ERROR(Read(fd, v.data, v.length));
       }
     }
-
     VINEYARD_DISCARD(Close(fd));
-    return std::pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(std::min(
       paths.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
-  for (size_t i = 0; i < paths.size(); i++) {
-    tg.AddTask(fn, i, i * batchSize);
+  std::vector<parallel::ThreadGroup::tid_t> tids(paths.size());
+  for (size_t i = 0; i < paths.size(); ++i) {
+    tids[i] = tg.AddTask(fn, i, i * chunkSize);
+  }
+  std::vector<Status> taskResults(paths.size(), Status::OK());
+  for (size_t i = 0; i < paths.size(); ++i) {
+    taskResults[i] = tg.TaskResult(tids[i]);
   }
 
   matched = 0;
-  std::vector<std::pair<int, Status>> ss = tg.TakeResults();
-  std::map<int, bool> pathIndexMap;
   for (size_t i = 0; i < paths.size(); i++) {
-    if (ss[i].second.ok()) {
-      pathIndexMap[ss[i].first] = true;
-    }
-  }
-
-  for (size_t i = 0; i < paths.size(); i++) {
-    if (pathIndexMap.find(i) != pathIndexMap.end()) {
-      matched += batchSize;
+    if (taskResults[i].ok()) {
+      matched += chunkSize;
     } else {
       break;
     }
@@ -567,20 +537,120 @@ Status FileStorage::Query(
   return Status::OK();
 }
 
-Status FileStorage::Query(const std::vector<int>& tokenList, int nextToken,
+Status FileStorage::Query(const std::vector<int>& prefix, int nextToken,
                           std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   // TBD
   return Status::NotImplemented();
 }
 
-bool FileStorage::CompareTokenList(const std::vector<int>& tokenList,
+Status FileStorage::Query(
+    const std::vector<int>& prefix, const std::vector<int>& tokenList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& matched) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
+  if (prefix.size() % chunkSize != 0) {
+    return Status::Invalid("Prefix size " + std::to_string(prefix.size()) +
+                           " should be multiple of batch size " +
+                           std::to_string(chunkSize) + "!");
+  }
+
+  size_t numPrefixChunks = prefix.size() / chunkSize;
+  std::vector<int> totalTokenList(prefix.begin(), prefix.end());
+  totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
+                        tokenList.end());
+
+  std::vector<std::string> paths;
+  std::string dir = rootPath;
+  RETURN_ON_ERROR(hasher->computePathForTokens(totalTokenList, chunkSize,
+                                               hashChunkSize, paths));
+
+  auto fn = [&](size_t i, size_t matched_start) -> Status {
+    ghc::filesystem::path filePath(dir + paths[i]);
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
+
+    // If open failed, it means the kv state is not in the cache(file not exist)
+    if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
+      return Status::ObjectNotExists("Failed to open file '" +
+                                     filePath.string() + "'");
+    }
+    size_t file_size = 0;
+    auto s = GetFileSize(fd, file_size);
+    if (!s.ok()) {
+      VINEYARD_DISCARD(Close(fd));
+      return Status::ObjectNotExists("Cannot get file size");
+    }
+    if (file_size == 0) {
+      VINEYARD_DISCARD(Close(fd));
+      VINEYARD_DISCARD(Delete(filePath.string()));
+      return Status::ObjectNotExists("The target file is empty");
+    }
+
+    int tokenLength = 0;
+    RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
+    std::vector<int> blockTokenList(tokenLength, -1);
+    RETURN_ON_ERROR(Read(fd, blockTokenList.data(), tokenLength * sizeof(int)));
+
+    if (!CompareTokenList(totalTokenList, blockTokenList, tokenLength)) {
+      VINEYARD_DISCARD(Close(fd));
+      return Status::ObjectNotExists("Token mismatch");
+    }
+    for (int j = 0; j < chunkSize; j++) {
+      if (matched_start + j >= totalTokenList.size() ||
+          matched_start + j >= kvCacheList.size()) {
+        break;
+      }
+      auto& kvState = kvCacheList[matched_start + j];
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        RETURN_ON_ASSERT(static_cast<int>(kvState.size()) == layer,
+                         "The size of kvState is not equal to layer");
+        LLMKV& k = kvState[currentLayer].first;
+        LLMKV& v = kvState[currentLayer].second;
+        RETURN_ON_ASSERT(
+            k.length == tensorNBytes && v.length == tensorNBytes,
+            "The size of kv tensor doesn't match with the tensorNBytes");
+        RETURN_ON_ERROR(Read(fd, k.data, k.length));
+        RETURN_ON_ERROR(Read(fd, v.data, v.length));
+      }
+    }
+
+    VINEYARD_DISCARD(Close(fd));
+    return Status::OK();
+  };
+
+  parallel::ThreadGroup tg(std::min(
+      paths.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
+  std::vector<parallel::ThreadGroup::tid_t> tids(paths.size() -
+                                                 numPrefixChunks);
+  for (size_t i = numPrefixChunks; i < paths.size(); i++) {
+    tids[i - numPrefixChunks] =
+        tg.AddTask(fn, i, (i - numPrefixChunks) * chunkSize);
+  }
+  std::vector<Status> taskResults(paths.size() - numPrefixChunks, Status::OK());
+  for (size_t i = numPrefixChunks; i < paths.size(); i++) {
+    taskResults[i - numPrefixChunks] = tg.TaskResult(tids[i - numPrefixChunks]);
+  }
+
+  matched = 0;
+  for (size_t i = numPrefixChunks; i < paths.size(); i++) {
+    if (taskResults[i - numPrefixChunks].ok()) {
+      matched += chunkSize;
+    } else {
+      break;
+    }
+  }
+  return Status::OK();
+}
+
+bool FileStorage::CompareTokenList(const std::vector<int>& tokenList1,
                                    const std::vector<int>& tokenList2,
                                    size_t length) {
-  if (tokenList.size() < length || tokenList2.size() < length) {
+  if (tokenList1.size() < length || tokenList2.size() < length) {
     return false;
   }
   for (size_t i = 0; i < length; i++) {
-    if (tokenList[i] != tokenList2[i]) {
+    if (tokenList1[i] != tokenList2[i]) {
       return false;
     }
   }

@@ -101,7 +101,7 @@ setup(
     package_dir={'vineyard.llm': 'python/vineyard/llm'},
     packages=find_llm_packages('python'),
     ext_modules=[
-        CopyCMakeExtension('vineyard.llm.llm_C'),
+        CopyCMakeExtension('vineyard.llm._llm_C'),
     ],
     cmdclass={
         'build_ext': build_ext_with_precompiled,

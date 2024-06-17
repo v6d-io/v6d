@@ -32,8 +32,8 @@ class Hasher {
    * @brief Compute the path list for the token list
    *
    * @param tokenList The list of tokens
-   * @param batchSize The size of the batch
-   * @param splitNumber The number of splits
+   * @param chunkSize The size of the batch
+   * @param hashChunkSize The number of splits
    * @param pathList The Relative path list of the token list
    *
    * @return Status
@@ -54,29 +54,29 @@ class Hasher {
    *      hashValue3(4c90a490) -> 4c/90/a4/90
    *
    */
-  Status computePathForTokens(const std::vector<int>& tokenList, int batchSize,
-                              int splitNumber,
+  Status computePathForTokens(const std::vector<int>& tokenList, int chunkSize,
+                              int hashChunkSize,
                               std::vector<std::string>& pathList) {
     char hashBuffer[9];
-    int tokenSize = tokenList.size() - tokenList.size() % batchSize;
+    int tokenSize = tokenList.size() - tokenList.size() % chunkSize;
     // if the token list (upper_bound) is less than the batch size, then return
     // directly
-    if (tokenSize < batchSize) {
+    if (tokenSize < chunkSize) {
       return Status::OK();
     }
 
     // split the token list into batches
-    for (int i = 0; i < tokenSize; i += batchSize) {
+    for (int i = 0; i < tokenSize; i += chunkSize) {
       int hashValue =
           hashAlgorithm->hash(reinterpret_cast<const char*>(tokenList.data()),
-                              (i + batchSize) * sizeof(int));
+                              (i + chunkSize) * sizeof(int));
       // split the hash value into paths
       std::snprintf(hashBuffer, sizeof(hashBuffer), "%08x", hashValue);
       int index = 0;
       std::string path;
-      while (index + splitNumber < 8) {
-        path += std::string(hashBuffer + index, splitNumber) + "/";
-        index += splitNumber;
+      while (index + hashChunkSize < 8) {
+        path += std::string(hashBuffer + index, hashChunkSize) + "/";
+        index += hashChunkSize;
       }
       path += std::string(hashBuffer + index, 8 - index);
       pathList.push_back(path);

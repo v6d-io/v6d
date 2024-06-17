@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
-#define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
+#ifndef MODULES_LLM_CACHE_DS_KV_CACHE_BLOCK_H_
+#define MODULES_LLM_CACHE_DS_KV_CACHE_BLOCK_H_
 
 #include <map>
 #include <memory>
@@ -48,26 +48,26 @@ struct OffsetData {
 
 struct TreeData {
   union {
-    void* kvStateCacheBlockBuilder;
+    void* kvCacheBlockBuilder;
     uint64_t builderObjectID;
   };
   bool isPtr = true;
 };
 
 /**
- * @brief KVStateCacheBlock is a cache for kv-cache of LLM. When a new prompt
- * comes, LLM can query KVStateCacheBlock to get the state of the kv-cache to
+ * @brief KVCacheBlock is a cache for kv-cache of LLM. When a new prompt
+ * comes, LLM can query KVCacheBlock to get the state of the kv-cache to
  * avoid calculate the kv-cache again if the new prompt is similar to the
  * previous one.
  *
- * KVStateCacheBlock is stored in vineyard as a vineyard object which contains a
+ * KVCacheBlock is stored in vineyard as a vineyard object which contains a
  * radix tree. The token sequence is the key of the radix tree and the value
  * point out the offset of the kv-cache in the tensor list.
  *
- * KVStateCacheBlock can be shared by multiple machines.
+ * KVCacheBlock can be shared by multiple machines.
  */
 
-class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
+class KVCacheBlock : public vineyard::Registered<KVCacheBlock> {
  private:
   std::vector<std::shared_ptr<KVTensor>> keyStateTensorList;
   std::vector<std::shared_ptr<KVTensor>> valueStateTensorList;
@@ -75,19 +75,19 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
   int blockSize;
   int bitmapSize;
   int layer;
-  int tensorBytes;
+  int tensorNBytes;
 
  public:
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
-        std::unique_ptr<KVStateCacheBlock>{new KVStateCacheBlock()});
+        std::unique_ptr<KVCacheBlock>{new KVCacheBlock()});
   }
 
   void Construct(const ObjectMeta& meta) override;
 
   std::string GetBitmapStr();
 
-  uint64_t GetTensorBytes() { return this->tensorBytes; }
+  uint64_t GetTensorNBytes() { return this->tensorNBytes; }
 
   uint64_t* GetBitmap() { return this->bitmap; }
 
@@ -109,12 +109,12 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
     return this->valueStateTensorList;
   }
 
-  ~KVStateCacheBlock();
+  ~KVCacheBlock();
 
-  friend class KVStateCacheBlockBuilder;
+  friend class KVCacheBlockBuilder;
 };
 
-class KVStateCacheBlockBuilder : public ObjectBuilder {
+class KVCacheBlockBuilder : public ObjectBuilder {
  private:
   Client& client;
   std::vector<std::shared_ptr<KVTensorBuilder>> keyStateTensorBuilderList;
@@ -124,20 +124,20 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
   uint64_t* bitmap;
   int blockSize;
   int bitmapSize;
-  int tensorBytes;
+  int tensorNBytes;
   int layer;
 
   int FindEmptySlot();
 
  public:
-  KVStateCacheBlockBuilder(Client& client, int tensorBytes, int layer,
-                           int blockSize);
+  KVCacheBlockBuilder(Client& client, int tensorNBytes, int layer,
+                      int blockSize);
 
-  KVStateCacheBlockBuilder(
-      Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block);
+  KVCacheBlockBuilder(Client& client,
+                      std::shared_ptr<KVCacheBlock> kv_cache_block);
 
   static Status Make(Client& client, TreeData* treeData,
-                     KVStateCacheBlockBuilder*& kvStateCacheBlockBuilder);
+                     KVCacheBlockBuilder*& kvCacheBlockBuilder);
 
   /**
    * @brief Update the kv-state using next token.
@@ -165,7 +165,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  int16_t Split(KVStateCacheBlockBuilder* child, int index);
+  int16_t Split(KVCacheBlockBuilder* child, int index);
 
   const std::shared_ptr<KVTensorBuilder>& GetKeyStateBuilder(int layer) {
     return keyStateTensorBuilderList[layer];
@@ -193,15 +193,15 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   uint64_t* GetBitmap() { return this->bitmap; }
 
-  uint64_t GetTensorBytes() { return this->tensorBytes; }
+  uint64_t GetTensorNBytes() { return this->tensorNBytes; }
 
   int GetBlockSize() { return this->blockSize; }
 
-  void PrintKVStateCacheBlock();
+  void PrintKVCacheBlock();
 
-  ~KVStateCacheBlockBuilder();
+  ~KVCacheBlockBuilder();
 };
 
 }  // namespace vineyard
 
-#endif  // MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
+#endif  // MODULES_LLM_CACHE_DS_KV_CACHE_BLOCK_H_

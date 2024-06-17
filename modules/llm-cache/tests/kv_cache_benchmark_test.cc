@@ -23,7 +23,7 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
 
-#include "llm-cache/ds/kv_state_cache_manager.h"
+#include "llm-cache/ds/kv_cache_manager.h"
 
 using namespace vineyard;  //  NOLINT(build/namespaces)
 
@@ -32,13 +32,13 @@ constexpr int CAPACITY = 8000;
 constexpr int LAYER = 64;
 constexpr int BLOCK_SIZE = 100;
 
-std::shared_ptr<KVStateCacheManager> manager;
+std::shared_ptr<KVCacheManager> manager;
 VineyardCacheConfig config(TENSORBYTES, CAPACITY, LAYER, BLOCK_SIZE, 300);
 Client client;
 
 void init(std::string socket) {
   VINEYARD_CHECK_OK(client.Connect(socket));
-  VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, manager, config));
+  VINEYARD_CHECK_OK(KVCacheManager::Make(client, manager, config));
 }
 
 std::vector<int> generate_unique_tokens(size_t max_length) {
@@ -83,7 +83,7 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
   std::chrono::duration<double> query_duration(0);
 
   std::vector<int> inference_tokens;
-  std::vector<std::pair<LLMKV, LLMKV>> kv_state_list;
+  std::vector<std::pair<LLMKV, LLMKV>> kv_cache_list;
   void* key_state = malloc(TENSORBYTES);
   void* value_state = malloc(TENSORBYTES);
 
@@ -106,15 +106,15 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
   // query time
   for (size_t i = 0; i < tokens.size(); ++i) {
     inference_tokens.clear();
-    kv_state_list.clear();
+    kv_cache_list.clear();
     for (size_t j = 0; j < tokens[i].size(); ++j) {
       start = std::chrono::steady_clock::now();
       Status status =
-          manager->Query(inference_tokens, tokens[i][j], kv_state_list);
+          manager->Query(inference_tokens, tokens[i][j], kv_cache_list);
       if (!status.ok()) {
         VLOG(100) << "KV state is not in the cache.";
       }
-      for (auto& kv : kv_state_list) {
+      for (auto& kv : kv_cache_list) {
         for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
           memcpy(key_state, kv.first.data, kv.first.length);
           memcpy(value_state, kv.second.data, kv.second.length);
@@ -138,7 +138,7 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage ./kv_state_cache_benchmark <ipc_socket>");
+    printf("usage ./kv_cache_benchmark <ipc_socket>");
     return 1;
   }
   std::string ipc_socket = std::string(argv[1]);

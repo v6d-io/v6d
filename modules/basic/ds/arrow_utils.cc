@@ -34,7 +34,7 @@ namespace vineyard {
 namespace detail {
 
 static inline std::string string_join(std::vector<std::string> const& srcs,
-                               std::string const& sep) {
+                                      std::string const& sep) {
   std::stringstream ss;
   if (!srcs.empty()) {
     ss << srcs[0];
@@ -45,21 +45,23 @@ static inline std::string string_join(std::vector<std::string> const& srcs,
   return ss.str();
 }
 
-static inline void string_split(std::vector<std::string> &rs, std::string const &content, std::string const &patterns) {
-	size_t i = 0, k = 0;
-    while (i < content.size()) {
-		while (k < content.size()) {
-			char c = content[k];
-			if (patterns.find_first_of(c) != std::string::npos) {
-				break;
-			}
-			k += 1;
-		}
-		if (i < k) {
-			rs.emplace_back(content.substr(i, k - i));
-		}
-		i = k;
-	}
+static inline void string_split(std::vector<std::string>& rs,
+                                std::string const& content,
+                                std::string const& patterns) {
+  size_t i = 0, k = 0;
+  while (i < content.size()) {
+    while (k < content.size()) {
+      char c = content[k];
+      if (patterns.find_first_of(c) != std::string::npos) {
+        break;
+      }
+      k += 1;
+    }
+    if (i < k) {
+      rs.emplace_back(content.substr(i, k - i));
+    }
+    i = k;
+  }
 }
 
 }  // namespace detail

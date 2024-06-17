@@ -20,26 +20,25 @@ limitations under the License.
 #include <vector>
 
 #include "llm-cache/ds/config.h"
-#include "llm-cache/ds/kv_state_cache.h"
+#include "llm-cache/ds/kv_cache.h"
 #include "llm-cache/storage/blob_storage.h"
 #include "llm-cache/storage/file_storage.h"
 
-#ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
-#define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
+#ifndef MODULES_LLM_CACHE_DS_KV_CACHE_MANAGER_H_
+#define MODULES_LLM_CACHE_DS_KV_CACHE_MANAGER_H_
 
 namespace vineyard {
 
-class KVStateCacheManager {
+class KVCacheManager {
  public:
-  explicit KVStateCacheManager(std::shared_ptr<IStorage> storageImpl);
+  explicit KVCacheManager(std::shared_ptr<IStorage> storageImpl);
 
-  ~KVStateCacheManager();
+  ~KVCacheManager();
 
-  static Status Make(Client& client,
-                     std::shared_ptr<KVStateCacheManager>& manager,
+  static Status Make(Client& client, std::shared_ptr<KVCacheManager>& manager,
                      VineyardCacheConfig& config);
 
-  static Status Make(std::shared_ptr<KVStateCacheManager>& manager,
+  static Status Make(std::shared_ptr<KVCacheManager>& manager,
                      FileCacheConfig& config);
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
@@ -47,19 +46,24 @@ class KVStateCacheManager {
 
   Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated);
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated);
 
-  Status Query(const std::vector<int>& tokenList, int token,
+  Status Query(const std::vector<int>& tokenList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+               size_t& matched);
+
+  Status Query(const std::vector<int>& prefix, int nextToken,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState);
 
-  Status Query(const std::vector<int>& tokenList,
-               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+  Status Query(const std::vector<int>& prefix,
+               const std::vector<int>& tokenList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched);
 
   void Close();
@@ -79,4 +83,4 @@ class KVStateCacheManager {
 
 }  // namespace vineyard
 
-#endif  // MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
+#endif  // MODULES_LLM_CACHE_DS_KV_CACHE_MANAGER_H_

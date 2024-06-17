@@ -21,7 +21,7 @@ limitations under the License.
 #include "rax/radix.h"
 
 #include "common/util/logging.h"
-#include "llm-cache/ds/kv_state_cache_manager.h"
+#include "llm-cache/ds/kv_cache_manager.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
