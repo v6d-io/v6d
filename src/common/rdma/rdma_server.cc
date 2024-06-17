@@ -468,6 +468,10 @@ Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
   return CloseResource(ep, "client endpoint");
 }
 
+size_t RDMAServer::GetServerMaxRegisterSize() {
+  return IRDMA::GetMaxRegisterSizeImpl(domain);
+}
+
 bool RDMAServer::IsStopped() { return (state == STOPED); }
 
 }  // namespace vineyard

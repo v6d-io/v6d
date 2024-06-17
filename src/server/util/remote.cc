@@ -159,7 +159,7 @@ Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
 }
 
 Status RemoteClient::RDMACheckMaxRegisterSize() {
-  max_register_size = IRDMA::GetMaxRegisterSize();
+  max_register_size = rdma_client_->GetClientMaxRegisterSize();
   if (max_register_size == 0) {
     return Status::IOError("Failed to get max register size.");
   }
@@ -176,9 +176,10 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
   if (this->rdma_connected_) {
     return Status::OK();
   }
-  RETURN_ON_ERROR(RDMACheckMaxRegisterSize());
 
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, host, port));
+  RETURN_ON_ERROR(RDMACheckMaxRegisterSize());
+
   VLOG(100) << "Try to connect to RDMA server " << host << ":" << port << "...";
   RETURN_ON_ERROR(this->rdma_client_->Connect());
   this->rdma_connected_ = true;

@@ -75,15 +75,14 @@ Status RPCServer::InitRDMA() {
   }
   uint32_t rdma_port = std::stoi(rdma_endpoint.substr(pos + 1));
 
-  max_register_size = IRDMA::GetMaxRegisterSize();
-  if (max_register_size == 0) {
-    return Status::Invalid("Get max register size failed!");
-  }
-  LOG(INFO) << "Max register size: " << max_register_size / 1024 / 1024 / 1024
-            << " GB.";
-
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
   if (status.ok()) {
+    max_register_size = rdma_server_->GetServerMaxRegisterSize();
+    if (max_register_size == 0) {
+      return Status::Invalid("Get max register size failed!");
+    }
+    LOG(INFO) << "Max register size: " << max_register_size / 1024 / 1024 / 1024
+              << " GB.";
     rdma_stop_ = false;
     rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
     rdma_recv_thread_ = std::thread([this]() { this->doRDMARecv(); });

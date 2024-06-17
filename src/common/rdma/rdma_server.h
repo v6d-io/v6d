@@ -98,6 +98,8 @@ class RDMAServer : public IRDMA {
 
   Status ReleaseTXBuffer(void* buffer);
 
+  size_t GetServerMaxRegisterSize();
+
  private:
   Status RemoveClient(uint64_t ep_token);
 

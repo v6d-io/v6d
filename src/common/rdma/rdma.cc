@@ -21,63 +21,8 @@ limitations under the License.
 namespace vineyard {
 
 size_t IRDMA::max_register_size_ = 0;
-static int default_port = 12345;
 constexpr size_t min_l_size = 1;
 constexpr size_t max_r_size = 8;
-
-size_t IRDMA::GetMaxRegisterSize() {
-  if (max_register_size_ == 0) {
-    fi_info* hints = fi_allocinfo();
-    if (!hints) {
-      return 0;
-    }
-
-    hints->caps =
-        FI_MSG | FI_RMA | FI_WRITE | FI_REMOTE_WRITE | FI_READ | FI_REMOTE_READ;
-    hints->domain_attr->resource_mgmt = FI_RM_ENABLED;
-    hints->mode = FI_CONTEXT;
-    hints->domain_attr->threading = FI_THREAD_DOMAIN;
-    hints->addr_format = FI_FORMAT_UNSPEC;
-    hints->domain_attr->mr_mode = FI_MR_LOCAL | FI_MR_ENDPOINT |
-                                  FI_MR_ALLOCATED | FI_MR_PROV_KEY |
-                                  FI_MR_VIRT_ADDR | FI_MR_RAW;
-    hints->tx_attr->tclass = FI_TC_BULK_DATA;
-    hints->ep_attr->type = FI_EP_MSG;
-    hints->fabric_attr = new fi_fabric_attr;
-    memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
-    hints->fabric_attr->prov_name = strdup("verbs");
-
-    fi_info* fi = nullptr;
-    fid_fabric* fabric = nullptr;
-    fid_domain* domain = nullptr;
-    if (fi_getinfo(VINEYARD_FIVERSION, nullptr,
-                   std::to_string(default_port).c_str(), 0, hints, &(fi))) {
-      FreeInfo(hints);
-      return 0;
-    }
-
-    if (fi_fabric(fi->fabric_attr, &fabric, NULL)) {
-      FreeInfo(fi);
-      FreeInfo(hints);
-      return 0;
-    }
-
-    if (fi_domain(fabric, fi, &domain, NULL)) {
-      CloseResource(fabric, "fabric");
-      FreeInfo(fi);
-      FreeInfo(hints);
-      return 0;
-    }
-
-    max_register_size_ = GetMaxRegisterSizeImpl(domain);
-
-    CloseResource(domain, "domain");
-    CloseResource(fabric, "fabric");
-    FreeInfo(fi);
-    FreeInfo(hints);
-  }
-  return max_register_size_;
-}
 
 size_t IRDMA::GetMaxRegisterSizeImpl(fid_domain* domain) {
   size_t l_size = min_l_size;
@@ -90,15 +35,15 @@ size_t IRDMA::GetMaxRegisterSizeImpl(fid_domain* domain) {
   size_t max_size = 0;
 
   while (l_size < r_size - 1) {
-    buffer = malloc(size_ * 1024 * 1024 * 1024);
+    size_t buffer_size = size_ * 1024 * 1024 * 1024;
+    buffer = malloc(buffer_size);
     if (buffer == nullptr) {
       return max_size;
     }
-    if (RegisterMemory(&mr, domain, buffer, size_ * 1024 * 1024 * 1024, rkey,
-                       mr_desc)
-            .ok()) {
-      LOG(INFO) << "Register memory size: " << size_ << "GB";
-      max_size = size_ * 1024 * 1024 * 1024;
+    if (RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc).ok()) {
+      LOG(INFO) << "Register memory size: " << buffer_size / 1024 / 1024 / 1024
+                << "GB success";
+      max_size = buffer_size;
       CloseResource(mr, "memory region");
       free(buffer);
       l_size = size_;

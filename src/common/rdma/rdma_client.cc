@@ -212,6 +212,10 @@ Status RDMAClient::Write(void* buf, size_t size, uint64_t remote_address,
                       mr_desc, ctx);
 }
 
+size_t RDMAClient::GetClientMaxRegisterSize() {
+  return IRDMA::GetMaxRegisterSizeImpl(domain);
+}
+
 Status RDMAClient::Close() {
   // close all registered memory regions
   RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));

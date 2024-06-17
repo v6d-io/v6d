@@ -90,8 +90,6 @@ class IRDMA {
     return Status::OK();
   }
 
-  static size_t GetMaxRegisterSize();
-
   static size_t GetMaxRegisterSizeImpl(fid_domain* domain);
 
   static size_t max_register_size_;

@@ -209,15 +209,14 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
     return Status::OK();
   }
 
-  max_reg_size = IRDMA::GetMaxRegisterSize();
+  RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
+                                            static_cast<int>(rdma_port)));
+  max_reg_size = rdma_client_->GetClientMaxRegisterSize();
   if (max_reg_size == 0) {
     return Status::Invalid("Failed to get max register size.");
   }
   std::cout << "Max register size: " << max_reg_size / 1024 / 1024 / 1024
             << " GB." << std::endl;
-
-  RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
-                                            static_cast<int>(rdma_port)));
   std::cout << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port
             << "..." << std::endl;
 
