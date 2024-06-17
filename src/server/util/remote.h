@@ -62,9 +62,11 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
                           std::map<ObjectID, ObjectID> const& result_blobs);
 
 #ifdef VINEYARD_WITH_RDMA
-  Status RDMARequestMemInfo(RegisterMemInfo &remote_info);
+  Status RDMARequestMemInfo(RegisterMemInfo& remote_info);
 
-  Status RDMAReleaseMemInfo(RegisterMemInfo &remote_info);
+  Status RDMAReleaseMemInfo(RegisterMemInfo& remote_info);
+
+  Status RDMACheckMaxRegisterSize();
 #endif
 
   Status StopRDMA();

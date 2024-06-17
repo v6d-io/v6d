@@ -437,9 +437,9 @@ class RPCClient final : public ClientBase {
   Status StopRDMA();
 
 #ifdef VINEYARD_WITH_RDMA
-  Status RDMARequestMemInfo(RegisterMemInfo &remote_info);
+  Status RDMARequestMemInfo(RegisterMemInfo& remote_info);
 
-  Status RDMAReleaseMemInfo(RegisterMemInfo &remote_info);
+  Status RDMAReleaseMemInfo(RegisterMemInfo& remote_info);
 #endif
 
   InstanceID remote_instance_id_;

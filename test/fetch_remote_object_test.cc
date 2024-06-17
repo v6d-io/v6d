@@ -24,7 +24,7 @@ limitations under the License.
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 constexpr uint64_t element_num =
-    (uint64_t) 1024 * 4 / sizeof(uint64_t);
+    (uint64_t) 1024 * 1024 * 1024 * 8 / sizeof(uint64_t);
 
 void CreateBuffer(std::string& objectName, Client& client) {
   TensorBuilder<uint64_t> builder(client, {1, element_num});

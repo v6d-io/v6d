@@ -76,7 +76,9 @@ class RPCServer : public SocketServer,
 
   // connection id to rdma server
 #ifdef VINEYARD_WITH_RDMA
-  std::unordered_map<uint64_t, std::set<RegisterMemInfo, CompareRegisterMemInfo>> remote_mem_infos_;
+  std::unordered_map<uint64_t,
+                     std::set<RegisterMemInfo, CompareRegisterMemInfo>>
+      remote_mem_infos_;
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
   uint64_t max_register_size = 1024UL * 1024 * 1024 * 6;

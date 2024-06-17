@@ -107,7 +107,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 }
 
 #ifdef VINEYARD_WITH_RDMA
-Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo &remote_info) {
+Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
@@ -141,7 +141,7 @@ Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo &remote_info) {
   return Status::OK();
 }
 
-Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo &remote_info) {
+Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
@@ -151,12 +151,23 @@ Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo &remote_info) {
   VLOG(100) << "Send remote addr: "
             << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address)
             << ", rkey: " << msg->remoteMemInfo.key;
-  
+
   this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
   VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
 
   return Status::OK();
 }
+
+Status RemoteClient::RDMACheckMaxRegisterSize() {
+  max_register_size = IRDMA::GetMaxRegisterSize();
+  if (max_register_size == 0) {
+    return Status::IOError("Failed to get max register size.");
+  }
+  LOG(INFO) << "Max register size is:" << max_register_size / 1024 / 1024 / 1024
+            << " GB.";
+  return Status::OK();
+}
+
 #endif
 
 Status RemoteClient::ConnectRDMAServer(const std::string& host,
@@ -165,6 +176,7 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
   if (this->rdma_connected_) {
     return Status::OK();
   }
+  RETURN_ON_ERROR(RDMACheckMaxRegisterSize());
 
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, host, port));
   VLOG(100) << "Try to connect to RDMA server " << host << ":" << port << "...";
@@ -408,36 +420,47 @@ Status RemoteClient::migrateBuffers(
         void* server_pointer = payloads[i].pointer;
         size_t receive_size = 0;
 
-        // Register mem
-        RegisterMemInfo local_info;
-        local_info.address = reinterpret_cast<uint64_t>(local_blob_data + blob_data_offset);
-        local_info.size = request_bytes;
-        RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
-
         // Exchange mem info
         RegisterMemInfo remote_info;
         remote_info.address = (uint64_t) server_pointer + blob_data_offset;
         remote_info.size = request_bytes;
-        LOG(INFO) << "Request remote address: " << reinterpret_cast<void*>(remote_info.address)
+        LOG(INFO) << "Request remote address: "
+                  << reinterpret_cast<void*>(remote_info.address)
                   << ", size: " << remote_info.size;
         RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
         receive_size = remote_info.size;
 
+        // Register mem
+        RegisterMemInfo local_info;
+        local_info.address =
+            reinterpret_cast<uint64_t>(local_blob_data + blob_data_offset);
+        local_info.size = receive_size;
+        RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
+
         // Read data
-        size_t remain_bytes = receive_size;//payloads[i].data_size; TODO: change to min(receive size, register size)
+        size_t remain_bytes =
+            receive_size;  // payloads[i].data_size; TODO: change to min(receive
+                           // size, register size)
         do {
           size_t read_bytes =
               std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
           size_t read_data_offset = receive_size - remain_bytes;
-          LOG(INFO) << "blob data offset: " << blob_data_offset << ", read data offset: " << read_data_offset << ", read bytes: " << read_bytes;
-          LOG(INFO) << "Read to address: " << reinterpret_cast<void*>(reinterpret_cast<uint64_t>(local_blob_data) + blob_data_offset + read_data_offset)
-                    << ", size: " << read_bytes
-                    << ", remote address: " << reinterpret_cast<void*>(reinterpret_cast<uint64_t>(server_pointer) + blob_data_offset + read_data_offset)
+          LOG(INFO) << "blob data offset: " << blob_data_offset
+                    << ", read data offset: " << read_data_offset
+                    << ", read bytes: " << read_bytes;
+          LOG(INFO) << "Read to address: "
+                    << reinterpret_cast<void*>(
+                           reinterpret_cast<uint64_t>(local_blob_data) +
+                           blob_data_offset + read_data_offset)
+                    << ", size: " << read_bytes << ", remote address: "
+                    << reinterpret_cast<void*>(
+                           reinterpret_cast<uint64_t>(server_pointer) +
+                           blob_data_offset + read_data_offset)
                     << ", rkey: " << remote_info.rkey;
           VINEYARD_CHECK_OK(rdma_client_->Read(
-              local_blob_data + blob_data_offset + read_data_offset,
-              read_bytes,
-              reinterpret_cast<uint64_t>(server_pointer) + blob_data_offset + read_data_offset,
+              local_blob_data + blob_data_offset + read_data_offset, read_bytes,
+              reinterpret_cast<uint64_t>(server_pointer) + blob_data_offset +
+                  read_data_offset,
               remote_info.rkey, local_info.mr_desc, nullptr));
           VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
           remain_bytes -= read_bytes;
@@ -446,7 +469,7 @@ Status RemoteClient::migrateBuffers(
         remain_blob_bytes -= receive_size;
         RETURN_ON_ERROR(rdma_client_->DeregisterMemory(local_info));
         RETURN_ON_ERROR(RDMAReleaseMemInfo(remote_info));
-      } while(remain_blob_bytes > 0);
+      } while (remain_blob_bytes > 0);
     }
     std::map<ObjectID, ObjectID> result_blobs;
     for (size_t i = 0; i < payloads.size(); i++) {

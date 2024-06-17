@@ -72,10 +72,18 @@ Status RPCServer::InitRDMA() {
   if (pos == std::string::npos) {
     return Status::Invalid("Invalid RDMA endpoint: " + rdma_endpoint);
   }
-  int rdma_port = std::stoi(rdma_endpoint.substr(pos + 1));
+  uint32_t rdma_port = std::stoi(rdma_endpoint.substr(pos + 1));
+
+  max_register_size = IRDMA::GetMaxRegisterSize();
+  if (max_register_size == 0) {
+    return Status::Invalid("Get max register size failed!");
+  }
+  LOG(INFO) << "Max register size: " << max_register_size / 1024 / 1024 / 1024
+            << " GB.";
 
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
   if (status.ok()) {
+    rdma_stop_ = false;
     rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
     rdma_recv_thread_ = std::thread([this]() { this->doRDMARecv(); });
     rdma_send_thread_ = std::thread([this]() { this->doRDMASend(); });
@@ -84,7 +92,6 @@ Status RPCServer::InitRDMA() {
                            status.message());
   }
 
-  rdma_stop_ = false;
   return Status::OK();
 #else
   return Status::Invalid("RDMA is not supported in this build.");
@@ -211,14 +218,17 @@ void RPCServer::doRDMARecv() {
         remote_reqeust_mem_info.address =
             recv_msg->remoteMemInfo.remote_address;
         // remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
-        remote_reqeust_mem_info.size = std::min(recv_msg->remoteMemInfo.len, max_register_size);
+        remote_reqeust_mem_info.size =
+            std::min(recv_msg->remoteMemInfo.len, max_register_size);
         LOG(INFO) << "Receive remote request address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size;
 
         // Register mem
-        VINEYARD_CHECK_OK(rdma_server_->RegisterMemory(remote_reqeust_mem_info));
-        LOG(INFO) << "Register memory" << " address: "
+        VINEYARD_CHECK_OK(
+            rdma_server_->RegisterMemory(remote_reqeust_mem_info));
+        LOG(INFO) << "Register memory"
+                  << " address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size
                   << " rkey: " << remote_reqeust_mem_info.rkey
@@ -240,12 +250,14 @@ void RPCServer::doRDMARecv() {
 
         rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg),
                            send_context);
-        LOG(INFO) << "Send key:" << remote_reqeust_mem_info.rkey << " send address:"
+        LOG(INFO) << "Send key:" << remote_reqeust_mem_info.rkey
+                  << " send address:"
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size;
 
         std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
-        remote_mem_infos_[recv_context->rdma_conn_id].insert(remote_reqeust_mem_info);
+        remote_mem_infos_[recv_context->rdma_conn_id].insert(
+            remote_reqeust_mem_info);
         rdma_server_->Recv(recv_context->rdma_conn_id,
                            reinterpret_cast<void*>(recv_msg),
                            sizeof(VineyardMsg), context);
@@ -274,14 +286,17 @@ void RPCServer::doRDMARecv() {
         }
 
         // Deregister mem
-        LOG(INFO) << "Deregister memory" << " address: "
+        LOG(INFO) << "Deregister memory"
+                  << " address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size
                   << " rkey: " << remote_reqeust_mem_info.rkey
                   << " mr_desc: " << remote_reqeust_mem_info.mr_desc
                   << " fid_mr:" << remote_reqeust_mem_info.mr;
-        VINEYARD_CHECK_OK(rdma_server_->DeregisterMemory(remote_reqeust_mem_info));
-        remote_mem_infos_[recv_context->rdma_conn_id].erase(remote_reqeust_mem_info);
+        VINEYARD_CHECK_OK(
+            rdma_server_->DeregisterMemory(remote_reqeust_mem_info));
+        remote_mem_infos_[recv_context->rdma_conn_id].erase(
+            remote_reqeust_mem_info);
         LOG(INFO) << "Wait next request.";
         rdma_server_->Recv(recv_context->rdma_conn_id,
                            reinterpret_cast<void*>(recv_msg),
