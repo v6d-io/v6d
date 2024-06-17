@@ -14,6 +14,7 @@ limitations under the License.
 */
 #include "server/async/rpc_server.h"
 
+#include <algorithm>
 #include <memory>
 #include <mutex>
 #include <utility>
