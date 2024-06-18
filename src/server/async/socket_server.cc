@@ -679,7 +679,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   auto callback = [self, this, compress,
                    object](const Status& status) -> Status {
     ReceiveRemoteBuffers(
-        socket_, {object}, 0, 0, compress,
+        socket_, {object}, compress,
         [self, object](const Status& status) -> Status {
           std::string message_out;
           if (status.ok()) {
@@ -725,7 +725,7 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
   auto callback = [self, this, compress, object_ids,
                    objects](const Status& status) -> Status {
     ReceiveRemoteBuffers(
-        socket_, objects, 0, 0, compress,
+        socket_, objects, compress,
         [self, object_ids, objects](const Status& status) -> Status {
           std::string message_out;
           if (status.ok()) {
