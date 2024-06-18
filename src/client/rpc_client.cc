@@ -841,7 +841,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
       RegisterMemInfo local_info;
       local_info.address =
           reinterpret_cast<uint64_t>(buffer->mutable_data()) + blob_data_offset;
-      local_info.size = std::min(remain_blob_bytes, max_register_size);;
+      local_info.size = std::min(remain_blob_bytes, max_register_size);
       Status status;
       while (true) {
         status = rdma_client_->RegisterMemory(local_info);

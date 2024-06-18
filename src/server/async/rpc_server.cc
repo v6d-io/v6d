@@ -77,9 +77,10 @@ Status RPCServer::InitRDMA() {
 
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
   if (status.ok()) {
-    void *pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
+    void* pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
     size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
-    max_register_size = rdma_server_->GetServerMaxRegisterSize(pointer, 1, size / 1024 / 1024 / 1024);
+    max_register_size = rdma_server_->GetServerMaxRegisterSize(
+        pointer, 1, size / 1024 / 1024 / 1024);
     if (max_register_size == 0) {
       return Status::Invalid("Get max register size failed!");
     }
@@ -235,13 +236,15 @@ void RPCServer::doRDMARecv() {
           if (status.IsIOError()) {
             // probe the max register size again
             LOG(INFO) << "Probe the max register size again.";
-            void *pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
+            void* pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
             size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
-            max_register_size = rdma_server_->GetServerMaxRegisterSize(pointer, 1, size / 1024 / 1024 / 1024);
+            max_register_size = rdma_server_->GetServerMaxRegisterSize(
+                pointer, 1, size / 1024 / 1024 / 1024);
             if (max_register_size == 0) {
               break;
             }
-            remote_reqeust_mem_info.size = std::min(recv_msg->remoteMemInfo.len, max_register_size);
+            remote_reqeust_mem_info.size =
+                std::min(recv_msg->remoteMemInfo.len, max_register_size);
           } else {
             break;
           }
@@ -260,11 +263,11 @@ void RPCServer::doRDMARecv() {
           memset(&send_context->attr, 0, sizeof(send_context->attr));
           send_context->attr.msg_buffer = msg;
           rdma_server_->Send(recv_context->rdma_conn_id,
-                              recv_context->attr.msg_buffer,
-                              sizeof(VineyardMsg), recv_context);
+                             recv_context->attr.msg_buffer, sizeof(VineyardMsg),
+                             recv_context);
           rdma_server_->Recv(recv_context->rdma_conn_id,
-                            reinterpret_cast<void*>(recv_msg),
-                            sizeof(VineyardMsg), context);
+                             reinterpret_cast<void*>(recv_msg),
+                             sizeof(VineyardMsg), context);
           continue;
         }
 

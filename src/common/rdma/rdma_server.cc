@@ -468,7 +468,8 @@ Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
   return CloseResource(ep, "client endpoint");
 }
 
-size_t RDMAServer::GetServerMaxRegisterSize(void* addr, size_t min_size, size_t max_size) {
+size_t RDMAServer::GetServerMaxRegisterSize(void* addr, size_t min_size,
+                                            size_t max_size) {
   return IRDMA::GetMaxRegisterSizeImpl(addr, min_size, max_size, domain);
 }
 

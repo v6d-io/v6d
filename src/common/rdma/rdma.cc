@@ -26,7 +26,8 @@ size_t IRDMA::max_register_size_ = 0;
 constexpr size_t min_l_size = 1;
 constexpr size_t max_r_size = 64;
 
-size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_size, fid_domain* domain) {
+size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
+                                     size_t max_size, fid_domain* domain) {
   size_t l_size = min_size == 0 ? min_l_size : min_size;
   size_t r_size = max_size == 0 ? max_r_size : max_size;
   fid_mr* mr = nullptr;
@@ -38,7 +39,8 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_siz
   size_t max_buffer_size = r_size * 1024 * 1024 * 1024;
 
   if (addr == nullptr) {
-    buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE,
+                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (buffer == MAP_FAILED) {
       return register_size;
     }
@@ -46,7 +48,8 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_siz
 
   while (l_size < r_size - 1) {
     size_t buffer_size = size_ * 1024 * 1024 * 1024;
-    Status status = RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
+    Status status =
+        RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
     if (status.ok()) {
       LOG(INFO) << "Register memory size: " << buffer_size / 1024 / 1024 / 1024
                 << "GB success";
@@ -66,8 +69,9 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_siz
   }
 
   /**
-   * The memory registered by the rpc client may be not page aligned. So we need to
-   * subtract the page size from the registered memory size to avoid the memory
+   * The memory registered by the rpc client may be not page aligned. So we need
+   * to subtract the page size from the registered memory size to avoid the
+   * memory
    */
   return register_size - 4096;
 }
