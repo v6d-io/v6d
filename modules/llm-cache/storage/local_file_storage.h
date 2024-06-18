@@ -35,21 +35,21 @@ struct LocalFileDescriptor : public FileDescriptor {
 
 class LocalFileStorage : public FileStorage {
  public:
-  LocalFileStorage(int tensorBytes, int cacheCapacity, int layer, int batchSize,
-                   int splitNumber, std::string rootPath,
-                   int64_t clientGCInterval, int64_t ttl, bool enableGlobalGC,
+  LocalFileStorage(int tensorNBytes, int cacheCapacity, int layer,
+                   int chunkSize, int hashChunkSize, std::string rootPath,
+                   int64_t gcInterval, int64_t ttl, bool enableGlobalGC,
                    int64_t globalGCInterval, int64_t globalTTL) {
     this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
     this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
-    this->tensorBytes = tensorBytes;
+    this->tensorNBytes = tensorNBytes;
     this->cacheCapacity = cacheCapacity;
     this->layer = layer;
-    this->batchSize = batchSize;
-    this->splitNumber = splitNumber;
+    this->chunkSize = chunkSize;
+    this->hashChunkSize = hashChunkSize;
     this->rootPath = std::regex_replace(rootPath + "/", std::regex("/+"), "/");
     this->tempFileDir =
         std::regex_replace(rootPath + "/__temp/", std::regex("/+"), "/");
-    this->gcInterval = std::chrono::seconds(clientGCInterval);
+    this->gcInterval = std::chrono::seconds(gcInterval);
     this->fileTTL = std::chrono::seconds(ttl);
     this->globalGCInterval = std::chrono::seconds(globalGCInterval);
     this->globalFileTTL = std::chrono::seconds(globalTTL);

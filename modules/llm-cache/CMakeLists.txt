@@ -20,10 +20,9 @@ target_link_libraries(vineyard_llm_cache PRIVATE libzstd_static ${GLOG_LIBRARIES
 target_link_libraries(vineyard_llm_cache PUBLIC vineyard_client)
 
 # install bundled thirdparty: rax and MurmurHash3
-install(DIRECTORY
-            ${PROJECT_SOURCE_DIR}/thirdparty/rax
-            ${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3
-            ${PROJECT_SOURCE_DIR}/thirdparty/cityhash
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/rax
+                  ${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3
+                  ${PROJECT_SOURCE_DIR}/thirdparty/cityhash
         DESTINATION include/vineyard/contrib    # target directory
         FILES_MATCHING                          # install only matched files
         PATTERN "*.h"                           # select header files

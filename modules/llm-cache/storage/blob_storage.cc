@@ -23,14 +23,13 @@ limitations under the License.
 
 namespace vineyard {
 
-BlobStorage::BlobStorage(Client& client,
-                         std::shared_ptr<KVStateCacheBuilder>& cache,
+BlobStorage::BlobStorage(Client& client, std::shared_ptr<KVCacheBuilder>& cache,
                          int syncInterval, std::string& llmCacheSyncLock,
                          std::string& llmCacheObjectName,
                          std::string& llmRefcntObjectName)
     : client(client) {
   this->syncInterval = syncInterval;
-  this->kvStateCacheBuilder = cache;
+  this->kvCacheBuilder = cache;
   this->llmCacheSyncLock = llmCacheSyncLock;
   this->llmCacheObjectName = llmCacheObjectName;
   this->llmRefcntObjectName = llmRefcntObjectName;
@@ -38,7 +37,7 @@ BlobStorage::BlobStorage(Client& client,
 }
 
 Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
-                         int tensorBytes, int cacheCapacity, int layer,
+                         int tensorNBytes, int cacheCapacity, int layer,
                          int blockSize, int syncInterval,
                          std::string llmCacheSyncLock,
                          std::string llmCacheObjectName,
@@ -50,40 +49,37 @@ Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
   AcquireServerLock(client, llmCacheSyncLock, actualKey);
 
   // sync global cache object with vineyard
-  ObjectID globalKVStateCacheID;
+  ObjectID globalKVCacheID;
   std::set<ObjectID> blockIDSetToAdd;
   std::set<ObjectID> blockIDSetToDelete;
-  Status status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
-  std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder;
+  Status status = client.GetName(llmCacheObjectName, globalKVCacheID);
+  std::shared_ptr<KVCacheBuilder> kvCacheBuilder;
   if (status.ok()) {
     // if success, pull the cache object
-    std::shared_ptr<KVStateCache> globalKVStateCache =
-        std::dynamic_pointer_cast<KVStateCache>(
-            client.FetchAndGetObject(globalKVStateCacheID));
-    Status status = KVStateCacheBuilder::Make(client, kvStateCacheBuilder,
-                                              globalKVStateCache);
+    std::shared_ptr<KVCache> globalKVCache = std::dynamic_pointer_cast<KVCache>(
+        client.FetchAndGetObject(globalKVCacheID));
+    Status status = KVCacheBuilder::Make(client, kvCacheBuilder, globalKVCache);
     if (!status.ok()) {
       ReleaseServerLock(client, actualKey);
       return Status::Invalid(
           "Failed to make the cache object from global cache object.");
     }
-    if (globalKVStateCache->id() != globalKVStateCacheID) {
+    if (globalKVCache->id() != globalKVCacheID) {
       VLOG(100) << "Del migrate object";
-      Status status = client.DelData(globalKVStateCache->id());
+      Status status = client.DelData(globalKVCache->id());
       if (!status.ok()) {
         LOG(ERROR) << "Delete object failed: " << status.ToString()
                    << " It may cause memory leak.";
       }
     }
 
-    kvStateCacheBuilder->GetCurrentBlockIDSet(blockIDSetToAdd);
-    blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
+    kvCacheBuilder->GetCurrentBlockIDSet(blockIDSetToAdd);
+    blockIDSetToDelete = kvCacheBuilder->GetBlockIDSetToDelete();
   } else {
     // if failed, create a new cache object
     LOG(INFO) << "failed to get the cache object, create a new one.";
-    Status status =
-        KVStateCacheBuilder::Make(client, kvStateCacheBuilder, tensorBytes,
-                                  cacheCapacity, layer, blockSize);
+    Status status = KVCacheBuilder::Make(client, kvCacheBuilder, tensorNBytes,
+                                         cacheCapacity, layer, blockSize);
     if (!status.ok()) {
       ReleaseServerLock(client, actualKey);
       return Status::Invalid("Failed to make new cache object.");
@@ -92,9 +88,9 @@ Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
 
   // TBD
   // use lease to prevent the deadlock if the client is down
-  storage = std::make_shared<BlobStorage>(
-      client, kvStateCacheBuilder, syncInterval, llmCacheSyncLock,
-      llmCacheObjectName, llmRefcntObjectName);
+  storage = std::make_shared<BlobStorage>(client, kvCacheBuilder, syncInterval,
+                                          llmCacheSyncLock, llmCacheObjectName,
+                                          llmRefcntObjectName);
   VINEYARD_CHECK_OK(storage->SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd));
   // release the lock
   ReleaseServerLock(client, actualKey);
@@ -104,13 +100,13 @@ Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
 Status BlobStorage::UpdateInternal(
     const std::vector<int>& tokenList, int nextToken,
     const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
-  return kvStateCacheBuilder->Update(tokenList, nextToken, kvState);
+  return kvCacheBuilder->Update(tokenList, nextToken, kvState);
 }
 
 Status BlobStorage::QueryInternal(
     const std::vector<int>& tokenList, int token,
     std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
-  return kvStateCacheBuilder->Query(tokenList, token, kvState);
+  return kvCacheBuilder->Query(tokenList, token, kvState);
 }
 
 /**
@@ -132,12 +128,12 @@ Status BlobStorage::QueryInternal(
  *           * for (int i = 0; i < 2; i++) {                                 *
  *           *   LLMKV key_state;                                            *
  *           *   LLMKV value_state;                                          *
- *           *   key_state.data = malloc(tensorBytes);                       *
- *           *   value_state.data = malloc(tensorBytes)                      *
+ *           *   key_state.data = malloc(tensorNBytes);                       *
+ *           *   value_state.data = malloc(tensorNBytes)                      *
  *           *   // Copy the k_state of LLM KV Cache to key_state.data       *
  *           *   // Copy the v_state of LLM KV Cache to value_state.data     *
- *           *   key_state.length = tensorBytes;                             *
- *           *   value_state.length = tensorBytes;                           *
+ *           *   key_state.length = tensorNBytes;                             *
+ *           *   value_state.length = tensorNBytes;                           *
  *           *   kvState.emplace_back(key_state, value_state);               *
  *           *}                                                              *
  *           *                                                               *
@@ -169,7 +165,7 @@ Status BlobStorage::Update(
  * manager.
  *
  * @param tokenList The token list to be updated.
- * @param kvStateList The kv state list of the token list.
+ * @param kvCacheList The kv state list of the token list.
  *                    It's a 2D vector, the first dimension is the token index,
  *                    and the second dimension is the layer index.
  *                    The kv state is a pair of LLMKV, the first is the K tensor
@@ -185,38 +181,38 @@ Status BlobStorage::Update(
  *           *                                                               *
  *           * Assume the layer is 2, and the token list is [1,2] you should *
  *           * allocate the memory for the kv state like this:               *
- *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvCacheList;*
  *           * for (int i = 0; i < 2; i++) {                                 *
  *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
  *           *   for (int j = 0; j < 2; j++) {                               *
  *           *     LLMKV key_state;                                          *
  *           *     LLMKV value_state;                                        *
- *           *     key_state.data = malloc(tensorBytes);                     *
- *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     key_state.data = malloc(tensorNBytes);                     *
+ *           *     value_state.data = malloc(tensorNBytes)                    *
  *           *     // Copy the k_state of LLM KV Cache to key_state.data     *
  *           *     // Copy the v_state of LLM KV Cache to value_state.data   *
- *           *     key_state.length = tensorBytes;                           *
- *           *     value_state.length = tensorBytes;                         *
+ *           *     key_state.length = tensorNBytes;                           *
+ *           *     value_state.length = tensorNBytes;                         *
  *           *     kvState.emplace_back(key_state, value_state);             *
  *           *   }                                                           *
- *           *   kvStateList.push_back(kvState);                             *
+ *           *   kvCacheList.push_back(kvState);                             *
  *           *}                                                              *
  *           *                                                               *
  *           * After calling this function, you must release(free) the       *
- *           * kv buffer of the kvStateList manually                         *
+ *           * kv buffer of the kvCacheList manually                         *
  *           *                                                               *
  *           *****************************************************************
  *
  *
  * @note The length of the token list should be as same as the length of the
- * kvStateList. and the second dimension of the kvStateList should be as same as
+ * kvCacheList. and the second dimension of the kvCacheList should be as same as
  * the layer of the kv state.
  *
  * @return Status
  */
 Status BlobStorage::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& updated) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
@@ -227,7 +223,7 @@ Status BlobStorage::Update(
   }
   std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    Status result = UpdateInternal(tokenListCopy, tokenList[i], kvStateList[i]);
+    Status result = UpdateInternal(tokenListCopy, tokenList[i], kvCacheList[i]);
     if (!result.ok()) {
       break;
     }
@@ -244,7 +240,7 @@ Status BlobStorage::Update(
  *
  * @param prefix The prefix of the token list.
  * @param tokenList The token list to be updated.
- * @param kvStateList The kv state list of the token list.
+ * @param kvCacheList The kv state list of the token list.
  *                    It's a 2D vector, the first dimension is the token index,
  *                    and the second dimension is the layer index.
  *                    The kv state is a pair of LLMKV, the first is the K tensor
@@ -258,25 +254,25 @@ Status BlobStorage::Update(
  *           *                                                               *
  *           * Assume the layer is 2, and the token list is [1,2] you should *
  *           * allocate the memory for the kv state like this:               *
- *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvCacheList;*
  *           * for (int i = 0; i < 2; i++) {                                 *
  *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
  *           *   for (int j = 0; j < 2; j++) {                               *
  *           *     LLMKV key_state;                                          *
  *           *     LLMKV value_state;                                        *
- *           *     key_state.data = malloc(tensorBytes);                     *
- *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     key_state.data = malloc(tensorNBytes);                     *
+ *           *     value_state.data = malloc(tensorNBytes)                    *
  *           *     // Copy the k_state of LLM KV Cache to key_state.data     *
  *           *     // Copy the v_state of LLM KV Cache to value_state.data   *
- *           *     key_state.length = tensorBytes;                           *
- *           *     value_state.length = tensorBytes;                         *
+ *           *     key_state.length = tensorNBytes;                           *
+ *           *     value_state.length = tensorNBytes;                         *
  *           *     kvState.emplace_back(key_state, value_state);             *
  *           *   }                                                           *
- *           *   kvStateList.push_back(kvState);                             *
+ *           *   kvCacheList.push_back(kvState);                             *
  *           *}                                                              *
  *           *                                                               *
  *           * After calling this function, you must release(free) the       *
- *           * kv buffer of the kvStateList                                  *
+ *           * kv buffer of the kvCacheList                                  *
  *           *                                                               *
  *           *****************************************************************
  *
@@ -287,7 +283,7 @@ Status BlobStorage::Update(
  */
 Status BlobStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& updated) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
@@ -298,7 +294,7 @@ Status BlobStorage::Update(
   }
   std::vector<int> tokenListCopy(prefix.begin(), prefix.end());
   for (size_t i = 0; i < tokenList.size(); i++) {
-    Status result = UpdateInternal(tokenListCopy, tokenList[i], kvStateList[i]);
+    Status result = UpdateInternal(tokenListCopy, tokenList[i], kvCacheList[i]);
     if (!result.ok()) {
       break;
     }
@@ -310,10 +306,92 @@ Status BlobStorage::Update(
 }
 
 /**
+ * @brief Query the kv state with the given token list and its prefix in the kv
+ * state cache manager.
+ *
+ * @param tokenList The token list as the prefix of the updated token.
+ * @param kvCacheList The kv state list of the token list. It must be
+ *                    initialized before calling this function, including the
+ *                    data and length of the kv tensor.
+ *                    The kv state list is a 2D vector, the first dimension is
+ *                    the token index, and the second dimension is the layer
+ *                    index. The kv state is a pair of LLMKV, the first is
+ *                    the K tensor and the second is the V tensor.
+ *                    It contains two fields: data and length. The data is
+ *                    the pointer to the tensor, and the length is the size
+ *                    of the tensor.
+ * @param matched It's a return value to indicate the number of tokens that have
+ *                been matched successfully.
+ *
+ *           *****************************************************************
+ *           * Important, the kv state is managed by the kv state cache      *
+ *           * manager, the caller does not need to malloc and free the      *
+ *           * memory of the kv state. Besides, the data pointer should be   *
+ *           * nullptr and the length should be 0.                           *
+ *           *                                                               *
+ *           * Assume the layer is 2, and the token list is [1,2] you should *
+ *           * allocate the memory for the kv state like this:               *
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvCacheList;*
+ *           * for (int i = 0; i < 2; i++) {                                 *
+ *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
+ *           *   for (int j = 0; j < 2; j++) {                               *
+ *           *     LLMKV key_state;                                          *
+ *           *     LLMKV value_state;                                        *
+ *           *     key_state.data = nullptr                                  *
+ *           *     value_state.data = nullptr                                *
+ *           *     key_state.length = 0;                                     *
+ *           *     value_state.length = 0;                                   *
+ *           *     kvState.emplace_back(key_state, value_state);             *
+ *           *   }                                                           *
+ *           *   kvCacheList.push_back(kvState);                             *
+ *           *}                                                              *
+ *           *                                                               *
+ *           * After calling this function, the key_state's data is pointing *
+ *           * to the K tensor data stored in vineyard blob, and the         *
+ *           * value_state's data is pointing to the V tensor data stored in *
+ *           * vineyard blob. All the length of the kv state is the size of  *
+ *           * the tensor data. Then you can copy the kv state to the LLM KV *
+ *           * Cache. The memory of the kv state will be freed when calling  *
+ *           * the close function of the kv state cache manager.             *
+ *           *                                                               *
+ *           *****************************************************************
+ *
+ * @return Status
+ */
+Status BlobStorage::Query(
+    const std::vector<int>& tokenList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& matched) {
+  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
+  if (!lock.try_lock()) {
+    return Status::Invalid("Query cache failed: can not gain the cache lock.");
+  }
+  if (isClosed) {
+    return Status::Invalid("The memory storage is closed.");
+  }
+
+  // support partial match of the token list
+  // copy the token list and query the cache one token by one token
+  matched = 0;
+  std::vector<int> tokenListPrefix;
+  for (size_t i = 0; i < tokenList.size() && i < kvCacheList.size(); i++) {
+    Status result =
+        QueryInternal(tokenListPrefix, tokenList[i], kvCacheList[i]);
+    if (!result.ok()) {
+      return Status::OK();
+    }
+    matched += 1;
+    tokenListPrefix.push_back(tokenList[i]);
+  }
+
+  return Status::OK();
+}
+
+/**
  * @brief Query the kv state with the given token and its prefix in the kv state
  * cache manager.
  *
- * @param tokenList The token list as the prefix of the updated token.
+ * @param prefix The token list as the prefix of the updated token.
  * @param token The token to be queried.
  * @param kvState The kv state of the token. It must be initialized(allocated)
  *                before calling this function, including the data and length
@@ -351,7 +429,7 @@ Status BlobStorage::Update(
  *
  * @return Status
  */
-Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
+Status BlobStorage::Query(const std::vector<int>& prefix, int token,
                           std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
@@ -361,90 +439,14 @@ Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
   if (isClosed) {
     return Status::Invalid("The memory storage is closed.");
   }
-
-  return QueryInternal(tokenList, token, kvState);
+  return QueryInternal(prefix, token, kvState);
 }
 
-/**
- * @brief Query the kv state with the given token list and its prefix in the kv
- * state cache manager.
- *
- * @param tokenList The token list as the prefix of the updated token.
- * @param kvStateList The kv state list of the token list. It must be
- *                    initialized before calling this function, including the
- *                    data and length of the kv tensor.
- *                    The kv state list is a 2D vector, the first dimension is
- *                    the token index, and the second dimension is the layer
- *                    index. The kv state is a pair of LLMKV, the first is
- *                    the K tensor and the second is the V tensor.
- *                    It contains two fields: data and length. The data is
- *                    the pointer to the tensor, and the length is the size
- *                    of the tensor.
- * @param matched It's a return value to indicate the number of tokens that have
- *                been matched successfully.
- *
- *           *****************************************************************
- *           * Important, the kv state is managed by the kv state cache      *
- *           * manager, the caller does not need to malloc and free the      *
- *           * memory of the kv state. Besides, the data pointer should be   *
- *           * nullptr and the length should be 0.                           *
- *           *                                                               *
- *           * Assume the layer is 2, and the token list is [1,2] you should *
- *           * allocate the memory for the kv state like this:               *
- *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
- *           * for (int i = 0; i < 2; i++) {                                 *
- *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
- *           *   for (int j = 0; j < 2; j++) {                               *
- *           *     LLMKV key_state;                                          *
- *           *     LLMKV value_state;                                        *
- *           *     key_state.data = nullptr                                  *
- *           *     value_state.data = nullptr                                *
- *           *     key_state.length = 0;                                     *
- *           *     value_state.length = 0;                                   *
- *           *     kvState.emplace_back(key_state, value_state);             *
- *           *   }                                                           *
- *           *   kvStateList.push_back(kvState);                             *
- *           *}                                                              *
- *           *                                                               *
- *           * After calling this function, the key_state's data is pointing *
- *           * to the K tensor data stored in vineyard blob, and the         *
- *           * value_state's data is pointing to the V tensor data stored in *
- *           * vineyard blob. All the length of the kv state is the size of  *
- *           * the tensor data. Then you can copy the kv state to the LLM KV *
- *           * Cache. The memory of the kv state will be freed when calling  *
- *           * the close function of the kv state cache manager.             *
- *           *                                                               *
- *           *****************************************************************
- *
- * @return Status
- */
 Status BlobStorage::Query(
-    const std::vector<int>& tokenList,
-    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    const std::vector<int>& prefix, const std::vector<int>& tokenList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& matched) {
-  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
-  if (!lock.try_lock()) {
-    return Status::Invalid("Query cache failed: can not gain the cache lock.");
-  }
-  if (isClosed) {
-    return Status::Invalid("The memory storage is closed.");
-  }
-
-  // support partial match of the token list
-  // copy the token list and query the cache one token by one token
-  matched = 0;
-  std::vector<int> tokenListPrefix;
-  for (size_t i = 0; i < tokenList.size() && i < kvStateList.size(); i++) {
-    Status result =
-        QueryInternal(tokenListPrefix, tokenList[i], kvStateList[i]);
-    if (!result.ok()) {
-      return Status::OK();
-    }
-    matched += 1;
-    tokenListPrefix.push_back(tokenList[i]);
-  }
-
-  return Status::OK();
+  return Status::NotImplemented();
 }
 
 BlobStorage::~BlobStorage() {
@@ -455,10 +457,10 @@ BlobStorage::~BlobStorage() {
 // This function is used for testing
 void BlobStorage::Delete(std::vector<int>& token) {
   std::shared_ptr<NodeData> evictedNode;
-  kvStateCacheBuilder->GetRootTree()->Delete(token, evictedNode);
-  kvStateCacheBuilder->Delete(evictedNode);
+  kvCacheBuilder->GetRootTree()->Delete(token, evictedNode);
+  kvCacheBuilder->Delete(evictedNode);
   if (VLOG_IS_ON(100)) {
-    VLOG(100) << raxShow(kvStateCacheBuilder->GetRootTree()->tree);
+    VLOG(100) << raxShow(kvCacheBuilder->GetRootTree()->tree);
   }
 }
 
@@ -468,16 +470,16 @@ Status BlobStorage::Sync() {
   std::set<ObjectID> blockIDSetToDelete;
   std::set<ObjectID> globalBlockIDSet;
   // 1. pull the cache object
-  ObjectID globalKVStateCacheID;
+  ObjectID globalKVCacheID;
   std::vector<ObjectID> deleteList;
 
-  std::shared_ptr<KVStateCache> globalKVStateCache = nullptr;
-  status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
+  std::shared_ptr<KVCache> globalKVCache = nullptr;
+  status = client.GetName(llmCacheObjectName, globalKVCacheID);
   if (status.ok()) {
-    deleteList.push_back(globalKVStateCacheID);
-    globalKVStateCache = std::dynamic_pointer_cast<KVStateCache>(
-        client.FetchAndGetObject(globalKVStateCacheID));
-    globalKVStateCache->GetCurrentBlockIDSet(globalBlockIDSet);
+    deleteList.push_back(globalKVCacheID);
+    globalKVCache = std::dynamic_pointer_cast<KVCache>(
+        client.FetchAndGetObject(globalKVCacheID));
+    globalKVCache->GetCurrentBlockIDSet(globalBlockIDSet);
   } else {
     // Not an error.
     VLOG(100) << "There is no cache object in the meta server.";
@@ -485,48 +487,47 @@ Status BlobStorage::Sync() {
 
   // 2. merge the cache object
   // only the global cache object with higher version will be merged
-  VLOG(100) << "Current builder version:" << kvStateCacheBuilder->GetVersion()
+  VLOG(100) << "Current builder version:" << kvCacheBuilder->GetVersion()
             << " global version:"
-            << (globalKVStateCache == nullptr
+            << (globalKVCache == nullptr
                     ? "null"
-                    : std::to_string(globalKVStateCache->GetVersion()));
-  if (globalKVStateCache != nullptr &&
-      kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
-    status = kvStateCacheBuilder->Merge(globalKVStateCache);
+                    : std::to_string(globalKVCache->GetVersion()));
+  if (globalKVCache != nullptr &&
+      kvCacheBuilder->GetVersion() < globalKVCache->GetVersion()) {
+    status = kvCacheBuilder->Merge(globalKVCache);
     RETURN_ON_ERROR(status);
-    if (globalKVStateCache->id() != globalKVStateCacheID) {
+    if (globalKVCache->id() != globalKVCacheID) {
       VLOG(100) << "Del migrate object";
-      Status status = client.DelData(globalKVStateCache->id());
+      Status status = client.DelData(globalKVCache->id());
       if (!status.ok()) {
         LOG(ERROR) << "Delete object failed: " << status.ToString()
                    << " It may cause memory leak.";
       }
     }
   }
-  kvStateCacheBuilder->UpdateVersion();
+  kvCacheBuilder->UpdateVersion();
 
   /**
    * 3. get the current block id set, which stores the block id(instead of block
    * ptr) and the block id set to delete.
    */
   std::set<ObjectID> currentObjectIDSet;
-  kvStateCacheBuilder->GetCurrentBlockIDSet(currentObjectIDSet);
-  blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
+  kvCacheBuilder->GetCurrentBlockIDSet(currentObjectIDSet);
+  blockIDSetToDelete = kvCacheBuilder->GetBlockIDSetToDelete();
 
   // 4. push the cache object to the vineyardd
-  kvStateCache = std::dynamic_pointer_cast<KVStateCache>(
-      kvStateCacheBuilder->_Seal(client));
+  kvCache = std::dynamic_pointer_cast<KVCache>(kvCacheBuilder->_Seal(client));
 
   std::set<ObjectID> currentGlobalBlockIDSet;
-  kvStateCacheBuilder->GetCurrentBlockIDSet(currentGlobalBlockIDSet);
+  kvCacheBuilder->GetCurrentBlockIDSet(currentGlobalBlockIDSet);
 
-  status = client.Persist(kvStateCache->id());
+  status = client.Persist(kvCache->id());
   RETURN_ON_ERROR(status);
 
   // 5. put the name of the new cache object to the meta server
   status = client.DropName(llmCacheObjectName);
   RETURN_ON_ERROR(status);
-  status = client.PutName(kvStateCache->id(), llmCacheObjectName);
+  status = client.PutName(kvCache->id(), llmCacheObjectName);
   RETURN_ON_ERROR(status);
 
   // 6. delete old cache object
@@ -537,11 +538,10 @@ Status BlobStorage::Sync() {
   }
 
   // 7. create a global cache object replica
-  kvStateCache->Resolve();
-  RETURN_ON_ERROR(
-      KVStateCacheBuilder::Make(client, kvStateCacheBuilder, kvStateCache));
+  kvCache->Resolve();
+  RETURN_ON_ERROR(KVCacheBuilder::Make(client, kvCacheBuilder, kvCache));
 
-  kvStateCacheBuilder->GetCurrentBlockIDSet(blockIDSetToAdd);
+  kvCacheBuilder->GetCurrentBlockIDSet(blockIDSetToAdd);
 
   /**
    * 8. get the add set, which contains the block id in the new cache object
@@ -625,31 +625,30 @@ Status BlobStorage::AfterSyncFailed() {
    * If there exists a global cache object, recover from the global object
    * and delete the cache object if the builder is sealed.
    */
-  ObjectID globalKVStateCacheID;
-  std::shared_ptr<KVStateCache> globalKVStateCache = nullptr;
-  Status status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
+  ObjectID globalKVCacheID;
+  std::shared_ptr<KVCache> globalKVCache = nullptr;
+  Status status = client.GetName(llmCacheObjectName, globalKVCacheID);
   if (status.ok()) {
-    globalKVStateCache = std::dynamic_pointer_cast<KVStateCache>(
-        client.FetchAndGetObject(globalKVStateCacheID));
+    globalKVCache = std::dynamic_pointer_cast<KVCache>(
+        client.FetchAndGetObject(globalKVCacheID));
   } else {
     VLOG(100) << "There is no cache object in the meta server.";
     return Status::OK();
   }
 
-  status = KVStateCacheBuilder::Make(client, kvStateCacheBuilder,
-                                     globalKVStateCache);
+  status = KVCacheBuilder::Make(client, kvCacheBuilder, globalKVCache);
   RETURN_ON_ERROR(status);
-  if (kvStateCache != nullptr && kvStateCache->id() != globalKVStateCacheID) {
+  if (kvCache != nullptr && kvCache->id() != globalKVCacheID) {
     // It means the builder is sealed but not pushed to the vineyardd
-    deleteList.push_back(kvStateCache->id());
-    deleteList.push_back(globalKVStateCache->id());
+    deleteList.push_back(kvCache->id());
+    deleteList.push_back(globalKVCache->id());
   }
   status = client.DelData(deleteList, false, true);
   if (!status.ok()) {
     LOG(ERROR) << "Delete object failed: " << status.ToString()
                << " It may cause memory leak.";
   }
-  kvStateCache = nullptr;
+  kvCache = nullptr;
 
   return Status::OK();
 }
@@ -696,8 +695,8 @@ Status BlobStorage::ClearGlobalCache(Client& client,
   RETURN_ON_ERROR(client.GetName(llmRefcntObjectName, globalRefcntMapId));
   RETURN_ON_ERROR(client.DropName(llmRefcntObjectName));
 
-  std::shared_ptr<KVStateCache> globalCacheObject =
-      std::dynamic_pointer_cast<KVStateCache>(
+  std::shared_ptr<KVCache> globalCacheObject =
+      std::dynamic_pointer_cast<KVCache>(
           client.FetchAndGetObject(globalCacheObjectID));
   std::set<ObjectID> blockIDSetToDelete;
   globalCacheObject->GetCurrentBlockIDSet(blockIDSetToDelete);
@@ -719,7 +718,7 @@ void BlobStorage::CloseCache() {
 
   LOG(INFO) << "Clear block set and recycle blob.";
   std::lock_guard<std::mutex> cacheLock(cacheAccessMutex);
-  this->kvStateCacheBuilder->Close();
+  this->kvCacheBuilder->Close();
   this->isClosed = true;
   RefreshRefcnt();
 }
@@ -785,7 +784,7 @@ Status BlobStorage::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
 
 void BlobStorage::RefreshRefcnt() {
   std::set<ObjectID> blockIDSetToDelete =
-      this->kvStateCacheBuilder->GetBlockIDSetToDelete();
+      this->kvCacheBuilder->GetBlockIDSetToDelete();
   std::set<ObjectID> blockIDSetToAdd;
   std::string actualKey;
   AcquireServerLock(client, llmCacheSyncLock, actualKey);

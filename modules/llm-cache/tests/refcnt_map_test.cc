@@ -20,11 +20,11 @@ limitations under the License.
 #include "rax/radix.h"
 
 #include "common/util/logging.h"
-#include "llm-cache/ds/kv_state_cache_manager.h"
+#include "llm-cache/ds/kv_cache_manager.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
-constexpr int tensorBytes = 80;
+constexpr int tensorNBytes = 80;
 constexpr int capacity = 5;
 constexpr int layer = 3;
 constexpr int block_size = 4;
@@ -34,7 +34,7 @@ std::vector<int> round_2_tokens = {1, 2, 4, 9, 10};  // split to two blocks
 std::vector<std::vector<int>> round_token_list = {round_1_tokens,
                                                   round_2_tokens};
 
-std::vector<std::shared_ptr<KVStateCacheManager>> kv_state_cache_managers;
+std::vector<std::shared_ptr<KVCacheManager>> kv_cache_managers;
 std::vector<std::shared_ptr<BlobStorage>> blob_storages;
 std::string llmCacheObjectName = "refcnt_map_test_cache_object";
 std::string llmCacheSyncLock = "refcnt_map_test_cache_lock";
@@ -58,10 +58,10 @@ void print_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state) {
         reinterpret_cast<uint8_t*>(kv_state[i].first.data);
     uint8_t* value_state_data =
         reinterpret_cast<uint8_t*>(kv_state[i].second.data);
-    // print the first tensorBytes bytes
+    // print the first tensorNBytes bytes
     std::string key_state_str = "";
     std::string value_state_str = "";
-    for (int j = 0; j < tensorBytes; j++) {
+    for (int j = 0; j < tensorNBytes; j++) {
       key_state_str += std::to_string(key_state_data[j]) + " ";
       value_state_str += std::to_string(value_state_data[j]) + " ";
     }
@@ -78,13 +78,13 @@ std::vector<std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
   for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
     LLMKV key_state;
     LLMKV value_state;
-    key_state.data = malloc(tensorBytes);
-    value_state.data = malloc(tensorBytes);
+    key_state.data = malloc(tensorNBytes);
+    value_state.data = malloc(tensorNBytes);
 
-    key_state.length = tensorBytes;
-    value_state.length = tensorBytes;
+    key_state.length = tensorNBytes;
+    value_state.length = tensorNBytes;
 
-    for (int i = 0; i < tensorBytes; ++i) {
+    for (int i = 0; i < tensorNBytes; ++i) {
       (reinterpret_cast<uint8_t*>(key_state.data))[i] =
           (static_cast<uint8_t>(token)) + i + currentLayer;
       (reinterpret_cast<uint8_t*>(value_state.data))[i] =
@@ -100,12 +100,12 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
                     int& token) {
   VINEYARD_ASSERT(kv_state.size() == (size_t) layer);
   for (size_t index = 0; index < kv_state.size(); ++index) {
-    VINEYARD_ASSERT(kv_state[index].first.length == (size_t) tensorBytes);
-    VINEYARD_ASSERT(kv_state[index].second.length == (size_t) tensorBytes);
-    for (int i = 0; i < tensorBytes; ++i) {
+    VINEYARD_ASSERT(kv_state[index].first.length == (size_t) tensorNBytes);
+    VINEYARD_ASSERT(kv_state[index].second.length == (size_t) tensorNBytes);
+    for (int i = 0; i < tensorNBytes; ++i) {
       if ((reinterpret_cast<uint8_t*>(kv_state[index].first.data))[i] !=
           (static_cast<uint8_t>(token)) + i + index) {
-        LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
+        LOG(INFO) << "token:" << token << " tensorNBytes" << tensorNBytes
                   << " layer:" << index;
         LOG(INFO) << "key_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(kv_state[index].first.data))[i]
@@ -115,7 +115,7 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
       }
       if (reinterpret_cast<uint8_t*>(kv_state[index].second.data)[i] !=
           (static_cast<uint8_t>(token)) + i + index) {
-        LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
+        LOG(INFO) << "token:" << token << " tensorNBytes" << tensorNBytes
                   << " layer:" << index;
         LOG(INFO) << "value_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(
@@ -128,7 +128,7 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
   }
 }
 
-void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
+void inference(std::shared_ptr<KVCacheManager>& kv_cache_manager,
                std::vector<int> tokens, size_t begin = 0) {
   std::vector<int> inference_tokens;
   std::vector<std::pair<LLMKV, LLMKV>> kv_state;
@@ -140,16 +140,16 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
       for (int current_layer = 0; current_layer < layer; current_layer++) {
         kv_state_to_query.emplace_back(LLMKV{nullptr, 0}, LLMKV{nullptr, 0});
       }
-      Status result = kv_state_cache_manager->Query(inference_tokens, tokens[i],
-                                                    kv_state_to_query);
+      Status result = kv_cache_manager->Query(inference_tokens, tokens[i],
+                                              kv_state_to_query);
       if (!result.ok()) {
         LOG(INFO) << "Can not find the kv_state from cache:";
         print_current_tokens(inference_tokens, tokens[i]);
         LOG(INFO) << "Generate the kv_state and update the cache.";
         kv_state = generate_kv_state(tokens[i]);
         // print_kv_state(kv_state);
-        Status status = kv_state_cache_manager->Update(inference_tokens,
-                                                       tokens[i], kv_state);
+        Status status =
+            kv_cache_manager->Update(inference_tokens, tokens[i], kv_state);
         if (!status.ok()) {
           // Not a error. May be the cache is full.
           LOG(INFO) << "Put kv state into cache failed:" << status.ToString();
@@ -180,18 +180,18 @@ Status checkRefCnt(std::string ipc_socket) {
 
   std::vector<std::set<void*>> treeDataSets;
   treeDataSets.push_back(blob_storages[0]
-                             ->GetKVStateCacheBuilder()
+                             ->GetKVCacheBuilder()
                              ->GetRootTree()
                              ->GetSubTreeDataSet());
   treeDataSets.push_back(blob_storages[1]
-                             ->GetKVStateCacheBuilder()
+                             ->GetKVCacheBuilder()
                              ->GetRootTree()
                              ->GetSubTreeDataSet());
   LOG(INFO) << raxShow(
-      blob_storages[0]->GetKVStateCacheBuilder()->GetRootTree()->GetRootTree());
+      blob_storages[0]->GetKVCacheBuilder()->GetRootTree()->GetRootTree());
   LOG(INFO) << "------------------------------------------";
   LOG(INFO) << raxShow(
-      blob_storages[1]->GetKVStateCacheBuilder()->GetRootTree()->GetRootTree());
+      blob_storages[1]->GetKVCacheBuilder()->GetRootTree()->GetRootTree());
 
   std::shared_ptr<RefcntMapObjectBuilder> refcnt_map =
       std::make_shared<RefcntMapObjectBuilder>(client[0]);
@@ -211,13 +211,12 @@ Status checkRefCnt(std::string ipc_socket) {
   ObjectID globalCacheObjectID;
   blockIDSetToAdd.clear();
   VINEYARD_CHECK_OK(client[0].GetName(llmCacheObjectName, globalCacheObjectID));
-  std::shared_ptr<KVStateCache> kvStateCache =
-      std::dynamic_pointer_cast<KVStateCache>(
-          client[0].FetchAndGetObject(globalCacheObjectID));
-  kvStateCache->GetCurrentBlockIDSet(blockIDSetToAdd);
+  std::shared_ptr<KVCache> kvCache = std::dynamic_pointer_cast<KVCache>(
+      client[0].FetchAndGetObject(globalCacheObjectID));
+  kvCache->GetCurrentBlockIDSet(blockIDSetToAdd);
   refcnt_map->IncSetRefcnt(blockIDSetToAdd);
-  if (kvStateCache->id() != globalCacheObjectID) {
-    client[0].DelData(kvStateCache->id());
+  if (kvCache->id() != globalCacheObjectID) {
+    client[0].DelData(kvCache->id());
   }
 
   LOG(INFO) << "Prepare refcnt done";
@@ -244,20 +243,20 @@ void threadFunc(std::string socket, int threadId) {
     sleep(4);
   }
 
-  std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
+  std::shared_ptr<KVCacheManager> kv_cache_manager;
   std::shared_ptr<BlobStorage> blob_storage;
   VINEYARD_CHECK_OK(BlobStorage::Make(
-      client[threadId], blob_storage, tensorBytes, capacity, layer, block_size,
+      client[threadId], blob_storage, tensorNBytes, capacity, layer, block_size,
       3, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
   blob_storages.push_back(blob_storage);
-  kv_state_cache_manager = std::make_shared<KVStateCacheManager>(blob_storage);
-  kv_state_cache_managers.push_back(kv_state_cache_manager);
+  kv_cache_manager = std::make_shared<KVCacheManager>(blob_storage);
+  kv_cache_managers.push_back(kv_cache_manager);
 
   std::vector<int> tokenList = round_token_list[threadId];
   if (threadId == 1) {
-    inference(kv_state_cache_manager, tokenList, 2);
+    inference(kv_cache_manager, tokenList, 2);
   } else {
-    inference(kv_state_cache_manager, tokenList);
+    inference(kv_cache_manager, tokenList);
   }
 
   sleep(5);
@@ -292,7 +291,7 @@ int main(int argc, char** argv) {
   std::string sockets[2];
   if (argc < 2) {
     printf(
-        "Usage ./kv_state_cache_test "
+        "Usage ./kv_cache_test "
         "<ipc_socket_1> <ipc_socket_2> -d \n");
     return 1;
   }
@@ -315,8 +314,8 @@ int main(int argc, char** argv) {
   VINEYARD_CHECK_OK(checkRefCnt(sockets[0]));
 
   for (int i = 0; i < 2; i++) {
-    kv_state_cache_managers[i]->Close();
-    kv_state_cache_managers[i] = nullptr;
+    kv_cache_managers[i]->Close();
+    kv_cache_managers[i] = nullptr;
   }
 
   LOG(INFO) << "Clear global object";

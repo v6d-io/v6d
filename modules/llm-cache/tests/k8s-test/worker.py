@@ -13,9 +13,9 @@ def start_server(port=8888):
     ip = os.environ.get('POD_IP', 'localhost')
     layer = int(os.environ.get('LAYER', 96))
     batch_size = int(os.environ.get('BATCH_SIZE', 16))
-    split_number = int(os.environ.get('SPLIT_NUMBER', 2))
+    hash_chunk_size = int(os.environ.get('HASH_CHUNK_SIZE', 2))
     cache_path = os.environ.get('CACHE_PATH', '/mnt/llm_cache')
-    client_gc_interval = int(os.environ.get('CLIENT_GC_INTERVAL', 30 * 60))
+    gc_interval = int(os.environ.get('GC_INTERVAL', 30 * 60))
     ttl = int(os.environ.get('TTL', 30 * 60))
     enable_global_gc = os.environ.get('ENABLE_GLOBAL_GC', False).lower() in ['true', '1']
     global_gc_interval = int(os.environ.get('GLOBAL_GC_INTERVAL', 3 * 60 * 60))
@@ -29,9 +29,9 @@ def start_server(port=8888):
 
     file_cache_config = FileCacheConfig(
         chunk_size = int(batch_size),
-        split_number = int(split_number),
+        hash_chunk_size = int(hash_chunk_size),
         root = cache_path,
-        client_gc_interval = client_gc_interval,
+        gc_interval = gc_interval,
         ttl = ttl,
         enable_global_gc = enable_global_gc,
         global_gc_interval = global_gc_interval,
@@ -39,7 +39,7 @@ def start_server(port=8888):
     )
     cache = KVCache(
         cache_config = file_cache_config,
-        tensor_bytes=kv_tensor.nbytes,  # should be the same as the nbytes of the tensor
+        tensor_nbytes=kv_tensor.nbytes,  # should be the same as the nbytes of the tensor
         cache_capacity=1024,
         layer=int(layer),
     )
@@ -64,7 +64,7 @@ def start_server(port=8888):
         return kv_tensors
 
     # used to hold the query results
-    kv_state_list = []
+    kv_cache_list = []
 
     while True:
         clientsocket, _ = serversocket.accept()
@@ -80,10 +80,10 @@ def start_server(port=8888):
         tokens = tokens.replace('\n', '').split(' ')
         tokens = [int(token) for token in tokens]
 
-        kv_state_list = reserve_kv_tensors(kv_state_list, len(tokens), kv_tensor)
+        kv_cache_list = reserve_kv_tensors(kv_cache_list, len(tokens), kv_tensor)
 
         query_start_time = time.time()
-        matched = cache.query(tokens, kv_state_list)
+        matched = cache.query(tokens, kv_cache_list)
         query_end_time = time.time()
         if matched > 0:
             total_query_time += query_end_time - query_start_time
@@ -92,14 +92,14 @@ def start_server(port=8888):
         total_tokens += len(tokens)
 
         remaining = tokens[matched:]
-        kv_state_list_remaining = [
+        kv_cache_list_remaining = [
             [ (KVTensor(kv_tensor.ctypes.data, kv_tensor.nbytes),
               KVTensor(kv_tensor.ctypes.data, kv_tensor.nbytes))
               for _ in range(layer)
             ] for _ in remaining
         ]
         update_start_time = time.time()
-        updated = cache.update(tokens[:matched], remaining, kv_state_list_remaining)
+        updated = cache.update(tokens[:matched], remaining, kv_cache_list_remaining)
         total_updated_tokens += updated
         update_end_time = time.time()
         if updated > 0:

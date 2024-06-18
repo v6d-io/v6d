@@ -23,8 +23,6 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "boost/algorithm/string/replace.hpp"
-
 #include "common/util/env.h"
 
 namespace vineyard {
@@ -37,7 +35,11 @@ inline std::string ExpandEnvironmentVariables(const std::string& text) {
     std::smatch match;
     while (std::regex_search(text_copy, match, env)) {
       std::string var = read_env(match.str(1).c_str());
-      boost::replace_first(text_copy, match[0].str(), var);
+      const std::string& matched = match[0].str();
+      size_t pos = text_copy.find_first_of(matched);
+      if (pos != std::string::npos) {
+        text_copy.replace(pos, matched.size(), var, 0, std::string::npos);
+      }
     }
     return text_copy;
   } catch (std::exception& e) {

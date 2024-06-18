@@ -24,7 +24,7 @@ limitations under the License.
 using namespace vineyard;  //  NOLINT(build/namespaces)
 
 constexpr int BATCHSIZE = 16;
-constexpr int SPLITNUMBER = 2;
+constexpr int HASH_CHUNK_SIZE = 2;
 constexpr int TOKENLISTSIZE = 100000;
 
 std::vector<int> generate_random_tokens(size_t max_length) {
@@ -49,7 +49,7 @@ void test_with_tokens(IHashAlgorithm* hash_algorithm,
   std::vector<int> tokens = generate_random_tokens(10);
   std::vector<std::string> paths;
   VINEYARD_CHECK_OK(
-      hasher.computePathForTokens(tokens, BATCHSIZE, SPLITNUMBER, paths));
+      hasher.computePathForTokens(tokens, BATCHSIZE, HASH_CHUNK_SIZE, paths));
   VINEYARD_ASSERT(paths.size() == 0);
 
   // test the hash with the tokens more than the batch size
@@ -57,15 +57,15 @@ void test_with_tokens(IHashAlgorithm* hash_algorithm,
   std::vector<int> tokens1 = generate_random_tokens(17);
   std::vector<int> tokens2 = generate_random_tokens(18);
   VINEYARD_CHECK_OK(
-      hasher.computePathForTokens(tokens1, BATCHSIZE, SPLITNUMBER, paths1));
+      hasher.computePathForTokens(tokens1, BATCHSIZE, HASH_CHUNK_SIZE, paths1));
   VINEYARD_CHECK_OK(
-      hasher.computePathForTokens(tokens2, BATCHSIZE, SPLITNUMBER, paths2));
+      hasher.computePathForTokens(tokens2, BATCHSIZE, HASH_CHUNK_SIZE, paths2));
   VINEYARD_ASSERT(paths1.size() == paths1.size());
 
   paths.clear();
   tokens = generate_random_tokens(100);
   VINEYARD_CHECK_OK(
-      hasher.computePathForTokens(tokens, BATCHSIZE, SPLITNUMBER, paths));
+      hasher.computePathForTokens(tokens, BATCHSIZE, HASH_CHUNK_SIZE, paths));
   VINEYARD_ASSERT(paths.size() == size_t(100 / 16));
   LOG(INFO) << "Passed the " << hash_name << " test of tokens";
 }
@@ -79,10 +79,10 @@ void test_accuracy(IHashAlgorithm* hash_algorithm,
   std::vector<std::string> paths2;
   for (int i = 0; i < 100; i++) {
     std::vector<int> tokens = generate_random_tokens(100);
-    VINEYARD_CHECK_OK(
-        hasher.computePathForTokens(tokens, BATCHSIZE, SPLITNUMBER, paths1));
-    VINEYARD_CHECK_OK(
-        hasher.computePathForTokens(tokens, BATCHSIZE, SPLITNUMBER, paths2));
+    VINEYARD_CHECK_OK(hasher.computePathForTokens(tokens, BATCHSIZE,
+                                                  HASH_CHUNK_SIZE, paths1));
+    VINEYARD_CHECK_OK(hasher.computePathForTokens(tokens, BATCHSIZE,
+                                                  HASH_CHUNK_SIZE, paths2));
   }
 
   VINEYARD_ASSERT(paths1.size() == paths2.size());
@@ -119,9 +119,9 @@ void test_hash_conflict() {
     tokens_map[tokens]++;
     token_size += tokens.size();
     VINEYARD_CHECK_OK(murmur_hasher.computePathForTokens(
-        tokens, BATCHSIZE, SPLITNUMBER, murmur_hash_paths));
+        tokens, BATCHSIZE, HASH_CHUNK_SIZE, murmur_hash_paths));
     VINEYARD_CHECK_OK(city_hasher.computePathForTokens(
-        tokens, BATCHSIZE, SPLITNUMBER, city_hash_paths));
+        tokens, BATCHSIZE, HASH_CHUNK_SIZE, city_hash_paths));
   }
 
   for (size_t i = 0; i < murmur_hash_paths.size(); i++) {

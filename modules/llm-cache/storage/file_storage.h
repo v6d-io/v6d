@@ -50,7 +50,7 @@ enum FileOperationType {
 class FileStorage : public IStorage,
                     public std::enable_shared_from_this<FileStorage> {
  private:
-  bool CompareTokenList(const std::vector<int>& tokenList,
+  bool CompareTokenList(const std::vector<int>& tokenList1,
                         const std::vector<int>& tokenList2, size_t length);
 
   virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
@@ -117,7 +117,7 @@ class FileStorage : public IStorage,
 
   Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) override;
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
@@ -125,15 +125,20 @@ class FileStorage : public IStorage,
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) override;
 
   Status Query(const std::vector<int>& tokenList,
-               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched) override;
 
-  Status Query(const std::vector<int>& tokenList, int nextToken,
+  Status Query(const std::vector<int>& prefix, int nextToken,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
+
+  Status Query(const std::vector<int>& prefix,
+               const std::vector<int>& tokenList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+               size_t& matched) override;
 
   void CloseCache() override;
 
@@ -144,11 +149,11 @@ class FileStorage : public IStorage,
   void StartGlobalGCThread() override { this->enableGlobalGC = true; }
 
  protected:
-  size_t tensorBytes;
+  size_t tensorNBytes;
   size_t cacheCapacity;
   int layer;
-  int batchSize;
-  int splitNumber;
+  int chunkSize;
+  int hashChunkSize;
   std::string rootPath;
   std::string tempFileDir;
   std::shared_ptr<IHashAlgorithm> hashAlgorithm;

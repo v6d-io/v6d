@@ -80,11 +80,11 @@ void TestLocalGC() {
   std::shared_ptr<LocalFileStorage> storage =
       std::make_shared<LocalFileStorage>(10, 10, 1, 5, 5, kTempDir, 1, 6, false,
                                          300, 300);
-  storage->Mkdir(kTempDir);
+  VINEYARD_CHECK_OK(storage->Mkdir(kTempDir));
 
-  auto fn = [&paths, storage](int i) -> std::pair<int, Status> {
+  auto fn = [&paths, storage](int i) -> Status {
     CreateFile(paths[i], storage);
-    return std::make_pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(std::min(
@@ -93,11 +93,10 @@ void TestLocalGC() {
     tg.AddTask(fn, i);
   }
 
-  std::vector<std::pair<int, Status>> ss = tg.TakeResults();
-  for (auto& s : ss) {
-    VINEYARD_CHECK_OK(s.second);
+  for (auto& s : tg.TakeResults()) {
+    VINEYARD_CHECK_OK(s);
   }
-  storage->Init();
+  VINEYARD_CHECK_OK(storage->Init());
 
   CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
@@ -117,11 +116,11 @@ void TestGlobalGC() {
   std::shared_ptr<LocalFileStorage> storage =
       std::make_shared<LocalFileStorage>(10, 10, 1, 5, 5, kTempDir, 100, 600,
                                          true, 1, 6);
-  storage->Mkdir(kTempDir);
+  VINEYARD_CHECK_OK(storage->Mkdir(kTempDir));
 
-  auto fn = [&paths, storage](int i) -> std::pair<int, Status> {
+  auto fn = [&paths, storage](int i) -> Status {
     CreateFile(paths[i], storage);
-    return std::make_pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(std::min(
@@ -130,11 +129,10 @@ void TestGlobalGC() {
     tg.AddTask(fn, i);
   }
 
-  std::vector<std::pair<int, Status>> ss = tg.TakeResults();
-  for (auto& s : ss) {
-    VINEYARD_CHECK_OK(s.second);
+  for (auto& s : tg.TakeResults()) {
+    VINEYARD_CHECK_OK(s);
   }
-  storage->Init();
+  VINEYARD_CHECK_OK(storage->Init());
 
   CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
@@ -154,11 +152,11 @@ void TestLocalAndGlobalGC() {
   std::shared_ptr<LocalFileStorage> storage =
       std::make_shared<LocalFileStorage>(10, 10, 1, 5, 5, kTempDir, 1, 6, true,
                                          1, 10);
-  storage->Mkdir(kTempDir);
+  VINEYARD_CHECK_OK(storage->Mkdir(kTempDir));
 
-  auto fn = [&paths, storage](int i) -> std::pair<int, Status> {
+  auto fn = [&paths, storage](int i) -> Status {
     CreateFile(paths[i], storage);
-    return std::make_pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(std::min(
@@ -167,9 +165,8 @@ void TestLocalAndGlobalGC() {
     tg.AddTask(fn, i);
   }
 
-  std::vector<std::pair<int, Status>> ss1 = tg.TakeResults();
-  for (auto& s : ss1) {
-    VINEYARD_CHECK_OK(s.second);
+  for (auto& s : tg.TakeResults()) {
+    VINEYARD_CHECK_OK(s);
   }
   sleep(2);
 
@@ -177,12 +174,11 @@ void TestLocalAndGlobalGC() {
     tg.AddTask(fn, i);
   }
 
-  std::vector<std::pair<int, Status>> ss2 = tg.TakeResults();
-  for (auto& s : ss2) {
-    VINEYARD_CHECK_OK(s.second);
+  for (auto& s : tg.TakeResults()) {
+    VINEYARD_CHECK_OK(s);
   }
 
-  storage->Init();
+  VINEYARD_CHECK_OK(storage->Init());
 
   CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
@@ -202,11 +198,11 @@ void TestCleanAllFiles() {
   std::shared_ptr<LocalFileStorage> storage =
       std::make_shared<LocalFileStorage>(10, 10, 1, 5, 5, kTempDir, 1, 6, true,
                                          1, 10);
-  storage->Mkdir(kTempDir);
+  VINEYARD_CHECK_OK(storage->Mkdir(kTempDir));
 
-  auto fn = [&paths, storage](int i) -> std::pair<int, Status> {
+  auto fn = [&paths, storage](int i) -> Status {
     CreateFile(paths[i], storage);
-    return std::make_pair(i, Status::OK());
+    return Status::OK();
   };
 
   parallel::ThreadGroup tg(std::min(
@@ -215,15 +211,14 @@ void TestCleanAllFiles() {
     tg.AddTask(fn, i);
   }
 
-  std::vector<std::pair<int, Status>> ss = tg.TakeResults();
-  for (auto& s : ss) {
-    VINEYARD_CHECK_OK(s.second);
+  for (auto& s : tg.TakeResults()) {
+    VINEYARD_CHECK_OK(s);
   }
 
   storage = std::make_shared<LocalFileStorage>(10, 10, 1, 5, 5, kTempDir, 1, 1,
                                                true, 1, 1);
 
-  storage->Init();
+  VINEYARD_CHECK_OK(storage->Init());
   sleep(2);
   CheckFilesNotExist(kTempDir);
   storage->CloseCache();

@@ -35,9 +35,9 @@ spec:
           value: "96"
         - name: BATCH_SIZE
           value: "16"
-        - name: SPLIT_NUMBER
+        - name: HASH_CHUNK_SIZE
           value: "2"
-        - name: CLIENT_GC_INTERVAL
+        - name: GC_INTERVAL
           value: "1800"
         - name: TTL
           value: "1800"

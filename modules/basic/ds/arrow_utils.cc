@@ -23,9 +23,6 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/compute/api.h"
 #include "arrow/ipc/api.h"  // IWYU pragma: keep
-#include "boost/algorithm/string/classification.hpp"
-#include "boost/algorithm/string/join.hpp"
-#include "boost/algorithm/string/split.hpp"
 
 #include "client/ds/blob.h"
 #include "client/ds/remote_blob.h"
@@ -33,6 +30,41 @@ limitations under the License.
 #include "common/util/typename.h"
 
 namespace vineyard {
+
+namespace detail {
+
+static inline std::string string_join(std::vector<std::string> const& srcs,
+                                      std::string const& sep) {
+  std::stringstream ss;
+  if (!srcs.empty()) {
+    ss << srcs[0];
+    for (size_t i = 1; i < srcs.size(); ++i) {
+      ss << sep << srcs[i];
+    }
+  }
+  return ss.str();
+}
+
+static inline void string_split(std::vector<std::string>& rs,
+                                std::string const& content,
+                                std::string const& patterns) {
+  size_t i = 0, k = 0;
+  while (i < content.size()) {
+    while (k < content.size()) {
+      char c = content[k];
+      if (patterns.find_first_of(c) != std::string::npos) {
+        break;
+      }
+      k += 1;
+    }
+    if (i < k) {
+      rs.emplace_back(content.substr(i, k - i));
+    }
+    i = k;
+  }
+}
+
+}  // namespace detail
 
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   switch (type) {
@@ -1439,7 +1471,7 @@ Status ConsolidateColumns(const std::shared_ptr<arrow::Table>& table,
                           std::string const& consolidated_column_name,
                           std::shared_ptr<arrow::Table>& out) {
   // check the types of columns that will be consolidated
-  std::string column_names_joined = boost::algorithm::join(column_names, ",");
+  std::string column_names_joined = detail::string_join(column_names, ",");
   auto schema = table->schema();
   std::shared_ptr<arrow::DataType> dtype = nullptr;
   std::vector<int> column_indexes;
@@ -1514,8 +1546,7 @@ Status ConsolidateColumns(const std::shared_ptr<arrow::Table>& table,
   }
 
   std::vector<std::string> consolidate_columns_vec;
-  boost::algorithm::split(consolidate_columns_vec, consolidate_columns,
-                          boost::is_any_of(",;"));
+  detail::string_split(consolidate_columns_vec, consolidate_columns, ",;");
   return ConsolidateColumns(table, consolidate_columns_vec, "", out);
 }
 
