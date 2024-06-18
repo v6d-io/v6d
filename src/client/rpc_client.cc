@@ -167,9 +167,10 @@ Status RPCClient::GetMetaData(const std::vector<ObjectID>& ids,
   return Status::OK();
 }
 
-std::shared_ptr<Object> RPCClient::GetObject(const ObjectID id) {
+std::shared_ptr<Object> RPCClient::GetObject(const ObjectID id,
+                                             const bool sync_remote) {
   ObjectMeta meta;
-  RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, true));
+  RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, sync_remote));
   RETURN_NULL_ON_ASSERT(!meta.MetaData().empty());
   auto object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
@@ -179,10 +180,10 @@ std::shared_ptr<Object> RPCClient::GetObject(const ObjectID id) {
   return object;
 }
 
-Status RPCClient::GetObject(const ObjectID id,
-                            std::shared_ptr<Object>& object) {
+Status RPCClient::GetObject(const ObjectID id, std::shared_ptr<Object>& object,
+                            const bool sync_remote) {
   ObjectMeta meta;
-  RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
+  RETURN_ON_ERROR(this->GetMetaData(id, meta, sync_remote));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
 
   std::map<ObjectID, std::shared_ptr<RemoteBlob>> remote_blobs;
@@ -206,10 +207,10 @@ Status RPCClient::GetObject(const ObjectID id,
 }
 
 std::vector<std::shared_ptr<Object>> RPCClient::GetObjects(
-    const std::vector<ObjectID>& ids) {
+    const std::vector<ObjectID>& ids, const bool sync_remote) {
   std::vector<std::shared_ptr<Object>> objects(ids.size());
   std::vector<ObjectMeta> metas;
-  if (!this->GetMetaData(ids, metas, true).ok()) {
+  if (!this->GetMetaData(ids, metas, sync_remote).ok()) {
     for (size_t index = 0; index < ids.size(); ++index) {
       objects[index] = nullptr;
     }

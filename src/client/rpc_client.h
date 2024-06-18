@@ -165,12 +165,15 @@ class RPCClient final : public ClientBase {
    * those fields will trigger an `std::runtime_error`.
    *
    * @param id The object id to get.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific object. Default is false.
    *
    * @return A std::shared_ptr<Object> that can be safely cast to the underlying
    * concrete object type. When the object doesn't exists an std::runtime_error
    * exception will be raised.
    */
-  std::shared_ptr<Object> GetObject(const ObjectID id);
+  std::shared_ptr<Object> GetObject(const ObjectID id,
+                                    const bool sync_remote = false);
 
   /**
    * @brief Get an object from vineyard. The ObjectFactory will be used to
@@ -178,35 +181,43 @@ class RPCClient final : public ClientBase {
    *
    * @param id The object id to get.
    * @param object The result object will be set in parameter `object`.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific object. Default is false.
    *
    * @return When errors occur during the request, this method won't throw
    * exceptions, rather, it results a status to represents the error.
    */
-  Status GetObject(const ObjectID id, std::shared_ptr<Object>& object);
+  Status GetObject(const ObjectID id, std::shared_ptr<Object>& object,
+                   const bool sync_remote = false);
 
   /**
    * @brief Get multiple objects from vineyard.
    *
    * @param ids The object IDs to get.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific object. Default is false.
    *
    * @return A list of objects.
    */
   std::vector<std::shared_ptr<Object>> GetObjects(
-      const std::vector<ObjectID>& ids);
+      const std::vector<ObjectID>& ids, const bool sync_remote = false);
 
   /**
    * @brief Get an object from vineyard. The type parameter `T` will be used to
    * resolve the constructor of the object.
    *
    * @param id The object id to get.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific object. Default is false.
    *
    * @return A std::shared_ptr<Object> that can be safely cast to the underlying
    * concrete object type. When the object doesn't exists an std::runtime_error
    * exception will be raised.
    */
   template <typename T>
-  std::shared_ptr<T> GetObject(const ObjectID id) {
-    return std::dynamic_pointer_cast<T>(GetObject(id));
+  std::shared_ptr<T> GetObject(const ObjectID id,
+                               const bool sync_remote = false) {
+    return std::dynamic_pointer_cast<T>(GetObject(id, sync_remote));
   }
 
   /**
@@ -224,14 +235,17 @@ class RPCClient final : public ClientBase {
    *
    * @param id The object id to get.
    * @param object The result object will be set in parameter `object`.
+   * @param sync_remote Whether to trigger an immediate remote metadata
+   *        synchronization before get specific object. Default is false.
    *
    * @return When errors occur during the request, this method won't throw
    * exceptions, rather, it results a status to represents the error.
    */
   template <typename T>
-  Status GetObject(const ObjectID id, std::shared_ptr<T>& object) {
+  Status GetObject(const ObjectID id, std::shared_ptr<T>& object,
+                   const bool sync_remote = false) {
     std::shared_ptr<Object> _object;
-    RETURN_ON_ERROR(GetObject(id, _object));
+    RETURN_ON_ERROR(GetObject(id, _object, sync_remote));
     object = std::dynamic_pointer_cast<T>(_object);
     if (object == nullptr) {
       return Status::ObjectTypeError(type_name<T>(),

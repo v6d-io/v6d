@@ -635,7 +635,7 @@ class Client:
         meta = self.get_meta(object_id, sync_remote=True)
 
         if self.has_ipc_client() and enable_migrate:
-            return self._ipc_client.get_object(object_id, fetch=True)
+            return self._ipc_client.get_object(object_id, fetch=True, sync_remote=False)
 
         blobs = _traverse_blobs(meta)
 

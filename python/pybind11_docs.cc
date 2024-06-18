@@ -948,7 +948,7 @@ See Also:
 )doc";
 
 const char* IPCClient_get_object = R"doc(
-.. method:: get_object(object_id: ObjectID) -> Object
+.. method:: get_object(object_id: ObjectID, fetch: bool, sync_remote: bool) -> Object
     :noindex:
 
 Get object from vineyard.
@@ -956,19 +956,27 @@ Get object from vineyard.
 Parameters:
     object_id: ObjectID
         The object id to get.
+    fetch: bool
+        whether to trigger the migration of the object from the remote vineyardd
+        to the connected one.
+    sync_remote: bool
+        whether to synchronize the metadata from the metadata service.
 
 Returns:
     Object
 )doc";
 
 const char* IPCClient_get_objects = R"doc(
-.. method:: get_objects(object_ids: List[ObjectID]) -> List[Object]
+.. method:: get_objects(object_ids: List[ObjectID], sync_remote: bool) -> List[Object]
     :noindex:
 
 Get multiple objects from vineyard.
 
 Parameters:
     object_ids: List[ObjectID]
+    sync_remote: bool
+        whether to synchronize the metadata from the metadata service.
+
 
 Returns:
     List[Object]
@@ -1103,7 +1111,7 @@ RPC client that connects to vineyard instance's RPC endpoints.
 )doc";
 
 const char* RPCClient_get_object = R"doc(
-.. method:: get_object(object_id: ObjectID) -> Object
+.. method:: get_object(object_id: ObjectID, sync_remote: bool) -> Object
     :noindex:
 
 Get object from vineyard.
@@ -1111,19 +1119,23 @@ Get object from vineyard.
 Parameters:
     object_id: ObjectID
         The object id to get.
+    sync_remote: bool
+        whether to synchronize the metadata from the metadata service.
 
 Returns:
     Object
 )doc";
 
 const char* RPCClient_get_objects = R"doc(
-.. method:: get_objects(object_ids: List[ObjectID]) -> List[Object]
+.. method:: get_objects(object_ids: List[ObjectID], sync_remote: bool) -> List[Object]
     :noindex:
 
 Get multiple objects from vineyard.
 
 Parameters:
     object_ids: List[ObjectID]
+    sync_remote: bool
+        whether to synchronize the metadata from the metadata service.
 
 Returns:
     List[Object]

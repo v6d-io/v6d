@@ -672,23 +672,27 @@ void bind_client(py::module& mod) {
             // receive the status to throw a more precise exception when failed.
             std::shared_ptr<Object> object;
             if (fetch) {
-              throw_on_error(self->FetchAndGetObject(object_id, object));
+              throw_on_error(
+                  self->FetchAndGetObject(object_id, object, sync_remote));
             } else {
-              throw_on_error(self->GetObject(object_id, object));
+              throw_on_error(self->GetObject(object_id, object, sync_remote));
             }
             return object;
           },
-          "object_id"_a, py::arg("fetch") = false, doc::IPCClient_get_object)
+          "object_id"_a, py::arg("fetch") = false,
+          py::arg("sync_remote") = true, doc::IPCClient_get_object)
       .def(
           "get_objects",
-          [](Client* self, const std::vector<ObjectIDWrapper>& object_ids) {
+          [](Client* self, const std::vector<ObjectIDWrapper>& object_ids,
+             bool const sync_remote) {
             std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
             for (size_t idx = 0; idx < object_ids.size(); ++idx) {
               unwrapped_object_ids[idx] = object_ids[idx];
             }
-            return self->GetObjects(unwrapped_object_ids);
+            return self->GetObjects(unwrapped_object_ids, sync_remote);
           },
-          "object_ids"_a, doc::IPCClient_get_objects)
+          "object_ids"_a, py::arg("sync_remote") = true,
+          doc::IPCClient_get_objects)
       .def(
           "get_meta",
           [](Client* self, ObjectIDWrapper const& object_id,
@@ -881,23 +885,27 @@ void bind_client(py::module& mod) {
           doc::RPCClient_get_remote_blobs)
       .def(
           "get_object",
-          [](RPCClient* self, const ObjectIDWrapper object_id) {
+          [](RPCClient* self, const ObjectIDWrapper object_id,
+             bool const sync_remote) {
             // receive the status to throw a more precise exception when failed.
             std::shared_ptr<Object> object;
-            throw_on_error(self->GetObject(object_id, object));
+            throw_on_error(self->GetObject(object_id, object, sync_remote));
             return object;
           },
-          "object_id"_a, doc::RPCClient_get_object)
+          "object_id"_a, py::arg("sync_remote") = true,
+          doc::RPCClient_get_object)
       .def(
           "get_objects",
-          [](RPCClient* self, std::vector<ObjectIDWrapper> const& object_ids) {
+          [](RPCClient* self, std::vector<ObjectIDWrapper> const& object_ids,
+             bool const sync_remote) {
             std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
             for (size_t idx = 0; idx < object_ids.size(); ++idx) {
               unwrapped_object_ids[idx] = object_ids[idx];
             }
-            return self->GetObjects(unwrapped_object_ids);
+            return self->GetObjects(unwrapped_object_ids, sync_remote);
           },
-          "object_ids"_a, doc::RPCClient_get_objects)
+          "object_ids"_a, py::arg("sync_remote") = true,
+          doc::RPCClient_get_objects)
       .def(
           "get_meta",
           [](RPCClient* self, ObjectIDWrapper const& object_id,
