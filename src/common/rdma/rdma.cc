@@ -15,6 +15,8 @@ limitations under the License.
 
 #ifdef VINEYARD_WITH_RDMA
 
+#include <sys/mman.h>
+
 #include "common/rdma/rdma.h"
 #include "common/rdma/util.h"
 
@@ -22,39 +24,53 @@ namespace vineyard {
 
 size_t IRDMA::max_register_size_ = 0;
 constexpr size_t min_l_size = 1;
-constexpr size_t max_r_size = 8;
+constexpr size_t max_r_size = 64;
 
-size_t IRDMA::GetMaxRegisterSizeImpl(fid_domain* domain) {
-  size_t l_size = min_l_size;
-  size_t r_size = max_r_size;
+size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_size, fid_domain* domain) {
+  size_t l_size = min_size == 0 ? min_l_size : min_size;
+  size_t r_size = max_size == 0 ? max_r_size : max_size;
   fid_mr* mr = nullptr;
   void* mr_desc = nullptr;
   uint64_t rkey = 0;
-  void* buffer = nullptr;
+  void* buffer = addr;
   size_t size_ = (r_size + l_size) / 2;
-  size_t max_size = 0;
+  size_t register_size = 0;
+  size_t max_buffer_size = r_size * 1024 * 1024 * 1024;
+
+  if (addr == nullptr) {
+    // buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    // if (buffer == MAP_FAILED) {
+    //   return register_size;
+    // }
+    buffer = malloc(max_buffer_size);
+    if (buffer == nullptr) {
+      return register_size;
+    }
+  }
 
   while (l_size < r_size - 1) {
     size_t buffer_size = size_ * 1024 * 1024 * 1024;
-    buffer = malloc(buffer_size);
-    if (buffer == nullptr) {
-      return max_size;
-    }
-    if (RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc).ok()) {
+    Status status = RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
+    if (status.ok()) {
       LOG(INFO) << "Register memory size: " << buffer_size / 1024 / 1024 / 1024
                 << "GB success";
-      max_size = buffer_size;
-      CloseResource(mr, "memory region");
-      free(buffer);
+      register_size = buffer_size;
+      VINEYARD_CHECK_OK(CloseResource(mr, "memory region"));
       l_size = size_;
       size_ = (size_ + r_size) / 2;
     } else {
-      free(buffer);
+      LOG(INFO) << "Register failed:" << status.message();
       r_size = size_;
       size_ = (size_ + l_size) / 2;
     }
   }
-  return max_size;
+
+  if (addr == nullptr) {
+    // munmap(buffer, max_buffer_size);
+    free(buffer);
+  }
+
+  return register_size;
 }
 
 Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
@@ -72,6 +88,10 @@ Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
   LOG(INFO) << "Try to register memory region: size=" << size;
 
   int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
+  if (ret == -FI_EIO) {
+    return Status::IOError("Failed to register memory region:" +
+                           std::to_string(ret));
+  }
   CHECK_ERROR(!ret, "Failed to register memory region:" + std::to_string(ret));
 
   mr_desc = fi_mr_desc(*mr);

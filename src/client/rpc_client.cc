@@ -211,11 +211,11 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
 
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
                                             static_cast<int>(rdma_port)));
-  max_reg_size = rdma_client_->GetClientMaxRegisterSize();
-  if (max_reg_size == 0) {
+  max_register_size = rdma_client_->GetClientMaxRegisterSize();
+  if (max_register_size == 0) {
     return Status::Invalid("Failed to get max register size.");
   }
-  std::cout << "Max register size: " << max_reg_size / 1024 / 1024 / 1024
+  std::cout << "Max register size: " << max_register_size / 1024 / 1024 / 1024
             << " GB." << std::endl;
   std::cout << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port
             << "..." << std::endl;
@@ -541,28 +541,43 @@ Status RPCClient::CreateRemoteBlob(
     char* local_blob_data = buffer->data();
 
     do {
-      size_t request_bytes = std::min(remain_blob_bytes, max_reg_size);
       size_t blob_data_offset = buffer->size() - remain_blob_bytes;
       void* remote_blob_data = payload.pointer;
-      size_t send_bytes = 0;
 
       // Register mem
       RegisterMemInfo local_info;
       local_info.address =
           reinterpret_cast<uint64_t>(buffer->data()) + blob_data_offset;
-      local_info.size = request_bytes;
-      RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
+      local_info.size = std::min(remain_blob_bytes, max_register_size);
+      Status status;
+      while (true) {
+        status = rdma_client_->RegisterMemory(local_info);
+        if (status.ok()) {
+          break;
+        }
+        if (status.IsIOError()) {
+          // probe the max register size again
+          LOG(INFO) << "Probe the max register size again.";
+          max_register_size = rdma_client_->GetClientMaxRegisterSize();
+          if (max_register_size == 0) {
+            return Status::Invalid("Failed to get max register size.");
+          }
+          local_info.size = std::min(remain_blob_bytes, max_register_size);
+        } else {
+          return status;
+        }
+      }
 
       // Request mem info
       RegisterMemInfo remote_info;
       remote_info.address =
           reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-      remote_info.size = request_bytes;
+      remote_info.size = local_info.size;
       std::cout << "Request remote address: "
                 << reinterpret_cast<void*>(remote_info.address)
                 << ", size: " << remote_info.size << std::endl;
       RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
-      send_bytes = remote_info.size;
+      size_t send_bytes = remote_info.size;
 
       // Write data
       size_t remain_bytes = send_bytes;
@@ -663,28 +678,43 @@ Status RPCClient::CreateRemoteBlobs(
       char* local_blob_data = buffers[i]->data();
 
       do {
-        size_t request_bytes = std::min(remain_blob_bytes, max_reg_size);
         size_t blob_data_offset = buffers[i]->size() - remain_blob_bytes;
         void* remote_blob_data = payloads[i].pointer;
-        size_t send_bytes = 0;
 
         // Register mem
         RegisterMemInfo local_info;
         local_info.address =
             reinterpret_cast<uint64_t>(buffers[i]->data()) + blob_data_offset;
-        local_info.size = request_bytes;
-        RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
+        local_info.size = std::min(remain_blob_bytes, max_register_size);
+        Status status;
+        while (true) {
+          status = rdma_client_->RegisterMemory(local_info);
+          if (status.ok()) {
+            break;
+          }
+          if (status.IsIOError()) {
+            // probe the max register size again
+            LOG(INFO) << "Probe the max register size again.";
+            max_register_size = rdma_client_->GetClientMaxRegisterSize();
+            if (max_register_size == 0) {
+              return Status::Invalid("Failed to get max register size.");
+            }
+            local_info.size = std::min(remain_blob_bytes, max_register_size);
+          } else {
+            return status;
+          }
+        }
 
         // Request mem info
         RegisterMemInfo remote_info;
         remote_info.address =
             reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-        remote_info.size = request_bytes;
+        remote_info.size = local_info.size;
         std::cout << "Request remote address: "
                   << reinterpret_cast<void*>(remote_info.address)
                   << ", size: " << remote_info.size << std::endl;
         RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
-        send_bytes = remote_info.size;
+        size_t send_bytes = remote_info.size;
 
         // Write data
         size_t remain_bytes = send_bytes;
@@ -802,28 +832,44 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
     char* local_blob_data = buffer->mutable_data();
 
     do {
-      size_t request_bytes = std::min(remain_blob_bytes, max_reg_size);
       size_t blob_data_offset = buffer->size() - remain_blob_bytes;
       void* remote_blob_data = payloads[0].pointer;
       size_t receive_bytes = 0;
-
-      // Request mem info
-      RegisterMemInfo remote_info;
-      remote_info.address =
-          reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-      remote_info.size = request_bytes;
-      std::cout << "Request remote address: "
-                << reinterpret_cast<void*>(remote_info.address)
-                << ", size: " << remote_info.size << std::endl;
-      RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
-      receive_bytes = remote_info.size;
 
       // Register mem
       RegisterMemInfo local_info;
       local_info.address =
           reinterpret_cast<uint64_t>(buffer->mutable_data()) + blob_data_offset;
-      local_info.size = receive_bytes;
-      RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
+      local_info.size = std::min(remain_blob_bytes, max_register_size);;
+      Status status;
+      while (true) {
+        status = rdma_client_->RegisterMemory(local_info);
+        if (status.ok()) {
+          break;
+        }
+        if (status.IsIOError()) {
+          // probe the max register size again
+          LOG(INFO) << "Probe the max register size again.";
+          max_register_size = rdma_client_->GetClientMaxRegisterSize();
+          if (max_register_size == 0) {
+            return Status::Invalid("Failed to get max register size.");
+          }
+          local_info.size = std::min(remain_blob_bytes, max_register_size);
+        } else {
+          return status;
+        }
+      }
+
+      // Request mem info
+      RegisterMemInfo remote_info;
+      remote_info.address =
+          reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
+      remote_info.size = local_info.size;
+      std::cout << "Request remote address: "
+                << reinterpret_cast<void*>(remote_info.address)
+                << ", size: " << remote_info.size << std::endl;
+      RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+      receive_bytes = remote_info.size;
 
       // Write data
       size_t remain_bytes = receive_bytes;
@@ -917,29 +963,44 @@ Status RPCClient::GetRemoteBlobs(
       char* local_blob_data = remote_blob->mutable_data();
 
       do {
-        size_t request_bytes = std::min(remain_blob_bytes, max_reg_size);
         size_t blob_data_offset = remote_blob->size() - remain_blob_bytes;
         void* remote_blob_data = payload.pointer;
-        size_t receive_bytes = 0;
-
-        // Request mem info
-        RegisterMemInfo remote_info;
-        remote_info.address =
-            reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-        remote_info.size = request_bytes;
-        std::cout << "Request remote address: "
-                  << reinterpret_cast<void*>(remote_info.address)
-                  << ", size: " << remote_info.size << std::endl;
-        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
-        receive_bytes = remote_info.size;
 
         // Register mem
         RegisterMemInfo local_info;
         local_info.address =
             reinterpret_cast<uint64_t>(remote_blob->mutable_data()) +
             blob_data_offset;
-        local_info.size = receive_bytes;
-        RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
+        local_info.size = std::min(remain_blob_bytes, max_register_size);
+        Status status;
+        while (true) {
+          status = rdma_client_->RegisterMemory(local_info);
+          if (status.ok()) {
+            break;
+          }
+          if (status.IsIOError()) {
+            // probe the max register size again
+            LOG(INFO) << "Probe the max register size again.";
+            max_register_size = rdma_client_->GetClientMaxRegisterSize();
+            if (max_register_size == 0) {
+              return Status::Invalid("Failed to get max register size.");
+            }
+            local_info.size = std::min(remain_blob_bytes, max_register_size);
+          } else {
+            return status;
+          }
+        }
+
+        // Request mem info
+        RegisterMemInfo remote_info;
+        remote_info.address =
+            reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
+        remote_info.size = local_info.size;
+        std::cout << "Request remote address: "
+                  << reinterpret_cast<void*>(remote_info.address)
+                  << ", size: " << remote_info.size << std::endl;
+        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        size_t receive_bytes = remote_info.size;
 
         // Read data
         size_t remain_bytes = receive_bytes;

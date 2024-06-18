@@ -77,7 +77,9 @@ Status RPCServer::InitRDMA() {
 
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
   if (status.ok()) {
-    max_register_size = rdma_server_->GetServerMaxRegisterSize();
+    void *pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
+    size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
+    max_register_size = rdma_server_->GetServerMaxRegisterSize(pointer, 1, size / 1024 / 1024 / 1024);
     if (max_register_size == 0) {
       return Status::Invalid("Get max register size failed!");
     }
@@ -217,7 +219,6 @@ void RPCServer::doRDMARecv() {
         RegisterMemInfo remote_reqeust_mem_info;
         remote_reqeust_mem_info.address =
             recv_msg->remoteMemInfo.remote_address;
-        // remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
         remote_reqeust_mem_info.size =
             std::min(recv_msg->remoteMemInfo.len, max_register_size);
         LOG(INFO) << "Receive remote request address: "
@@ -225,8 +226,48 @@ void RPCServer::doRDMARecv() {
                   << " size: " << remote_reqeust_mem_info.size;
 
         // Register mem
-        VINEYARD_CHECK_OK(
-            rdma_server_->RegisterMemory(remote_reqeust_mem_info));
+        Status status;
+        while (true) {
+          status = rdma_server_->RegisterMemory(remote_reqeust_mem_info);
+          if (status.ok()) {
+            break;
+          }
+          if (status.IsIOError()) {
+            // probe the max register size again
+            LOG(INFO) << "Probe the max register size again.";
+            void *pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
+            size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
+            max_register_size = rdma_server_->GetServerMaxRegisterSize(pointer, 1, size / 1024 / 1024 / 1024);
+            if (max_register_size == 0) {
+              break;
+            }
+            remote_reqeust_mem_info.size = std::min(recv_msg->remoteMemInfo.len, max_register_size);
+          } else {
+            break;
+          }
+        }
+        if (!status.ok()) {
+          LOG(ERROR) << "Failed to register mem.";
+          void* msg = nullptr;
+          rdma_server_->GetTXFreeMsgBuffer(msg);
+          VineyardMsg* send_msg = reinterpret_cast<VineyardMsg*>(msg);
+          send_msg->type = VINEYARD_MSG_REQUEST_MEM;
+          send_msg->remoteMemInfo.remote_address = 0;
+          send_msg->remoteMemInfo.key = -1;
+          send_msg->remoteMemInfo.len = 0;
+
+          VineyardSendContext* send_context = new VineyardSendContext();
+          memset(&send_context->attr, 0, sizeof(send_context->attr));
+          send_context->attr.msg_buffer = msg;
+          rdma_server_->Send(recv_context->rdma_conn_id,
+                              recv_context->attr.msg_buffer,
+                              sizeof(VineyardMsg), recv_context);
+          rdma_server_->Recv(recv_context->rdma_conn_id,
+                            reinterpret_cast<void*>(recv_msg),
+                            sizeof(VineyardMsg), context);
+          continue;
+        }
+
         LOG(INFO) << "Register memory"
                   << " address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)

@@ -212,8 +212,8 @@ Status RDMAClient::Write(void* buf, size_t size, uint64_t remote_address,
                       mr_desc, ctx);
 }
 
-size_t RDMAClient::GetClientMaxRegisterSize() {
-  return IRDMA::GetMaxRegisterSizeImpl(domain);
+size_t RDMAClient::GetClientMaxRegisterSize(void* addr, size_t min_size, size_t max_size) {
+  return IRDMA::GetMaxRegisterSizeImpl(addr, min_size, max_size, domain);
 }
 
 Status RDMAClient::Close() {

@@ -416,27 +416,42 @@ Status RemoteClient::migrateBuffers(
       uint8_t* local_blob_data = results[i]->pointer;
 
       do {
-        size_t request_bytes = std::min(remain_blob_bytes, max_register_size);
         size_t blob_data_offset = payloads[i].data_size - remain_blob_bytes;
         void* server_pointer = payloads[i].pointer;
-        size_t receive_size = 0;
-
-        // Exchange mem info
-        RegisterMemInfo remote_info;
-        remote_info.address = (uint64_t) server_pointer + blob_data_offset;
-        remote_info.size = request_bytes;
-        LOG(INFO) << "Request remote address: "
-                  << reinterpret_cast<void*>(remote_info.address)
-                  << ", size: " << remote_info.size;
-        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
-        receive_size = remote_info.size;
 
         // Register mem
         RegisterMemInfo local_info;
         local_info.address =
             reinterpret_cast<uint64_t>(local_blob_data + blob_data_offset);
-        local_info.size = receive_size;
-        RETURN_ON_ERROR(rdma_client_->RegisterMemory(local_info));
+        local_info.size = std::min(remain_blob_bytes, max_register_size);
+        Status status;
+        while (true) {
+          status = rdma_client_->RegisterMemory(local_info);
+          if (status.ok()) {
+            break;
+          }
+          if (status.IsIOError()) {
+            // probe the max register size again
+            LOG(INFO) << "Probe the max register size again.";
+            max_register_size = rdma_client_->GetClientMaxRegisterSize();
+            if (max_register_size == 0) {
+              return Status::Invalid("Failed to get max register size.");
+            }
+            local_info.size = std::min(remain_blob_bytes, max_register_size);
+          } else {
+            return status;
+          }
+        }
+
+        // Exchange mem info
+        RegisterMemInfo remote_info;
+        remote_info.address = (uint64_t) server_pointer + blob_data_offset;
+        remote_info.size = local_info.size;
+        LOG(INFO) << "Request remote address: "
+                  << reinterpret_cast<void*>(remote_info.address)
+                  << ", size: " << remote_info.size;
+        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        size_t receive_size = remote_info.size;
 
         // Read data
         size_t remain_bytes =
