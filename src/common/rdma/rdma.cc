@@ -38,12 +38,8 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_siz
   size_t max_buffer_size = r_size * 1024 * 1024 * 1024;
 
   if (addr == nullptr) {
-    // buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    // if (buffer == MAP_FAILED) {
-    //   return register_size;
-    // }
-    buffer = malloc(max_buffer_size);
-    if (buffer == nullptr) {
+    buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (buffer == MAP_FAILED) {
       return register_size;
     }
   }
@@ -66,11 +62,14 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size, size_t max_siz
   }
 
   if (addr == nullptr) {
-    // munmap(buffer, max_buffer_size);
-    free(buffer);
+    munmap(buffer, max_buffer_size);
   }
 
-  return register_size;
+  /**
+   * The memory registered by the rpc client may be not page aligned. So we need to
+   * subtract the page size from the registered memory size to avoid the memory
+   */
+  return register_size - 4096;
 }
 
 Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,

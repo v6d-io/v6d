@@ -298,6 +298,7 @@ Status RPCClient::StopRDMA() {
 
   RETURN_ON_ERROR(rdma_client_->Stop());
   RETURN_ON_ERROR(rdma_client_->Close());
+  RETURN_ON_ERROR(RDMAClientCreator::Release(rdma_endpoint_));
 
 #endif
 

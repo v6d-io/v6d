@@ -65,6 +65,7 @@ Status RemoteClient::StopRDMA() {
 
   RETURN_ON_ERROR(rdma_client_->Stop());
   RETURN_ON_ERROR(rdma_client_->Close());
+  RETURN_ON_ERROR(RDMAClientCreator::Release(rdma_endpoint_));
 #endif
   return Status::OK();
 }
@@ -96,6 +97,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 
   Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
   if (status.ok()) {
+    rdma_endpoint_ = rdma_host + ":" + rdma_port;
     VLOG(100) << "Connect to RDMA server successfully. RDMA host:" << rdma_host
               << ", port:" << rdma_port;
   } else {
