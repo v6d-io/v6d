@@ -515,14 +515,14 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
   if (decompress) {
     decompressor = std::make_shared<Decompressor>();
   }
-  struct State : public std::enable_shared_from_this<State> {
+  struct RemoteState : public std::enable_shared_from_this<RemoteState> {
     std::vector<std::shared_ptr<Payload>> objects;
     std::shared_ptr<Decompressor> decompressor;
     callback_t<> callback_after_finish;
     std::queue<std::pair<size_t, size_t>> pending_payloads;
 
-    State(const std::vector<std::shared_ptr<Payload>>& objs, callback_t<>&& cb,
-          std::shared_ptr<Decompressor> decomp)
+    RemoteState(const std::vector<std::shared_ptr<Payload>>& objs,
+                callback_t<>&& cb, std::shared_ptr<Decompressor> decomp)
         : objects(objs),
           decompressor(std::move(decomp)),
           callback_after_finish(std::move(cb)) {
@@ -635,8 +635,8 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
     }
   };
 
-  std::make_shared<State>(objects, std::move(callback_after_finish),
-                          std::move(decompressor))
+  std::make_shared<RemoteState>(objects, std::move(callback_after_finish),
+                                std::move(decompressor))
       ->process_next(socket);
 }
 
