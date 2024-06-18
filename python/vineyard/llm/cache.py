@@ -78,7 +78,6 @@ class VineyardCacheConfig:
         """
         import vineyard
 
-        self.socket = socket
         self.block_size = block_size
         self.sync_interval = sync_interval
         self.llm_cache_sync_lock = llm_cache_sync_lock
@@ -91,7 +90,7 @@ class VineyardCacheConfig:
     def __repr__(self):
         return (
             f'VineyardCacheConfig('
-            f'socket={self.socket}, '
+            f'ipc_client={self.ipc_client}, '
             f'block_size={self.block_size}, '
             f'sync_interval={self.sync_interval}, '
             f'llm_cache_sync_lock={self.llm_cache_sync_lock}, '
