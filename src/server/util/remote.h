@@ -90,7 +90,7 @@ void SendRemoteBuffers(asio::generic::stream_protocol::socket& socket,
 
 void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
                           std::vector<std::shared_ptr<Payload>> const& objects,
-                          size_t index, size_t offset, const bool decompress,
+                          const bool decompress,
                           callback_t<> callback_after_finish);
 
 }  // namespace vineyard

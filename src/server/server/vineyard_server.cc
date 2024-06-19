@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "server/server/vineyard_server.h"
 
+#include <future>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -22,6 +23,7 @@ limitations under the License.
 #include <mutex>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gulrak/filesystem.hpp"
@@ -1034,20 +1036,49 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
 
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
+
+          // check if the object is already migrated
+          // also ensure the migration is atomic with the same object_id
+          std::lock_guard<std::mutex> lock(self->migration_mutex_);
+          auto it = self->migrations_.find(object_id);
+          if (it != self->migrations_.end()) {
+            auto& shared_future = it->second;
+            auto migration_result = shared_future.get();
+            if (migration_result.first.ok()) {
+              return callback(migration_result.first, migration_result.second);
+            } else {
+              self->migrations_.erase(object_id);
+            }
+          }
+
+          auto promise_ptr =
+              std::make_shared<std::promise<std::pair<Status, ObjectID>>>();
+          std::shared_future<std::pair<Status, ObjectID>> shared_future =
+              promise_ptr->get_future().share();
+          self->migrations_[object_id] = shared_future;
+
           // push to the async queues
           boost::asio::post(
-              self->GetIOContext(),
-              [self, callback, remote_endpoint, object_id, metadata]() {
+              self->GetIOContext(), [self, callback, remote_endpoint, object_id,
+                                     metadata, promise_ptr]() mutable {
                 auto remote = std::make_shared<RemoteClient>(self);
                 RETURN_ON_ERROR(
                     remote->Connect(remote_endpoint, self->session_id()));
                 return remote->MigrateObject(
                     object_id, metadata,
-                    [self, remote, callback](const Status& status,
-                                             const ObjectID result) {
+                    [self, remote, callback, promise_ptr](
+                        const Status& status, const ObjectID result) {
+                      if (status.ok()) {
+                        promise_ptr->set_value(
+                            std::make_pair(Status::OK(), result));
+                      } else {
+                        promise_ptr->set_value(
+                            std::make_pair(status, InvalidObjectID()));
+                      }
                       return callback(status, result);
                     });
               });
+
           return Status::OK();
         } else {
           VLOG(100) << "Error: " << status.ToString();

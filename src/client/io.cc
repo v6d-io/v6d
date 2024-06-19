@@ -202,7 +202,7 @@ Status recv_bytes(int fd, void* data, size_t length) {
   char* ptr = static_cast<char*>(data);
 
   struct timeval timeout;
-  timeout.tv_sec = 60;
+  timeout.tv_sec = 300;
   timeout.tv_usec = 0;
 
   fd_set readfds;
@@ -214,7 +214,7 @@ Status recv_bytes(int fd, void* data, size_t length) {
       if (errno == EINTR) {
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
-        timeout.tv_sec = 60;
+        timeout.tv_sec = 300;
         timeout.tv_usec = 0;
         continue;
       } else {
