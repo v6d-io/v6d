@@ -183,14 +183,12 @@ Status FileStorage::Update(
 
   size_t upper_bound = 0;
   {
-    std::lock_guard<std::mutex> lock(gcMutex);
     for (size_t i = 0; i < pathList.size(); i++) {
       if (taskResults[i].ok()) {
         upper_bound += 1;
         if (createFileSet.find(this->rootPath + pathList[i]) !=
             createFileSet.end()) {
           TouchFile(this->rootPath + pathList[i]);
-          gcList.push_back(this->rootPath + pathList[i]);
         }
       } else {
         break;
@@ -201,6 +199,13 @@ Status FileStorage::Update(
   for (size_t i = upper_bound; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < upper_bound; i++) {
+      gcList.push_back(this->rootPath + pathList[i]);
+    }
   }
   return Status::OK();
 }
@@ -371,7 +376,6 @@ Status FileStorage::Update(
 
   size_t upper_bound = 0;
   {
-    std::lock_guard<std::mutex> lock(gcMutex);
     for (size_t i = 0; i < pathList.size(); i++) {
       if (taskResults[i].ok()) {
         upper_bound += 1;
@@ -380,7 +384,6 @@ Status FileStorage::Update(
                 createFileSet.end()) {
           // Only this part is created.
           TouchFile(this->rootPath + pathList[i]);
-          gcList.push_back(this->rootPath + pathList[i]);
         }
       } else {
         break;
@@ -393,6 +396,12 @@ Status FileStorage::Update(
   for (size_t i = upper_bound; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
+  }
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < upper_bound; i++) {
+      gcList.push_back(this->rootPath + pathList[i]);
+    }
   }
   return Status::OK();
 }
