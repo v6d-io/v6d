@@ -606,8 +606,12 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
 
       const auto& object = objects[index];
       if (!object || !object->pointer) {
-        VINEYARD_DISCARD(callback_after_finish(
-            Status::IOError("Object or pointer is null")));
+        if (object->data_size > 0) {
+          VINEYARD_DISCARD(callback_after_finish(
+              Status::IOError("Object or pointer is null")));
+          return;
+        }
+        process_next(socket);
         return;
       }
 
