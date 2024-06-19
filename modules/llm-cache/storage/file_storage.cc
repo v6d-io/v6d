@@ -667,19 +667,28 @@ Status FileStorage::DefaultGCFunc() {
        iter != gcList.end();) {
     std::string path = *iter;
     std::chrono::duration<int64_t, std::nano> accessTime(0);
-    RETURN_ON_ERROR(GetFileAccessTime(path, accessTime));
-    VLOG(100) << "GC ttl:" << fileTTL.count();
-    if ((accessTime + fileTTL).count() < nanoseconds_since_epoch.count()) {
-      VLOG(100) << "GC: " << path << " is dead!";
-      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
-      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
-      RETURN_ON_ERROR(Delete(path));
-      iter = gcList.erase(iter);
+    if (!GetFileAccessTime(path, accessTime).ok()) {
+      if (IsFileExist(path)) {
+        // skip this file, wait for next time.
+        iter++;
+      } else {
+        // file may be deleted by global GC thread, remove it from gcList
+        iter = gcList.erase(iter);
+      }
     } else {
-      VLOG(100) << "GC: " << path << " is alive!";
-      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
-      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
-      iter++;
+      VLOG(100) << "GC ttl:" << fileTTL.count();
+      if ((accessTime + fileTTL).count() < nanoseconds_since_epoch.count()) {
+        VLOG(100) << "GC: " << path << " is dead!";
+        VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+        VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+        RETURN_ON_ERROR(Delete(path));
+        iter = gcList.erase(iter);
+      } else {
+        VLOG(100) << "GC: " << path << " is alive!";
+        VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+        VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+        iter++;
+      }
     }
   }
   return Status::OK();
