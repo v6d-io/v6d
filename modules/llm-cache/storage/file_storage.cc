@@ -678,9 +678,11 @@ Status FileStorage::DefaultGCFunc() {
     std::chrono::duration<int64_t, std::nano> accessTime(0);
     if (!GetFileAccessTime(path, accessTime).ok()) {
       if (IsFileExist(path)) {
+        VLOG(100) << "Failed to get file access time: " << path;
         // skip this file, wait for next time.
         iter++;
       } else {
+        VLOG(100) << "Default GC: " << path << " may be deleted by global GC!";
         // file may be deleted by global GC thread, remove it from gcList
         iter = gcList.erase(iter);
       }
@@ -771,6 +773,7 @@ Status FileStorage::GlobalGCFunc() {
           now.time_since_epoch());
   std::vector<std::string> fileList;
   RETURN_ON_ERROR(this->GetFileList(this->rootPath, fileList));
+  VLOG(100) << "Global GC: " << fileList.size() << " files to check";
   for (std::vector<std::string>::iterator iter = fileList.begin();
        iter != fileList.end(); iter++) {
     std::string path = *iter;
