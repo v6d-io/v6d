@@ -38,22 +38,30 @@ RUN cd /work/v6d && \
              -DBUILD_SHARED_LIBS=OFF \
              -DBUILD_VINEYARD_SERVER=OFF \
              -DBUILD_VINEYARD_CLIENT=ON \
-             -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
-             -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
-             -DBUILD_VINEYARD_BASIC=OFF \
+             -DBUILD_VINEYARD_BASIC=ON \
              -DBUILD_VINEYARD_IO=OFF \
              -DBUILD_VINEYARD_GRAPH=OFF \
-             -DBUILD_VINEYARD_MIGRATION=ON \
              -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+             -DBUILD_VINEYARD_LLM_CACHE=ON \
+             -DBUILD_VINEYARD_MIGRATION=ON \
+             -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+             -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
              -DBUILD_VINEYARD_TESTS=OFF \
              -DBUILD_VINEYARD_TESTS_ALL=OFF \
              -DBUILD_VINEYARD_COVERAGE=OFF \
              -DBUILD_VINEYARD_PROFILING=OFF \
              -DCMAKE_BUILD_TYPE=Release \
              -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
+    cd /work/v6d/build && \
+    rm -rf bdist.linux* lib.linux* && \
     make vineyard_client_python -j$(nproc) && \
     cd .. && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
+    cd /work/v6d/build && \
+    rm -rf bdist.linux* lib.linux* && \
+    make vineyard_llm_python -j$(nproc) && \
+    cd .. && \
+    /opt/python/$python/bin/python setup_llm.py bdist_wheel && \
     export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
     for pylibs in /opt/_internal/tools/lib/*; do\
         sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
