@@ -771,21 +771,8 @@ Status VineyardServer::DelData(
                        "Fastpath deletion can only be applied to blobs");
     }
     context_.post([this, memory_trim, ids, callback] {
-      {
-        std::lock_guard<std::mutex> lock_origin(
-            this->migrations_target_to_origin_mutex_);
-        std::lock_guard<std::mutex> lock_target(
-            this->migrations_origin_to_target_mutex_);
-        for (auto const id : ids) {
-          VINEYARD_DISCARD(bulk_store_->OnDelete(id, memory_trim));
-
-          if (this->migrations_target_to_origin_.find(id) !=
-              this->migrations_target_to_origin_.end()) {
-            ObjectID remoteID = this->migrations_target_to_origin_[id];
-            this->migrations_origin_to_target_.erase(remoteID);
-            this->migrations_target_to_origin_.erase(id);
-          }
-        }
+      for (auto const id : ids) {
+        VINEYARD_DISCARD(bulk_store_->OnDelete(id, memory_trim));
       }
       VINEYARD_DISCARD(callback(Status::OK(), ids));
     });
