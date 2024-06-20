@@ -152,8 +152,8 @@ import vineyard
 
 from vineyard.llm import KVCache
 from vineyard.llm import KVTensor
-from vineyard.llm.config import FileCacheConfig
-from vineyard.llm.config import VineyardCacheConfig
+from vineyard.llm.cache import FileCacheConfig
+from vineyard.llm.cache import VineyardCacheConfig
 
 vineyard_cache_config = VineyardCacheConfig(
     socket="/tmp/vineyard_test.sock"
@@ -205,7 +205,7 @@ for _ in range(len(tokens)):
         ]
     )
 
-matched = cache.query(tokens, kv_tensors_to_query)
+matched = cache.query(None, tokens, kv_tensors_to_query)
 kv_tensors_from_cache = kv_tensors_to_query[:matched]
 assert matched == len(tokens)
 
@@ -243,8 +243,8 @@ import vineyard
 
 from vineyard.llm import KVCache
 from vineyard.llm import KVTensor
-from vineyard.llm.config import FileCacheConfig
-from vineyard.llm.config import VineyardCacheConfig
+from vineyard.llm.cache import FileCacheConfig
+from vineyard.llm.cache import VineyardCacheConfig
 
 file_cache_config = FileCacheConfig(
     chunk_size=2,
@@ -299,7 +299,7 @@ for _ in range(len(tokens)):
             for _ in range(cache.layer)
         ]
     )
-matched = cache.query(tokens, kv_tensors)
+matched = cache.query(None, tokens, kv_tensors)
 assert matched == len(tokens)
 
 assert len(kv_tensors) == len(kv_tensors_from_cache)

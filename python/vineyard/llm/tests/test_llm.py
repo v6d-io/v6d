@@ -20,8 +20,8 @@ import numpy as np
 
 from vineyard.llm import KVCache
 from vineyard.llm import KVTensor
-from vineyard.llm.config import FileCacheConfig
-from vineyard.llm.config import VineyardCacheConfig
+from vineyard.llm.cache import FileCacheConfig
+from vineyard.llm.cache import VineyardCacheConfig
 
 
 def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
@@ -75,7 +75,7 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
             ]
         )
 
-    matched = cache.query(tokens, kv_tensors_to_query)
+    matched = cache.query(None, tokens, kv_tensors_to_query)
     kv_tensors_from_cache = kv_tensors_to_query[:matched]
     assert matched == len(tokens)
 
@@ -151,7 +151,7 @@ def test_kv_cache_update_and_query_on_fs():
                 for _ in range(cache.layer)
             ]
         )
-    matched = cache.query(tokens, kv_tensors)
+    matched = cache.query(None, tokens, kv_tensors)
     assert matched == len(tokens)
 
     assert len(kv_tensors) == len(kv_tensors_from_cache)

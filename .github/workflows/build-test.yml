@@ -377,6 +377,7 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
+          mkdir -p /tmp/vineyard/llm_cache
           python3 test/runner.py $RUNNER_ARGS --with-llm-python
 
       - name: Run contrib/thirdparty tests

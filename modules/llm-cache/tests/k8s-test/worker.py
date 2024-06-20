@@ -6,7 +6,7 @@ import argparse
 import numpy as np
 
 from vineyard.llm import KVCache, KVTensor
-from vineyard.llm.config import FileCacheConfig
+from vineyard.llm.cache import FileCacheConfig
 
 def start_server(port=8888):
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -79,11 +79,12 @@ def start_server(port=8888):
         tokens = tokens.decode('utf-8')
         tokens = tokens.replace('\n', '').split(' ')
         tokens = [int(token) for token in tokens]
+        tokens = tokens[:len(tokens) - len(tokens) % batch_size]
 
         kv_cache_list = reserve_kv_tensors(kv_cache_list, len(tokens), kv_tensor)
 
         query_start_time = time.time()
-        matched = cache.query(tokens, kv_cache_list)
+        matched = cache.query(None, tokens, kv_cache_list)
         query_end_time = time.time()
         if matched > 0:
             total_query_time += query_end_time - query_start_time

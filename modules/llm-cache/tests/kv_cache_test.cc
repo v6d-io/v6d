@@ -64,7 +64,7 @@ void print_current_tokens(const std::vector<int>& prefix, int next_token) {
 }
 
 void print_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state) {
-  LOG(INFO) << "kv_state: ";
+  VLOG(100) << "kv_state: ";
   for (size_t i = 0; i < kv_state.size(); ++i) {
     uint8_t* key_state_data =
         reinterpret_cast<uint8_t*>(kv_state[i].first.data);
@@ -77,10 +77,10 @@ void print_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state) {
       key_state_str += std::to_string(key_state_data[j]) + " ";
       value_state_str += std::to_string(value_state_data[j]) + " ";
     }
-    LOG(INFO) << "layer " << i << ":";
-    LOG(INFO) << "key_state: " << key_state_str;
-    LOG(INFO) << "value_state: " << value_state_str;
-    LOG(INFO) << "---------------------";
+    VLOG(100) << "layer " << i << ":";
+    VLOG(100) << "key_state: " << key_state_str;
+    VLOG(100) << "value_state: " << value_state_str;
+    VLOG(100) << "---------------------";
   }
 }
 
@@ -116,9 +116,9 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
     for (int i = 0; i < tensorNBytes; ++i) {
       if ((reinterpret_cast<uint8_t*>(kv_state[index].first.data))[i] !=
           (static_cast<uint8_t>(token)) + i + index) {
-        LOG(INFO) << "token:" << token << " tensorNBytes" << tensorNBytes
+        VLOG(100) << "token:" << token << " tensorNBytes" << tensorNBytes
                   << " layer:" << index;
-        LOG(INFO) << "key_state[" << i << "]: "
+        VLOG(100) << "key_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(kv_state[index].first.data))[i]
                   << ". But is should be "
                   << (static_cast<uint8_t>(token)) + i + index;
@@ -126,9 +126,9 @@ void check_kv_state(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
       }
       if (reinterpret_cast<uint8_t*>(kv_state[index].second.data)[i] !=
           (static_cast<uint8_t>(token)) + i + index) {
-        LOG(INFO) << "token:" << token << " tensorNBytes" << tensorNBytes
+        VLOG(100) << "token:" << token << " tensorNBytes" << tensorNBytes
                   << " layer:" << index;
-        LOG(INFO) << "value_state[" << i << "]: "
+        VLOG(100) << "value_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(
                          kv_state[index].second.data))[i]
                   << ". But is should be "
