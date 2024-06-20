@@ -326,7 +326,7 @@ jobs:
           git clone https://github.com/GraphScope/gstest.git --depth=1
 
       - name: Setup tmate session
-        if: false
+        if: true
         uses: mxschmitt/action-tmate@v3
 
       - name: Run llm tests
