@@ -24,19 +24,7 @@ from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.build_ext import build_ext
 from setuptools.command.install import install
-from wheel.bdist_wheel import bdist_wheel
 
-
-class bdist_wheel_plat(bdist_wheel):
-    def finalize_options(self):
-        bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
-
-    def get_tag(self):
-        self.root_is_pure = True
-        tag = bdist_wheel.get_tag(self)
-        self.root_is_pure = False
-        return tag
 
 class CopyCMakeExtension(Extension):
     def __init__(self, name):
@@ -105,7 +93,6 @@ setup(
     ],
     cmdclass={
         'build_ext': build_ext_with_precompiled,
-        'bdist_wheel': bdist_wheel_plat,
         "install": install_plat
     },
     zip_safe=False,
