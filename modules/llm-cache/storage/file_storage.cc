@@ -183,14 +183,12 @@ Status FileStorage::Update(
 
   size_t upper_bound = 0;
   {
-    std::lock_guard<std::mutex> lock(gcMutex);
     for (size_t i = 0; i < pathList.size(); i++) {
       if (taskResults[i].ok()) {
         upper_bound += 1;
         if (createFileSet.find(this->rootPath + pathList[i]) !=
             createFileSet.end()) {
           TouchFile(this->rootPath + pathList[i]);
-          gcList.push_back(this->rootPath + pathList[i]);
         }
       } else {
         break;
@@ -201,6 +199,13 @@ Status FileStorage::Update(
   for (size_t i = upper_bound; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < upper_bound; i++) {
+      gcList.push_back(this->rootPath + pathList[i]);
+    }
   }
   return Status::OK();
 }
@@ -371,7 +376,6 @@ Status FileStorage::Update(
 
   size_t upper_bound = 0;
   {
-    std::lock_guard<std::mutex> lock(gcMutex);
     for (size_t i = 0; i < pathList.size(); i++) {
       if (taskResults[i].ok()) {
         upper_bound += 1;
@@ -380,7 +384,6 @@ Status FileStorage::Update(
                 createFileSet.end()) {
           // Only this part is created.
           TouchFile(this->rootPath + pathList[i]);
-          gcList.push_back(this->rootPath + pathList[i]);
         }
       } else {
         break;
@@ -393,6 +396,12 @@ Status FileStorage::Update(
   for (size_t i = upper_bound; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
+  }
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < upper_bound; i++) {
+      gcList.push_back(this->rootPath + pathList[i]);
+    }
   }
   return Status::OK();
 }
@@ -667,19 +676,30 @@ Status FileStorage::DefaultGCFunc() {
        iter != gcList.end();) {
     std::string path = *iter;
     std::chrono::duration<int64_t, std::nano> accessTime(0);
-    RETURN_ON_ERROR(GetFileAccessTime(path, accessTime));
-    VLOG(100) << "GC ttl:" << fileTTL.count();
-    if ((accessTime + fileTTL).count() < nanoseconds_since_epoch.count()) {
-      VLOG(100) << "GC: " << path << " is dead!";
-      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
-      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
-      RETURN_ON_ERROR(Delete(path));
-      iter = gcList.erase(iter);
+    if (!GetFileAccessTime(path, accessTime).ok()) {
+      if (IsFileExist(path)) {
+        VLOG(100) << "Failed to get file access time: " << path;
+        // skip this file, wait for next time.
+        iter++;
+      } else {
+        VLOG(100) << "Default GC: " << path << " may be deleted by global GC!";
+        // file may be deleted by global GC thread, remove it from gcList
+        iter = gcList.erase(iter);
+      }
     } else {
-      VLOG(100) << "GC: " << path << " is alive!";
-      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
-      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
-      iter++;
+      VLOG(100) << "GC ttl:" << fileTTL.count();
+      if ((accessTime + fileTTL).count() < nanoseconds_since_epoch.count()) {
+        VLOG(100) << "GC: " << path << " is dead!";
+        VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+        VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+        RETURN_ON_ERROR(Delete(path));
+        iter = gcList.erase(iter);
+      } else {
+        VLOG(100) << "GC: " << path << " is alive!";
+        VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+        VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+        iter++;
+      }
     }
   }
   return Status::OK();
@@ -753,6 +773,7 @@ Status FileStorage::GlobalGCFunc() {
           now.time_since_epoch());
   std::vector<std::string> fileList;
   RETURN_ON_ERROR(this->GetFileList(this->rootPath, fileList));
+  VLOG(100) << "Global GC: " << fileList.size() << " files to check";
   for (std::vector<std::string>::iterator iter = fileList.begin();
        iter != fileList.end(); iter++) {
     std::string path = *iter;
