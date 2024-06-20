@@ -6,7 +6,6 @@ import (
 	"unsafe"
 
 	"github.com/pkg/errors"
-
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/log"
 )
 

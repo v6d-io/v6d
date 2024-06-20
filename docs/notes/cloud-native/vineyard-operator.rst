@@ -461,6 +461,12 @@ on Vineyard by placing them as close as possible to their input data, thereby re
 migration costs. The Vineyard scheduler plugin is developed based on the `Kubernetes Scheduling
 Framework`_, and its overall scheduling strategy can be summarized as follows:
 
+.. note::
+
+    Vineyard Scheduler is compatible with Kubernetes versions 1.19 to 1.24. Ensure your Kubernetes 
+    cluster is within this version range for proper functionality.
+
+
 - All Vineyard workloads can only be deployed on nodes where the Vineyard daemon server is
   present.
 - If a workload does not depend on any other workload, it will be scheduled using a

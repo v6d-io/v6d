@@ -46,5 +46,7 @@ with vineyard_for_dask():
     df = dd.from_dask_array(arr, columns=['a', 'b'])
     obj_id = client.put(df, dask_scheduler=dask_scheduler)
 
+print("put finished",flush=True)
+
 # avoid CrashLoopBackOff
 time.sleep(3600)

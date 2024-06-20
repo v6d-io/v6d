@@ -45,10 +45,10 @@ setup:
         sed 's/$job/daskRepartitionJob1/' k8s/test/e2e/repartition-demo/repartition-job.yaml | \
           gomplate -d config=k8s/test/e2e/repartition-demo/repartition-job-config.yaml | \
           kubectl apply -f -
-      wait:
-        - namespace: vineyard-job
-          resource: deployment/dask-repartition-job1
-          for: condition=Available
+        while [[ -z $(kubectl logs -l app=dask-repartition-job1 -n vineyard-job | grep "put finished") ]]; \
+        do \
+          sleep 1; \
+        done
     - name: install job2
       command: |
         sed 's/$job/daskRepartitionJob2/' k8s/test/e2e/repartition-demo/repartition-job.yaml | \

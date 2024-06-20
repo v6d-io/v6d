@@ -10,7 +10,7 @@ Next, we will show you how to use the Vineyard CSI Driver to speed up a kubeflow
 Prerequisites
 =============
 
-- A kubernetes cluster with version >= 1.25.10. If you don't have one by hand, you can refer to the guide `Initialize Kubernetes Cluster`_ to create one.
+- A kubernetes cluster >= 1.19. If you don't have one by hand, you can refer to the guide `Initialize Kubernetes Cluster`_ to create one.
 - Install the `Vineyardctl`_ by following the official guide.
 - Install the argo workflow cli >= 3.4.8.
 - Install the kfp package <= 1.8.0 for kubeflow **v1** or >= 2.0.1 for kubeflow **v2**.

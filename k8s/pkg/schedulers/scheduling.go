@@ -25,16 +25,18 @@ import (
 
 	"github.com/pkg/errors"
 
-	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+	wfv1 "github.com/argoproj/argo/v3/pkg/apis/workflow/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-helpers/scheduling/corev1"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
+
+	framework "k8s.io/kubernetes/pkg/scheduler/framework/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/pkg/log"
@@ -57,7 +59,7 @@ type PodRank struct {
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.
 type VineyardScheduling struct {
 	client.Client
-	handle          framework.Handle
+	handle          framework.FrameworkHandle
 	scheduleTimeout *time.Duration
 	podRank         *PodRank
 }
@@ -68,7 +70,7 @@ func New(
 	client client.Client,
 	config *rest.Config,
 	obj runtime.Object,
-	handle framework.Handle,
+	handle framework.FrameworkHandle,
 ) (framework.Plugin, error) {
 	log.Infof("Initializing the vineyard scheduler plugin ...")
 	timeout := Timeout * time.Second
@@ -191,7 +193,7 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int, error) {
 				return int(*job.Spec.Parallelism), nil
 			}
 		case "CronJob":
-			crobjob := &batchv1.CronJob{}
+			crobjob := &batchv1beta1.CronJob{}
 			if err := vs.Get(ctx, name, crobjob); err == nil {
 				return crobjob.Spec.Size(), nil
 			}

@@ -16,54 +16,67 @@ limitations under the License.
 package util
 
 import (
-	"bytes"
+	"embed"
+	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
+	"log"
 
-	"sigs.k8s.io/kustomize/kustomize/v4/commands/build"
-	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/kustomize/api/filesys"
+	"sigs.k8s.io/kustomize/api/krusty"
 
 	"github.com/v6d-io/v6d/k8s/config"
 )
 
-func BuildKustomizeInEmbedDir() (Manifests, error) {
-	fSys := filesys.MakeFsOnDisk()
-	buffy := new(bytes.Buffer)
-	cmd := build.NewCmdBuild(fSys, build.MakeHelp("", ""), buffy)
-
-	// Create a temporary directory to extract the embedded config files
-	tmpDir, err := os.MkdirTemp("", "v6d-operator-manifests-")
+func writeEmbeddedFileToKustomizeFS(efs embed.FS, kfs filesys.FileSystem, path string) error {
+	data, err := efs.ReadFile(path)
 	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Extract the embedded config files to the temporary directory
-	if err := fs.WalkDir(config.Manifests, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			data, err := config.Manifests.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			destPath := filepath.Join(tmpDir, path)
-			if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
-				return err
-			}
-			if err := os.WriteFile(destPath, data, os.ModePerm); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, err
+		return fmt.Errorf("failed to read path %s from embedded file system: %w", path, err)
 	}
 
-	if err := cmd.RunE(cmd, []string{tmpDir + "/default"}); err != nil {
-		return nil, err
+	if err := kfs.WriteFile(path, data); err != nil {
+		return fmt.Errorf("failed to write path %s to in-memory kustomize file system: %w", path, err)
 	}
-	return ParseManifestsToObjects(buffy.Bytes())
+	return nil
+}
+
+// ConvertEmbeddedFSToKustomizeFS performs a walk from the root of the provided
+// embed.FS and copies the file tree into an in-memory Kustomize FileSystem,
+func ConvertEmbeddedFSToKustomizeFS(efs embed.FS) (filesys.FileSystem, error) {
+	fsys := filesys.MakeFsInMemory()
+	err := fs.WalkDir(config.Manifests, ".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return fmt.Errorf("encountered a walk error: %w", walkErr)
+		}
+
+		if d.IsDir() {
+			return fsys.Mkdir(path)
+		}
+
+		return writeEmbeddedFileToKustomizeFS(efs, fsys, path)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk embedded file system: %w", err)
+	}
+
+	return fsys, nil
+}
+
+func BuildKustomizeInEmbedDir() (Manifests, error) {
+	fSys, err := ConvertEmbeddedFSToKustomizeFS(config.Manifests)
+	if err != nil {
+		log.Fatalf("failed to convert embedded file system to kustomize file system: %v", err)
+	}
+	k := krusty.MakeKustomizer(fSys, krusty.MakeDefaultOptions())
+
+	resMap, err := k.Run("default")
+	if err != nil {
+		log.Fatalf("failed to run kustomize build: %v", err)
+	}
+
+	yamls, err := resMap.AsYaml()
+	if err != nil {
+		log.Fatalf("failed to convert resources to YAML: %v", err)
+	}
+
+	return ParseManifestsToObjects(yamls)
 }
