@@ -213,8 +213,17 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
   struct timespec times[2] = {0};
   times[0].tv_sec = now_nano / SECOND_TO_NANOSECOND;
   times[0].tv_nsec = now_nano % SECOND_TO_NANOSECOND;
+
+#ifdef __APPLE__
+  struct stat file_stat;
+  if (stat(path.c_str(), &file_stat) == -1) {
+    return Status::IOError("Failed to get file stat: " + formatIOError(path));
+  }
+  times[1] = file_stat.st_mtim;
+#else
   times[1].tv_sec = UTIME_OMIT;
   times[1].tv_nsec = UTIME_OMIT;
+#endif
 
   if (utimensat(AT_FDCWD, path.c_str(), times, 0) == -1) {
     return Status::IOError("Failed to touch file: " + formatIOError(path));
