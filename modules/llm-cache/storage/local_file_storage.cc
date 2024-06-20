@@ -214,6 +214,7 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
   times[0].tv_sec = now_nano / SECOND_TO_NANOSECOND;
   times[0].tv_nsec = now_nano % SECOND_TO_NANOSECOND;
   times[1].tv_sec = UTIME_OMIT;
+  times[1].tv_nsec = UTIME_OMIT;
 
   if (utimensat(AT_FDCWD, path.c_str(), times, 0) == -1) {
     return Status::IOError("Failed to touch file: " + formatIOError(path));
