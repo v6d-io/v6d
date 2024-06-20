@@ -433,8 +433,7 @@ Status BlobStorage::Query(const std::vector<int>& prefix, int token,
                           std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
-    // If failed to gain the lock, return OK and wait for next time
-    return Status::OK();
+    return Status::Invalid("Query cache failed: can not gain the cache lock.");
   }
   if (isClosed) {
     return Status::Invalid("The memory storage is closed.");
