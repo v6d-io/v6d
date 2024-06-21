@@ -76,12 +76,10 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
 
   CHECK_ERROR(!fi_enable(ptr->ep), "fi_enable failed.");
 
-  // ptr->rx_msg_buffer = malloc(ptr->fi->rx_attr->size);
   ptr->rx_msg_buffer = new char[ptr->fi->rx_attr->size];
   if (!ptr->rx_msg_buffer) {
     return Status::Invalid("Failed to allocate rx buffer.");
   }
-  // ptr->tx_msg_buffer = malloc(ptr->fi->tx_attr->size);
   ptr->tx_msg_buffer = new char[ptr->fi->tx_attr->size];
   if (!ptr->tx_msg_buffer) {
     return Status::Invalid("Failed to allocate tx buffer.");
@@ -193,22 +191,22 @@ Status RDMAClient::DeregisterMemory(RegisterMemInfo& memInfo) {
 }
 
 Status RDMAClient::Send(void* buf, size_t size, void* ctx) {
-  return IRDMA::Send(ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, ctx);
+  return IRDMA::Send(ep, remote_fi_addr, buf, size, tx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Recv(void* buf, size_t size, void* ctx) {
-  return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, ctx);
+  return IRDMA::Recv(ep, remote_fi_addr, buf, size, rx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Read(void* buf, size_t size, uint64_t remote_address,
                         uint64_t key, void* mr_desc, void* ctx) {
-  return IRDMA::Read(ep, remote_fi_addr, rxcq, buf, size, remote_address, key,
+  return IRDMA::Read(ep, remote_fi_addr, buf, size, remote_address, key,
                      mr_desc, ctx);
 }
 
 Status RDMAClient::Write(void* buf, size_t size, uint64_t remote_address,
                          uint64_t key, void* mr_desc, void* ctx) {
-  return IRDMA::Write(ep, remote_fi_addr, txcq, buf, size, remote_address, key,
+  return IRDMA::Write(ep, remote_fi_addr, buf, size, remote_address, key,
                       mr_desc, ctx);
 }
 

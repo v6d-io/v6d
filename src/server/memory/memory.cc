@@ -529,8 +529,7 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
                                            std::vector<size_t> const& offsets,
-                                           std::vector<size_t> const& sizes,
-                                           uint64_t instance_id) {
+                                           std::vector<size_t> const& sizes) {
   VLOG(2) << "finalizing arena (fd) " << fd << "...";
   auto arena = arenas_.find(fd);
   if (arena == arenas_.end()) {
@@ -616,8 +615,7 @@ template class BulkStoreBase<PlasmaID, PlasmaPayload>;
 
 // implementation for BulkStore
 Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
-                         std::shared_ptr<Payload>& object,
-                         uint64_t instance_id) {
+                         std::shared_ptr<Payload>& object) {
   if (data_size == 0) {
     object_id = EmptyBlobID<ObjectID>();
     object = Payload::MakeEmpty();
@@ -771,8 +769,7 @@ Status BulkStore::Release_GPU(ObjectID const& id, int conn) {
 // implementation for PlasmaBulkStore
 Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
                                PlasmaID const& plasma_id, ObjectID& object_id,
-                               std::shared_ptr<PlasmaPayload>& object,
-                               uint64_t instance_id) {
+                               std::shared_ptr<PlasmaPayload>& object) {
   if (data_size == 0) {
     object = PlasmaPayload::MakeEmpty();
     return Status::OK();

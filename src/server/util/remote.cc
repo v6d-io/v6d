@@ -116,7 +116,7 @@ Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
   msg->type = VINEYARD_MSG_REQUEST_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
   msg->remoteMemInfo.len = remote_info.size;
-  LOG(INFO) << "Request remote addr: "
+  VLOG(100) << "Request remote addr: "
             << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address);
   void* remoteMsg;
   this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
@@ -133,7 +133,7 @@ Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
     remote_info.address = vmsg->remoteMemInfo.remote_address;
     remote_info.rkey = vmsg->remoteMemInfo.key;
     remote_info.size = vmsg->remoteMemInfo.len;
-    LOG(INFO) << "Get remote address: "
+    VLOG(100) << "Get remote address: "
               << reinterpret_cast<void*>(remote_info.address)
               << ", rkey: " << remote_info.rkey
               << ", size: " << remote_info.size;
@@ -165,7 +165,7 @@ Status RemoteClient::RDMACheckMaxRegisterSize() {
   if (max_register_size == 0) {
     return Status::IOError("Failed to get max register size.");
   }
-  LOG(INFO) << "Max register size is:" << max_register_size / 1024 / 1024 / 1024
+  VLOG(100) << "Max register size is:" << max_register_size / 1024 / 1024 / 1024
             << " GB.";
   return Status::OK();
 }
@@ -389,8 +389,8 @@ Status RemoteClient::migrateBuffers(
     } else {
       ObjectID object_id;
       std::shared_ptr<Payload> object;
-      status = this->server_ptr_->GetBulkStore()->Create(
-          payload.data_size, object_id, object, server_ptr_->instance_id());
+      status = this->server_ptr_->GetBulkStore()->Create(payload.data_size,
+                                                         object_id, object);
       if (!status.ok()) {
         break;
       }
@@ -434,7 +434,7 @@ Status RemoteClient::migrateBuffers(
           }
           if (status.IsIOError()) {
             // probe the max register size again
-            LOG(INFO) << "Probe the max register size again.";
+            VLOG(100) << "Probe the max register size again.";
             max_register_size = rdma_client_->GetClientMaxRegisterSize();
             if (max_register_size == 0) {
               return Status::Invalid("Failed to get max register size.");
@@ -449,24 +449,22 @@ Status RemoteClient::migrateBuffers(
         RegisterMemInfo remote_info;
         remote_info.address = (uint64_t) server_pointer + blob_data_offset;
         remote_info.size = local_info.size;
-        LOG(INFO) << "Request remote address: "
+        VLOG(100) << "Request remote address: "
                   << reinterpret_cast<void*>(remote_info.address)
                   << ", size: " << remote_info.size;
         RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
         size_t receive_size = remote_info.size;
 
         // Read data
-        size_t remain_bytes =
-            receive_size;  // payloads[i].data_size; TODO: change to min(receive
-                           // size, register size)
+        size_t remain_bytes = receive_size;
         do {
           size_t read_bytes =
               std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
           size_t read_data_offset = receive_size - remain_bytes;
-          LOG(INFO) << "blob data offset: " << blob_data_offset
+          VLOG(100) << "blob data offset: " << blob_data_offset
                     << ", read data offset: " << read_data_offset
                     << ", read bytes: " << read_bytes;
-          LOG(INFO) << "Read to address: "
+          VLOG(100) << "Read to address: "
                     << reinterpret_cast<void*>(
                            reinterpret_cast<uint64_t>(local_blob_data) +
                            blob_data_offset + read_data_offset)

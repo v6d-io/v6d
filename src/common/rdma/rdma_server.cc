@@ -98,12 +98,10 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
   CHECK_ERROR(!fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->txcq, NULL),
               "fi_cq_open failed.");
 
-  // ptr->rx_msg_buffer = malloc(ptr->rx_msg_size);
   ptr->rx_msg_buffer = new char[ptr->rx_msg_size];
   if (!ptr->rx_msg_buffer) {
     return Status::Invalid("Failed to allocate rx buffer.");
   }
-  // ptr->tx_msg_buffer = malloc(ptr->rx_msg_size);
   ptr->tx_msg_buffer = new char[ptr->rx_msg_size];
   if (!ptr->tx_msg_buffer) {
     return Status::Invalid("Failed to allocate tx buffer.");
@@ -111,16 +109,12 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
 
   int bits = ptr->rx_msg_size / sizeof(VineyardMsg);
   ptr->rx_bitmap_num = ptr->tx_bitmap_num = (bits + 63) / 64;
-  // ptr->rx_buffer_bitmaps =
-  //     (uint64_t*) malloc(ptr->rx_bitmap_num * sizeof(uint64_t));
   ptr->rx_buffer_bitmaps = new uint64_t[ptr->rx_bitmap_num];
   if (!ptr->rx_buffer_bitmaps) {
     return Status::Invalid("Failed to allocate rx buffer bitmap.");
   }
   memset(ptr->rx_buffer_bitmaps, UINT8_MAX,
          ptr->rx_bitmap_num * sizeof(uint64_t));
-  // ptr->tx_buffer_bitmaps =
-  //     (uint64_t*) malloc(ptr->tx_bitmap_num * sizeof(uint64_t));
   ptr->tx_buffer_bitmaps = new uint64_t[ptr->tx_bitmap_num];
   if (!ptr->tx_buffer_bitmaps) {
     return Status::Invalid("Failed to allocate tx buffer bitmap.");
@@ -135,7 +129,7 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
 
   ptr->port = port;
 
-  LOG(INFO) << "RDMAServer listen....";
+  VLOG(100) << "RDMAServer listen....";
   CHECK_ERROR(!fi_listen(ptr->pep), "fi_listen failed.");
 
   ptr->state = READY;
@@ -196,7 +190,7 @@ Status RDMAServer::WaitConnect(uint64_t& rdma_conn_id) {
     CHECK_ERROR(rd == sizeof entry, "fi_eq_sread failed.");
     if (event == FI_SHUTDOWN) {
       fid_ep* closed_ep = container_of(entry.fid, fid_ep, fid);
-      LOG(INFO) << "Connection closed.";
+      VLOG(100) << "Connection closed.";
       RemoveClient(closed_ep);
       continue;
     }
@@ -238,7 +232,6 @@ Status RDMAServer::WaitConnect(uint64_t& rdma_conn_id) {
     return Status::Invalid("Unexpected event:" + std::to_string(event));
   }
 
-  // rdma_conn_handle = ep;
   AddClient(rdma_conn_id, ep);
 
   return Status::OK();
@@ -296,7 +289,7 @@ Status RDMAServer::Send(uint64_t ep_token, void* buf, size_t size, void* ctx) {
     return Status::Invalid("Failed to find buffer context.");
   }
   fid_ep* ep = ep_map_[ep_token];
-  return IRDMA::Send(ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, ctx);
+  return IRDMA::Send(ep, remote_fi_addr, buf, size, tx_msg_mr_desc, ctx);
 }
 
 Status RDMAServer::Recv(uint64_t ep_token, void* buf, size_t size, void* ctx) {
@@ -305,17 +298,17 @@ Status RDMAServer::Recv(uint64_t ep_token, void* buf, size_t size, void* ctx) {
     return Status::Invalid("Failed to find buffer context.");
   }
   fid_ep* ep = ep_map_[ep_token];
-  return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, ctx);
+  return IRDMA::Recv(ep, remote_fi_addr, buf, size, rx_msg_mr_desc, ctx);
 }
 
 Status RDMAServer::Send(void* ep, void* buf, size_t size, void* ctx) {
-  return IRDMA::Send(reinterpret_cast<fid_ep*>(ep), remote_fi_addr, txcq, buf,
-                     size, tx_msg_mr_desc, ctx);
+  return IRDMA::Send(reinterpret_cast<fid_ep*>(ep), remote_fi_addr, buf, size,
+                     tx_msg_mr_desc, ctx);
 }
 
 Status RDMAServer::Recv(void* ep, void* buf, size_t size, void* ctx) {
-  return IRDMA::Recv(reinterpret_cast<fid_ep*>(ep), remote_fi_addr, rxcq, buf,
-                     size, rx_msg_mr_desc, ctx);
+  return IRDMA::Recv(reinterpret_cast<fid_ep*>(ep), remote_fi_addr, buf, size,
+                     rx_msg_mr_desc, ctx);
 }
 
 Status RDMAServer::Read(uint64_t ep_token, void* buf, size_t size,
@@ -326,7 +319,7 @@ Status RDMAServer::Read(uint64_t ep_token, void* buf, size_t size,
     return Status::Invalid("Failed to find buffer context.");
   }
   fid_ep* ep = ep_map_[ep_token];
-  return IRDMA::Read(ep, remote_fi_addr, rxcq, buf, size, remote_address, rkey,
+  return IRDMA::Read(ep, remote_fi_addr, buf, size, remote_address, rkey,
                      mr_desc, ctx);
 }
 
@@ -338,7 +331,7 @@ Status RDMAServer::Write(uint64_t ep_token, void* buf, size_t size,
     return Status::Invalid("Failed to find buffer context.");
   }
   fid_ep* ep = ep_map_[ep_token];
-  return IRDMA::Write(ep, remote_fi_addr, txcq, buf, size, remote_address, rkey,
+  return IRDMA::Write(ep, remote_fi_addr, buf, size, remote_address, rkey,
                       mr_desc, ctx);
 }
 
@@ -458,7 +451,7 @@ Status RDMAServer::GetTXCompletion(int timeout, void** context) {
 }
 
 Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
-  LOG(INFO) << "Close connection endpoint!";
+  VLOG(100) << "Close connection endpoint!";
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   if (ep_map_.find(rdma_conn_id) == ep_map_.end()) {
     return Status::Invalid("Failed to find buffer context.");

@@ -100,7 +100,7 @@ Status StreamStore::Get(ObjectID const stream_id, size_t const size,
     // do allocation
     ObjectID chunk;
     std::shared_ptr<Payload> object;
-    auto status = store_->Create(size, chunk, object, server_->instance_id());
+    auto status = store_->Create(size, chunk, object);
     if (!status.ok()) {
       return callback(status, InvalidObjectID());
     } else {
@@ -191,8 +191,7 @@ Status StreamStore::Pull(ObjectID const stream_id,
     if (allocatable(stream, writer.first)) {
       ObjectID chunk;
       std::shared_ptr<Payload> object;
-      auto status =
-          store_->Create(writer.first, chunk, object, server_->instance_id());
+      auto status = store_->Create(writer.first, chunk, object);
       if (!status.ok()) {
         VINEYARD_SUPPRESS(writer.second(status, InvalidObjectID()));
       } else {

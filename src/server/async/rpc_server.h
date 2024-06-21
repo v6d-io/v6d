@@ -21,6 +21,8 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 
+#include "common/rdma/rdma_server.h"
+#include "common/rdma/util.h"
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/env.h"
 #include "server/async/socket_server.h"
@@ -81,7 +83,7 @@ class RPCServer : public SocketServer,
       remote_mem_infos_;
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
-  uint64_t max_register_size = 1024UL * 1024 * 1024 * 6;
+  uint64_t max_register_size = 0;
 
   std::thread rdma_listen_thread_;
   std::thread rdma_recv_thread_;

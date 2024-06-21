@@ -26,8 +26,6 @@ limitations under the License.
 #include <unordered_set>
 
 #include "common/memory/payload.h"
-#include "common/rdma/rdma_server.h"
-#include "common/rdma/util.h"
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
 #include "common/util/uuid.h"

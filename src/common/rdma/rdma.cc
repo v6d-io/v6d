@@ -51,14 +51,14 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
     Status status =
         RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
     if (status.ok()) {
-      LOG(INFO) << "Register memory size: " << buffer_size / 1024 / 1024 / 1024
+      VLOG(100) << "Register memory size: " << buffer_size / 1024 / 1024 / 1024
                 << "GB success";
       register_size = buffer_size;
       VINEYARD_CHECK_OK(CloseResource(mr, "memory region"));
       l_size = size_;
       size_ = (size_ + r_size) / 2;
     } else {
-      LOG(INFO) << "Register failed:" << status.message();
+      VLOG(100) << "Register failed:" << status.message();
       r_size = size_;
       size_ = (size_ + l_size) / 2;
     }
@@ -71,7 +71,7 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
   /**
    * The memory registered by the rpc client may be not page aligned. So we need
    * to subtract the page size from the registered memory size to avoid the
-   * memory
+   * memory registration failure.
    */
   return register_size - 4096;
 }
@@ -88,7 +88,7 @@ Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
   mr_attr.offset = 0;
   mr_attr.iface = FI_HMEM_SYSTEM;
   mr_attr.context = NULL;
-  LOG(INFO) << "Try to register memory region: size=" << size;
+  VLOG(100) << "Try to register memory region: size = " << size;
 
   int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
   if (ret == -FI_EIO) {
@@ -104,26 +104,26 @@ Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
   return Status::OK();
 }
 
-Status IRDMA::Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
-                   void* buf, size_t size, void* mr_desc, void* ctx) {
+Status IRDMA::Send(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf, size_t size,
+                   void* mr_desc, void* ctx) {
   POST(fi_send, "send", ep, buf, size, mr_desc, remote_fi_addr, ctx);
 }
 
-Status IRDMA::Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
-                   void* buf, size_t size, void* mr_desc, void* ctx) {
+Status IRDMA::Recv(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf, size_t size,
+                   void* mr_desc, void* ctx) {
   POST(fi_recv, "receive", ep, buf, size, mr_desc, remote_fi_addr, ctx);
 }
 
-Status IRDMA::Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
-                   void* buf, size_t size, uint64_t remote_address,
-                   uint64_t key, void* mr_desc, void* ctx) {
+Status IRDMA::Read(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf, size_t size,
+                   uint64_t remote_address, uint64_t key, void* mr_desc,
+                   void* ctx) {
   POST(fi_read, "read", ep, buf, size, mr_desc, remote_fi_addr, remote_address,
        key, ctx);
 }
 
-Status IRDMA::Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
-                    void* buf, size_t size, uint64_t remote_address,
-                    uint64_t key, void* mr_desc, void* ctx) {
+Status IRDMA::Write(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf,
+                    size_t size, uint64_t remote_address, uint64_t key,
+                    void* mr_desc, void* ctx) {
   POST(fi_write, "write", ep, buf, size, mr_desc, remote_fi_addr,
        remote_address, key, ctx);
 }

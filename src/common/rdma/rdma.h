@@ -35,19 +35,19 @@ namespace vineyard {
 
 class IRDMA {
  public:
-  static Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
-                     void* buf, size_t size, void* mr_desc, void* ctx);
+  static Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf,
+                     size_t size, void* mr_desc, void* ctx);
 
-  static Status Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
-                     void* buf, size_t size, void* mr_desc, void* ctx);
+  static Status Recv(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf,
+                     size_t size, void* mr_desc, void* ctx);
 
-  static Status Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
-                     void* buf, size_t size, uint64_t remote_address,
-                     uint64_t key, void* mr_desc, void* ctx);
+  static Status Read(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf,
+                     size_t size, uint64_t remote_address, uint64_t key,
+                     void* mr_desc, void* ctx);
 
-  static Status Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
-                      void* buf, size_t size, uint64_t remote_address,
-                      uint64_t key, void* mr_desc, void* ctx);
+  static Status Write(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf,
+                      size_t size, uint64_t remote_address, uint64_t key,
+                      void* mr_desc, void* ctx);
 
   static Status RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
                                size_t size, uint64_t& rkey, void*& mr_desc);

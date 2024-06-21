@@ -84,7 +84,7 @@ Status RPCServer::InitRDMA() {
     if (max_register_size == 0) {
       return Status::Invalid("Get max register size failed!");
     }
-    LOG(INFO) << "Max register size: " << max_register_size / 1024 / 1024 / 1024
+    VLOG(100) << "Max register size: " << max_register_size / 1024 / 1024 / 1024
               << " GB.";
     rdma_stop_ = false;
     rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
@@ -170,7 +170,7 @@ void RPCServer::doRDMASend() {
     Status status = rdma_server_->GetTXCompletion(-1, &context);
     if (!status.ok()) {
       if (rdma_server_->IsStopped()) {
-        LOG(INFO) << "RDMA server stopped!";
+        VLOG(100) << "RDMA server stopped!";
         return;
       }
       VLOG(100) << "Get TX completion failed! Error:" << status.message();
@@ -199,7 +199,7 @@ void RPCServer::doRDMARecv() {
     Status status = rdma_server_->GetRXCompletion(-1, &context);
     if (!status.ok()) {
       if (rdma_server_->IsStopped()) {
-        LOG(INFO) << "RDMA server stopped!";
+        VLOG(100) << "RDMA server stopped!";
         return;
       }
       VLOG(100) << "Get RX completion failed! Error:" << status.message();
@@ -216,13 +216,13 @@ void RPCServer::doRDMARecv() {
       VineyardMsg* recv_msg =
           reinterpret_cast<VineyardMsg*>(recv_context->attr.msg_buffer);
       if (recv_msg->type == VINEYARD_MSG_REQUEST_MEM) {
-        LOG(INFO) << "Receive vineyard request mem!";
+        VLOG(100) << "Receive vineyard request mem!";
         RegisterMemInfo remote_reqeust_mem_info;
         remote_reqeust_mem_info.address =
             recv_msg->remoteMemInfo.remote_address;
         remote_reqeust_mem_info.size =
             std::min(recv_msg->remoteMemInfo.len, max_register_size);
-        LOG(INFO) << "Receive remote request address: "
+        VLOG(100) << "Receive remote request address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size;
 
@@ -235,7 +235,7 @@ void RPCServer::doRDMARecv() {
           }
           if (status.IsIOError()) {
             // probe the max register size again
-            LOG(INFO) << "Probe the max register size again.";
+            VLOG(100) << "Probe the max register size again.";
             void* pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
             size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
             max_register_size = rdma_server_->GetServerMaxRegisterSize(
@@ -271,7 +271,7 @@ void RPCServer::doRDMARecv() {
           continue;
         }
 
-        LOG(INFO) << "Register memory"
+        VLOG(100) << "Register memory"
                   << " address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size
@@ -294,7 +294,7 @@ void RPCServer::doRDMARecv() {
 
         rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg),
                            send_context);
-        LOG(INFO) << "Send key:" << remote_reqeust_mem_info.rkey
+        VLOG(100) << "Send key:" << remote_reqeust_mem_info.rkey
                   << " send address:"
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size;
@@ -306,13 +306,13 @@ void RPCServer::doRDMARecv() {
                            reinterpret_cast<void*>(recv_msg),
                            sizeof(VineyardMsg), context);
       } else if (recv_msg->type == VINEYARD_RELEASE_MEM) {
-        LOG(INFO) << "Receive release msg!";
+        VLOG(100) << "Receive release msg!";
         RegisterMemInfo remote_reqeust_mem_info;
         remote_reqeust_mem_info.address =
             recv_msg->remoteMemInfo.remote_address;
         // remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
         remote_reqeust_mem_info.size = recv_msg->remoteMemInfo.len;
-        LOG(INFO) << "Receive release address: "
+        VLOG(100) << "Receive release address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address);
         if (remote_mem_infos_.find(recv_context->rdma_conn_id) ==
             remote_mem_infos_.end()) {
@@ -330,7 +330,7 @@ void RPCServer::doRDMARecv() {
         }
 
         // Deregister mem
-        LOG(INFO) << "Deregister memory"
+        VLOG(100) << "Deregister memory"
                   << " address: "
                   << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
                   << " size: " << remote_reqeust_mem_info.size
@@ -341,7 +341,7 @@ void RPCServer::doRDMARecv() {
             rdma_server_->DeregisterMemory(remote_reqeust_mem_info));
         remote_mem_infos_[recv_context->rdma_conn_id].erase(
             remote_reqeust_mem_info);
-        LOG(INFO) << "Wait next request.";
+        VLOG(100) << "Wait next request.";
         rdma_server_->Recv(recv_context->rdma_conn_id,
                            reinterpret_cast<void*>(recv_msg),
                            sizeof(VineyardMsg), context);
@@ -368,7 +368,7 @@ void RPCServer::doRDMAAccept() {
     uint64_t rdma_conn_id;
     Status status = rdma_server_->WaitConnect(rdma_conn_id);
     if (!status.ok()) {
-      LOG(INFO) << "Wait rdma connect failed! Close! Error:"
+      VLOG(100) << "Wait rdma connect failed! Close! Error:"
                 << status.message();
       return;
     }
