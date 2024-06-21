@@ -277,10 +277,12 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::string hostname_;
   std::string nodename_;
 
-  std::mutex migration_mutex_;
+  std::mutex migrations_origin_to_target_mutex_;
+  std::mutex migrations_target_to_origin_mutex_;
   // Record the migration status of objects to avoid duplicated migration.
   std::unordered_map<ObjectID, std::shared_future<std::pair<Status, ObjectID>>>
-      migrations_;
+      migrations_origin_to_target_;
+  std::unordered_map<ObjectID, ObjectID> migrations_target_to_origin_;
 };
 
 }  // namespace vineyard

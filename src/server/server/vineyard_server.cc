@@ -780,11 +780,26 @@ Status VineyardServer::DelData(
   }
   meta_service_ptr_->RequestToDelete(
       ids, force, deep, memory_trim,
-      [self](const Status& status, const json& meta,
-             std::vector<ObjectID> const& ids_to_delete,
-             std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
+      [self, ids](const Status& status, const json& meta,
+                  std::vector<ObjectID> const& ids_to_delete,
+                  std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
           Status s;
+
+          {
+            std::lock_guard<std::mutex> lock_origin(
+                self->migrations_target_to_origin_mutex_);
+            std::lock_guard<std::mutex> lock_target(
+                self->migrations_origin_to_target_mutex_);
+            for (auto const id : ids) {
+              if (self->migrations_target_to_origin_.find(id) !=
+                  self->migrations_target_to_origin_.end()) {
+                ObjectID remoteID = self->migrations_target_to_origin_[id];
+                self->migrations_origin_to_target_.erase(remoteID);
+                self->migrations_target_to_origin_.erase(id);
+              }
+            }
+          }
           VCATCH_JSON_ERROR(
               meta, s,
               meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
@@ -1037,47 +1052,63 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
 
-          // check if the object is already migrated
-          // also ensure the migration is atomic with the same object_id
-          std::lock_guard<std::mutex> lock(self->migration_mutex_);
-          auto it = self->migrations_.find(object_id);
-          if (it != self->migrations_.end()) {
-            auto& shared_future = it->second;
-            auto migration_result = shared_future.get();
-            if (migration_result.first.ok()) {
-              return callback(migration_result.first, migration_result.second);
-            } else {
-              self->migrations_.erase(object_id);
+          boost::asio::post(self->io_context_, [self, object_id, callback,
+                                                remote_endpoint, metadata]() {
+            // check if the object is already migrated
+            // also ensure the migration is atomic with the same object_id
+            std::lock_guard<std::mutex> lock(
+                self->migrations_origin_to_target_mutex_);
+            auto it = self->migrations_origin_to_target_.find(object_id);
+            if (it != self->migrations_origin_to_target_.end()) {
+              auto& shared_future = it->second;
+              auto migration_result = shared_future.get();
+              if (migration_result.first.ok()) {
+                return callback(migration_result.first,
+                                migration_result.second);
+              } else {
+                self->migrations_origin_to_target_.erase(object_id);
+              }
             }
-          }
 
-          auto promise_ptr =
-              std::make_shared<std::promise<std::pair<Status, ObjectID>>>();
-          std::shared_future<std::pair<Status, ObjectID>> shared_future =
-              promise_ptr->get_future().share();
-          self->migrations_[object_id] = shared_future;
+            auto promise_ptr =
+                std::make_shared<std::promise<std::pair<Status, ObjectID>>>();
+            std::shared_future<std::pair<Status, ObjectID>> shared_future =
+                promise_ptr->get_future().share();
+            self->migrations_origin_to_target_[object_id] = shared_future;
 
-          // push to the async queues
-          boost::asio::post(
-              self->GetIOContext(), [self, callback, remote_endpoint, object_id,
-                                     metadata, promise_ptr]() mutable {
-                auto remote = std::make_shared<RemoteClient>(self);
-                RETURN_ON_ERROR(
-                    remote->Connect(remote_endpoint, self->session_id()));
-                return remote->MigrateObject(
-                    object_id, metadata,
-                    [self, remote, callback, promise_ptr](
-                        const Status& status, const ObjectID result) {
-                      if (status.ok()) {
-                        promise_ptr->set_value(
-                            std::make_pair(Status::OK(), result));
-                      } else {
-                        promise_ptr->set_value(
-                            std::make_pair(status, InvalidObjectID()));
-                      }
-                      return callback(status, result);
-                    });
-              });
+            // push to the async queues
+            boost::asio::post(self->GetIOContext(), [self, callback,
+                                                     remote_endpoint, object_id,
+                                                     metadata,
+                                                     promise_ptr]() mutable {
+              auto remote = std::make_shared<RemoteClient>(self);
+              Status status =
+                  remote->Connect(remote_endpoint, self->session_id());
+              if (!status.ok()) {
+                promise_ptr->set_value(
+                    std::make_pair(status, InvalidObjectID()));
+                return callback(status, InvalidObjectID());
+              }
+              status = remote->MigrateObject(
+                  object_id, metadata,
+                  [self, remote, callback, promise_ptr, object_id](
+                      const Status& status, const ObjectID result) {
+                    if (status.ok()) {
+                      promise_ptr->set_value(
+                          std::make_pair(Status::OK(), result));
+                      std::lock_guard<std::mutex> lock(
+                          self->migrations_target_to_origin_mutex_);
+                      self->migrations_target_to_origin_[result] = object_id;
+                    } else {
+                      promise_ptr->set_value(
+                          std::make_pair(status, InvalidObjectID()));
+                    }
+                    return callback(status, result);
+                  });
+              return status;
+            });
+            return Status::OK();
+          });
 
           return Status::OK();
         } else {
