@@ -1000,6 +1000,7 @@ Status VineyardServer::DropName(const std::string& name,
 }
 
 Status VineyardServer::MigrateObject(const ObjectID object_id,
+                                     DeferredReq::alive_t alive,
                                      callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
   if (IsBlob(object_id)) {
@@ -1008,8 +1009,8 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
   }
   auto self(shared_from_this());
   meta_service_ptr_->RequestToGetData(
-      true /* sync remote */,
-      [self, callback, object_id](const Status& status, const json& meta) {
+      true /* sync remote */, [self, callback, object_id, alive](
+                                  const Status& status, const json& meta) {
         if (status.ok()) {
           Status s;
           json metadata;
@@ -1052,65 +1053,65 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
 
-          boost::asio::post(self->io_context_, [self, object_id, callback,
-                                                remote_endpoint, metadata]() {
-            // check if the object is already migrated
-            // also ensure the migration is atomic with the same object_id
+          auto test_task = [self, object_id](const json& meta) -> bool {
             std::lock_guard<std::mutex> lock(
                 self->migrations_origin_to_target_mutex_);
             auto it = self->migrations_origin_to_target_.find(object_id);
             if (it != self->migrations_origin_to_target_.end()) {
-              auto& shared_future = it->second;
-              auto migration_result = shared_future.get();
-              if (migration_result.first.ok()) {
-                return callback(migration_result.first,
-                                migration_result.second);
-              } else {
-                self->migrations_origin_to_target_.erase(object_id);
-              }
+              return it->second != InvalidObjectID();
+            } else {
+              // mark as InValidObjectID to indicate that the object_id is being
+              // processed
+              self->migrations_origin_to_target_[object_id] = InvalidObjectID();
+              return true;
+            }
+          };
+
+          auto eval_task = [self, callback, remote_endpoint, object_id,
+                            metadata](const json& meta) -> Status {
+            std::lock_guard<std::mutex> lock(
+                self->migrations_origin_to_target_mutex_);
+            auto it = self->migrations_origin_to_target_.find(object_id);
+            if (it != self->migrations_origin_to_target_.end() &&
+                it->second != InvalidObjectID()) {
+              return callback(Status::OK(), it->second);
             }
 
-            auto promise_ptr =
-                std::make_shared<std::promise<std::pair<Status, ObjectID>>>();
-            std::shared_future<std::pair<Status, ObjectID>> shared_future =
-                promise_ptr->get_future().share();
-            self->migrations_origin_to_target_[object_id] = shared_future;
-
-            // push to the async queues
             boost::asio::post(self->GetIOContext(), [self, callback,
                                                      remote_endpoint, object_id,
-                                                     metadata,
-                                                     promise_ptr]() mutable {
+                                                     metadata]() {
               auto remote = std::make_shared<RemoteClient>(self);
               Status status =
                   remote->Connect(remote_endpoint, self->session_id());
               if (!status.ok()) {
-                promise_ptr->set_value(
-                    std::make_pair(status, InvalidObjectID()));
                 return callback(status, InvalidObjectID());
               }
-              status = remote->MigrateObject(
+
+              return remote->MigrateObject(
                   object_id, metadata,
-                  [self, remote, callback, promise_ptr, object_id](
-                      const Status& status, const ObjectID result) {
+                  [self, remote, object_id, callback](const Status& status,
+                                                      const ObjectID result) {
+                    std::lock_guard<std::mutex> lock_origin(
+                        self->migrations_origin_to_target_mutex_);
+                    std::lock_guard<std::mutex> lock_target(
+                        self->migrations_target_to_origin_mutex_);
                     if (status.ok()) {
-                      promise_ptr->set_value(
-                          std::make_pair(Status::OK(), result));
-                      std::lock_guard<std::mutex> lock(
-                          self->migrations_target_to_origin_mutex_);
+                      self->migrations_origin_to_target_[object_id] = result;
                       self->migrations_target_to_origin_[result] = object_id;
                     } else {
-                      promise_ptr->set_value(
-                          std::make_pair(status, InvalidObjectID()));
+                      self->migrations_origin_to_target_.erase(object_id);
                     }
                     return callback(status, result);
                   });
-              return status;
             });
             return Status::OK();
-          });
-
-          return Status::OK();
+          };
+          if (test_task(meta)) {
+            return eval_task(meta);
+          } else {
+            self->deferred_.emplace_back(alive, test_task, eval_task);
+            return Status::OK();
+          }
         } else {
           VLOG(100) << "Error: " << status.ToString();
           return status;
