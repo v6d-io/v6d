@@ -548,18 +548,24 @@ class Client:
         return self.rpc_client.get_remote_blobs(object_ids, unsafe)
 
     @_apply_docstring(IPCClient.get_object)
-    def get_object(self, object_id: ObjectID, fetch: bool = False) -> Object:
+    def get_object(
+        self, object_id: ObjectID, sync_remote: bool = True, fetch: bool = False
+    ) -> Object:
         """
         Fetches the object associated with the given object_id from Vineyard.
         The IPC client is preferred if it's available, otherwise the RPC client
         """
-        return self._fetch_object(object_id, enable_migrate=fetch)
+        return self._fetch_object(
+            object_id, sync_remote=sync_remote, enable_migrate=fetch
+        )
 
     @_apply_docstring(IPCClient.get_objects)
-    def get_objects(self, object_ids: List[ObjectID]) -> List[Object]:
+    def get_objects(
+        self, object_ids: List[ObjectID], sync_remote: bool = True
+    ) -> List[Object]:
         objects = []
         for object_id in object_ids:
-            objects.append(self.get_object(object_id))
+            objects.append(self.get_object(object_id, sync_remote))
         return objects
 
     @_apply_docstring(IPCClient.get_meta)
@@ -631,8 +637,10 @@ class Client:
             self._rpc_client = self._rpc_client.fork()
         return self
 
-    def _fetch_object(self, object_id: ObjectID, enable_migrate: bool) -> Object:
-        meta = self.get_meta(object_id, sync_remote=True)
+    def _fetch_object(
+        self, object_id: ObjectID, enable_migrate: bool, sync_remote: bool = True
+    ) -> Object:
+        meta = self.get_meta(object_id, sync_remote=sync_remote)
 
         if self.has_ipc_client() and enable_migrate:
             return self._ipc_client.get_object(object_id, fetch=True, sync_remote=False)
