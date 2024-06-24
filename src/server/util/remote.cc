@@ -508,7 +508,7 @@ Status RemoteClient::migrateBuffers(
             }
           }
           return callback(status, result_blobs);
-          });
+        });
   }
   return Status::OK();
 }

@@ -700,11 +700,11 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
             self->doWrite(message_out);
             return Status::OK();
           });
-    LOG_SUMMARY("instances_memory_usage_bytes",
-                self->server_ptr_->instance_id(),
-                self->bulk_store_->Footprint());
-    return Status::OK();
-  };
+      LOG_SUMMARY("instances_memory_usage_bytes",
+                  self->server_ptr_->instance_id(),
+                  self->bulk_store_->Footprint());
+      return Status::OK();
+    };
 
     // ok to continue
     std::string message_out;
