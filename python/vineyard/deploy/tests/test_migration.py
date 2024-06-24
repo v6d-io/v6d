@@ -20,6 +20,7 @@ import itertools
 import json
 import logging
 import threading
+import time
 
 import numpy as np
 import pandas as pd
@@ -281,14 +282,15 @@ def test_concurrent_migrations(
     )
 
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
-    client2 = vineyard.connect(vineyard_ipc_sockets[1])
 
     data = np.random.rand(10, 1000, 1000)
-    client1.put(data, name="data", persist=True)
     client1.put(data, name="data1", persist=True)
+    client1.put(data, name="data2", persist=True)
 
-    def migrate_data(client2, data):
-        client2 = client2.fork()
+    start = time.time()
+
+    def migrate_data(vineyard_ipc_sockets, data):
+        client2 = vineyard.connect(vineyard_ipc_sockets[1]).fork()
         for _ in range(0, 5):
             get_data1 = client2.get(name="data1", fetch=True)
             get_data2 = client2.get(name="data2", fetch=True)
@@ -299,7 +301,7 @@ def test_concurrent_migrations(
         threading.Thread(
             target=migrate_data,
             args=(
-                client2,
+                vineyard_ipc_sockets,
                 data,
             ),
             name=f"Thread-{i}",
@@ -312,3 +314,7 @@ def test_concurrent_migrations(
 
     for thread in threads:
         thread.join()
+    end = time.time()
+    print(f"Concurrent migrations taken: {end - start} seconds.")
+    client1.delete(client1.get_name("data1"))
+    client1.delete(client1.get_name("data2"))

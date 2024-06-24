@@ -665,6 +665,10 @@ void bind_client(py::module& mod) {
       .def(
           "get_object",
           [](Client* self, const ObjectIDWrapper object_id, bool const fetch) {
+            // Release GIL to avoid blocking the other threads
+            // See also
+            // https://pybind11.readthedocs.io/en/stable/advanced/misc.html#global-interpreter-lock-gil
+            py::gil_scoped_release release;
             // receive the status to throw a more precise exception when failed.
             std::shared_ptr<Object> object;
             if (fetch) {
