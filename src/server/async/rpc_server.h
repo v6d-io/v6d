@@ -72,6 +72,16 @@ class RPCServer : public SocketServer,
 
   Status InitRDMA();
 
+#ifdef VINEYARD_WITH_RDMA
+  void doVineyardRequestMemory(VineyardRecvContext* recv_context,
+                               VineyardMsg* recv_msg);
+
+  void doVineyardReleaseMemory(VineyardRecvContext* recv_context,
+                               VineyardMsg* recv_msg);
+
+  void doVineyardClose(VineyardRecvContext* recv_context);
+#endif
+
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;
