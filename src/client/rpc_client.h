@@ -135,12 +135,12 @@ class RPCClient final : public ClientBase {
    * @param meta_data The result metadata will be store in `meta_data` as return
    * value.
    * @param sync_remote Whether to trigger an immediate remote metadata
-   *        synchronization before get specific metadata. Default is true.
+   *        synchronization before get specific metadata. Default is false.
    *
    * @return Status that indicates whether the get action has succeeded.
    */
   Status GetMetaData(const ObjectID id, ObjectMeta& meta_data,
-                     const bool sync_remote = true) override;
+                     const bool sync_remote = false) override;
 
   /**
    * @brief Obtain multiple metadatas from vineyard server.
@@ -149,13 +149,13 @@ class RPCClient final : public ClientBase {
    * @param meta_data The result metadata will be store in `meta_data` as return
    * value.
    * @param sync_remote Whether to trigger an immediate remote metadata
-   *        synchronization before get specific metadata. Default is true.
+   *        synchronization before get specific metadata. Default is false.
    *
    * @return Status that indicates whether the get action has succeeded.
    */
   Status GetMetaData(const std::vector<ObjectID>& id,
                      std::vector<ObjectMeta>& meta_data,
-                     const bool sync_remote = true);
+                     const bool sync_remote = false);
 
   /**
    * @brief Get an object from vineyard. The ObjectFactory will be used to

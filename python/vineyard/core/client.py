@@ -640,8 +640,6 @@ class Client:
     def _fetch_object(
         self, object_id: ObjectID, enable_migrate: bool, sync_remote: bool = True
     ) -> Object:
-        # for ipc_client, the metadata and local payload will be fetched by the get_meta
-        # for rpc_client, only the metadata will be fetched by the get_meta
         meta = self.get_meta(object_id, sync_remote=sync_remote)
 
         if self.has_ipc_client() and enable_migrate:
