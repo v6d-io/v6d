@@ -19,6 +19,7 @@
 import itertools
 import json
 import logging
+import threading
 
 import numpy as np
 import pandas as pd
@@ -269,3 +270,45 @@ def test_migration_large_object(
     assert o1 != o2
     np.testing.assert_allclose(client1.get(o1), client2.get(o2))
     logger.info('------- finish migrate remote large object --------')
+
+
+@pytest.mark.skip_without_migration()
+def test_concurrent_migrations(
+    vineyard_ipc_sockets,
+):  # pylint: disable=too-many-statements
+    vineyard_ipc_sockets = list(
+        itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
+    )
+
+    client1 = vineyard.connect(vineyard_ipc_sockets[0])
+    client2 = vineyard.connect(vineyard_ipc_sockets[1])
+
+    data = np.random.rand(10, 1000, 1000)
+    client1.put(data, name="data", persist=True)
+    client1.put(data, name="data1", persist=True)
+
+    def migrate_data(client2, data):
+        client2 = client2.fork()
+        for _ in range(0, 5):
+            get_data1 = client2.get(name="data1", fetch=True)
+            get_data2 = client2.get(name="data2", fetch=True)
+            np.testing.assert_equal(data, get_data1)
+            np.testing.assert_equal(data, get_data2)
+
+    threads = [
+        threading.Thread(
+            target=migrate_data,
+            args=(
+                client2,
+                data,
+            ),
+            name=f"Thread-{i}",
+        )
+        for i in range(4)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()

@@ -1746,7 +1746,8 @@ bool SocketConnection::doMigrateObject(const json& root) {
   TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id);
 
   RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
-      object_id, [self](const Status& status, const ObjectID& target) {
+      object_id, [self]() { return self->running_.load(); },
+      [self](const Status& status, const ObjectID& target) {
         std::string message_out;
         if (status.ok()) {
           WriteMigrateObjectReply(target, message_out);
