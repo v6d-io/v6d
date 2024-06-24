@@ -693,16 +693,19 @@ class Client:
                 f"{instance_id} is not available."
             )
 
-        host, port = instance_status['rpc_endpoint'].split(':')
-        try:
-            with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
-                remote_client = _connect(host, port)
-                remote_client.compression = compression
-        except Exception as exec:
-            raise RuntimeError(
-                f"Failed to connect to the vineyard instance {instance_id} "
-                f"at {host}:{port}."
-            ) from exec
+        if self.remote_instance_id == instance_id:
+            remote_client = self._rpc_client
+        else:
+            host, port = instance_status['rpc_endpoint'].split(':')
+            try:
+                with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
+                    remote_client = _connect(host, port)
+                    remote_client.compression = compression
+            except Exception as exec:
+                raise RuntimeError(
+                    f"Failed to connect to the vineyard instance {instance_id} "
+                    f"at {host}:{port}."
+                ) from exec
 
         return remote_client.get_remote_blobs(blob_ids)
 
