@@ -701,7 +701,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
             return meta;
           },
-          "object_id"_a, py::arg("sync_remote") = false,
+          "object_id"_a, py::arg("sync_remote") = true,
           doc::IPCClient_get_meta)
       .def(
           "get_metas",
@@ -718,7 +718,7 @@ void bind_client(py::module& mod) {
                 self->GetMetaData(unwrapped_object_ids, metas, sync_remote));
             return metas;
           },
-          "object_ids"_a, py::arg("sync_remote") = false,
+          "object_ids"_a, py::arg("sync_remote") = true,
           doc::IPCClient_get_metas)
       .def("list_objects", &Client::ListObjects, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5,

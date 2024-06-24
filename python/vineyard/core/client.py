@@ -572,13 +572,13 @@ class Client:
     def get_meta(
         self,
         object_id: ObjectID,
-        sync_remote: bool = False,
+        sync_remote: bool = True,
     ) -> ObjectMeta:
         return self.default_client().get_meta(object_id, sync_remote)
 
     @_apply_docstring(IPCClient.get_metas)
     def get_metas(
-        self, object_ids: List[ObjectID], sync_remote: bool = False
+        self, object_ids: List[ObjectID], sync_remote: bool = True
     ) -> List[ObjectMeta]:
         metas = []
         for object_id in object_ids:
@@ -640,9 +640,12 @@ class Client:
     def _fetch_object(
         self, object_id: ObjectID, enable_migrate: bool, sync_remote: bool = True
     ) -> Object:
+        # for ipc_client, the metadata and local payload will be fetched by the get_meta
+        # for rpc_client, only the metadata will be fetched by the get_meta
         meta = self.get_meta(object_id, sync_remote=sync_remote)
 
         if self.has_ipc_client() and enable_migrate:
+            # no need to sync remote metadata as the metadata is already fetched
             return self._ipc_client.get_object(object_id, fetch=True, sync_remote=False)
 
         blobs = _traverse_blobs(meta)
