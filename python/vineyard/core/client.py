@@ -694,7 +694,7 @@ class Client:
                 f"{instance_id} is not available."
             )
 
-        if self.remote_instance_id == instance_id:
+        if self.has_rpc_client() and self.remote_instance_id == instance_id:
             remote_client = self._rpc_client
         else:
             host, port = instance_status['rpc_endpoint'].split(':')
