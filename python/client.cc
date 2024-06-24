@@ -504,6 +504,10 @@ void bind_client(py::module& mod) {
       .def(
           "migrate",
           [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
+            // Release GIL to avoid blocking the other threads
+            // See also
+            // https://pybind11.readthedocs.io/en/stable/advanced/misc.html#global-interpreter-lock-gil
+            py::gil_scoped_release release;
             ObjectID target_id = InvalidObjectID();
             throw_on_error(self->MigrateObject(object_id, target_id));
             return target_id;
