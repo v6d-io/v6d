@@ -948,7 +948,7 @@ See Also:
 )doc";
 
 const char* IPCClient_get_object = R"doc(
-.. method:: get_object(object_id: ObjectID, fetch: bool, sync_remote: bool) -> Object
+.. method:: get_object(object_id: ObjectID, fetch: bool, sync_remote: bool = True) -> Object
     :noindex:
 
 Get object from vineyard.
@@ -967,7 +967,7 @@ Returns:
 )doc";
 
 const char* IPCClient_get_objects = R"doc(
-.. method:: get_objects(object_ids: List[ObjectID], sync_remote: bool) -> List[Object]
+.. method:: get_objects(object_ids: List[ObjectID], sync_remote: bool = True) -> List[Object]
     :noindex:
 
 Get multiple objects from vineyard.
@@ -1111,7 +1111,7 @@ RPC client that connects to vineyard instance's RPC endpoints.
 )doc";
 
 const char* RPCClient_get_object = R"doc(
-.. method:: get_object(object_id: ObjectID, sync_remote: bool) -> Object
+.. method:: get_object(object_id: ObjectID, sync_remote: bool = True) -> Object
     :noindex:
 
 Get object from vineyard.
@@ -1127,7 +1127,7 @@ Returns:
 )doc";
 
 const char* RPCClient_get_objects = R"doc(
-.. method:: get_objects(object_ids: List[ObjectID], sync_remote: bool) -> List[Object]
+.. method:: get_objects(object_ids: List[ObjectID], sync_remote: bool = True) -> List[Object]
     :noindex:
 
 Get multiple objects from vineyard.
