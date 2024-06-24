@@ -648,6 +648,10 @@ class Client:
 
         blobs = _traverse_blobs(meta)
 
+        # If the object is local, return it directly
+        if blobs.keys() == {self.instance_id}:
+            return Object.from_(meta)
+
         cluster_info = self.default_client().meta
         meta.force_local()
         meta._client = None
