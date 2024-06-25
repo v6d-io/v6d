@@ -50,6 +50,7 @@ namespace vineyard {
   } while (0)
 
 enum VINEYARD_MSG_OPT {
+  VINEYARD_MSG_CONNECT,
   VINEYARD_MSG_EXCHANGE_KEY,
   VINEYARD_MSG_REQUEST_MEM,
   VINEYARD_RELEASE_MEM,
@@ -63,6 +64,9 @@ struct VineyardMsg {
       uint64_t len;
       uint64_t key;
     } remoteMemInfo;
+    struct {
+      bool isReady;
+    } ConnectState;
   };
   int type;
 };

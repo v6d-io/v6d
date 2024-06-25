@@ -211,14 +211,6 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
 
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
                                             static_cast<int>(rdma_port)));
-  max_register_size = rdma_client_->GetClientMaxRegisterSize();
-  if (max_register_size == 0) {
-    return Status::Invalid("Failed to get max register size.");
-  }
-  std::cout << "Max register size: " << max_register_size / 1024 / 1024 / 1024
-            << " GB." << std::endl;
-  std::cout << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port
-            << "..." << std::endl;
 
   RETURN_ON_ERROR(this->rdma_client_->Connect());
   this->rdma_connected_ = true;
@@ -540,6 +532,7 @@ Status RPCClient::CreateRemoteBlob(
 #ifdef VINEYARD_WITH_RDMA
     size_t remain_blob_bytes = buffer->size();
     char* local_blob_data = buffer->data();
+    uint64_t max_register_size = buffer->size();
 
     do {
       size_t blob_data_offset = buffer->size() - remain_blob_bytes;
@@ -559,9 +552,12 @@ Status RPCClient::CreateRemoteBlob(
         if (status.IsIOError()) {
           // probe the max register size again
           LOG(INFO) << "Probe the max register size again.";
-          max_register_size = rdma_client_->GetClientMaxRegisterSize();
-          if (max_register_size == 0) {
-            return Status::Invalid("Failed to get max register size.");
+          while(true) {
+            size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+            if (size > 0) {
+              max_register_size = size;
+              break;
+            }
           }
           local_info.size = std::min(remain_blob_bytes, max_register_size);
         } else {
@@ -677,6 +673,7 @@ Status RPCClient::CreateRemoteBlobs(
     for (size_t i = 0; i < payloads.size(); ++i) {
       size_t remain_blob_bytes = buffers[i]->size();
       char* local_blob_data = buffers[i]->data();
+      uint64_t max_register_size = buffers[i]->size();
 
       do {
         size_t blob_data_offset = buffers[i]->size() - remain_blob_bytes;
@@ -696,9 +693,12 @@ Status RPCClient::CreateRemoteBlobs(
           if (status.IsIOError()) {
             // probe the max register size again
             LOG(INFO) << "Probe the max register size again.";
-            max_register_size = rdma_client_->GetClientMaxRegisterSize();
-            if (max_register_size == 0) {
-              return Status::Invalid("Failed to get max register size.");
+            while(true) {
+              size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+              if (size > 0) {
+                max_register_size = size;
+                break;
+              }
             }
             local_info.size = std::min(remain_blob_bytes, max_register_size);
           } else {
@@ -831,6 +831,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
 #ifdef VINEYARD_WITH_RDMA
     size_t remain_blob_bytes = buffer->size();
     char* local_blob_data = buffer->mutable_data();
+    uint64_t max_register_size = buffer->size();
 
     do {
       size_t blob_data_offset = buffer->size() - remain_blob_bytes;
@@ -851,9 +852,12 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
         if (status.IsIOError()) {
           // probe the max register size again
           LOG(INFO) << "Probe the max register size again.";
-          max_register_size = rdma_client_->GetClientMaxRegisterSize();
-          if (max_register_size == 0) {
-            return Status::Invalid("Failed to get max register size.");
+          while(true) {
+            size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+            if (size > 0) {
+              max_register_size = size;
+              break;
+            }
           }
           local_info.size = std::min(remain_blob_bytes, max_register_size);
         } else {
@@ -962,6 +966,7 @@ Status RPCClient::GetRemoteBlobs(
 
       size_t remain_blob_bytes = remote_blob->size();
       char* local_blob_data = remote_blob->mutable_data();
+      uint64_t max_register_size = remote_blob->size();
 
       do {
         size_t blob_data_offset = remote_blob->size() - remain_blob_bytes;
@@ -982,9 +987,12 @@ Status RPCClient::GetRemoteBlobs(
           if (status.IsIOError()) {
             // probe the max register size again
             LOG(INFO) << "Probe the max register size again.";
-            max_register_size = rdma_client_->GetClientMaxRegisterSize();
-            if (max_register_size == 0) {
-              return Status::Invalid("Failed to get max register size.");
+            while(true) {
+              size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+              if (size > 0) {
+                max_register_size = size;
+                break;
+              }
             }
             local_info.size = std::min(remain_blob_bytes, max_register_size);
           } else {

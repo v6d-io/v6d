@@ -447,7 +447,6 @@ class RPCClient final : public ClientBase {
   std::string rdma_endpoint_;
 #ifdef VINEYARD_WITH_RDMA
   std::shared_ptr<RDMAClient> rdma_client_;
-  size_t max_register_size = 0;
 #endif
   mutable bool rdma_connected_ = false;
 

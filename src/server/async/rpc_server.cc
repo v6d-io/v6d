@@ -77,15 +77,6 @@ Status RPCServer::InitRDMA() {
 
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
   if (status.ok()) {
-    void* pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
-    size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
-    max_register_size = rdma_server_->GetServerMaxRegisterSize(
-        pointer, 1, size / 1024 / 1024 / 1024);
-    if (max_register_size == 0) {
-      return Status::Invalid("Get max register size failed!");
-    }
-    VLOG(100) << "Max register size: " << max_register_size / 1024 / 1024 / 1024
-              << " GB.";
     rdma_stop_ = false;
     rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
     rdma_recv_thread_ = std::thread([this]() { this->doRDMARecv(); });
@@ -198,8 +189,8 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
   VLOG(100) << "Receive vineyard request mem!";
   RegisterMemInfo remote_request_mem_info;
   remote_request_mem_info.address = recv_msg->remoteMemInfo.remote_address;
-  remote_request_mem_info.size =
-      std::min(recv_msg->remoteMemInfo.len, max_register_size);
+  uint64_t max_register_size = recv_msg->remoteMemInfo.len;
+  remote_request_mem_info.size = recv_msg->remoteMemInfo.len;
   VLOG(100) << "Receive remote request address: "
             << reinterpret_cast<void*>(remote_request_mem_info.address)
             << " size: " << remote_request_mem_info.size;
@@ -214,12 +205,14 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
     if (status.IsIOError()) {
       // probe the max register size again
       VLOG(100) << "Probe the max register size again.";
-      void* pointer = this->vs_ptr_->GetBulkStore()->GetBasePointer();
-      size_t size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
-      max_register_size = rdma_server_->GetServerMaxRegisterSize(
-          pointer, 1, size / 1024 / 1024 / 1024);
-      if (max_register_size == 0) {
-        break;
+      while (true) {
+        size_t size = rdma_server_->GetServerMaxRegisterSize(
+            reinterpret_cast<void*>(remote_request_mem_info.address),
+            1, max_register_size / 1024 / 1024 / 1024);
+        if (size > 0) {
+          max_register_size = size;
+          break;
+        }
       }
       remote_request_mem_info.size =
           std::min(recv_msg->remoteMemInfo.len, max_register_size);

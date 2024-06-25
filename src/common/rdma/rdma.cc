@@ -34,20 +34,30 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
   void* mr_desc = nullptr;
   uint64_t rkey = 0;
   void* buffer = addr;
-  size_t size_ = (r_size + l_size) / 2;
   size_t register_size = 0;
   size_t max_buffer_size = r_size * 1024 * 1024 * 1024;
 
   if (addr == nullptr) {
-    buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE,
-                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (buffer == MAP_FAILED) {
-      return register_size;
+    do {
+      buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+      if (buffer == MAP_FAILED) {
+        VLOG(100) << "map failed!";
+        r_size /= 2;
+        max_buffer_size = r_size * 1024 * 1024 * 1024;
+      } else {
+        break;
+      }
+    } while (max_buffer_size > 0);
+    if (max_buffer_size == 0) {
+      return 0;
     }
   }
 
+  size_t size_ = (r_size + l_size) / 2;
   while (l_size < r_size - 1) {
     size_t buffer_size = size_ * 1024 * 1024 * 1024;
+    VLOG(100) << "Register size: " << (double)buffer_size / 1024 / 1024 / 1024 << "GB";
     Status status =
         RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
     if (status.ok()) {

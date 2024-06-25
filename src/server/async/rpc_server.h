@@ -93,7 +93,6 @@ class RPCServer : public SocketServer,
       remote_mem_infos_;
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
-  uint64_t max_register_size = 0;
 
   std::thread rdma_listen_thread_;
   std::thread rdma_recv_thread_;
