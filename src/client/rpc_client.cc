@@ -552,8 +552,9 @@ Status RPCClient::CreateRemoteBlob(
         if (status.IsIOError()) {
           // probe the max register size again
           LOG(INFO) << "Probe the max register size again.";
-          while(true) {
-            size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+          while (true) {
+            size_t size = rdma_client_->GetClientMaxRegisterSize(
+                local_blob_data + blob_data_offset, 1, max_register_size);
             if (size > 0) {
               max_register_size = size;
               break;
@@ -693,8 +694,9 @@ Status RPCClient::CreateRemoteBlobs(
           if (status.IsIOError()) {
             // probe the max register size again
             LOG(INFO) << "Probe the max register size again.";
-            while(true) {
-              size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+            while (true) {
+              size_t size = rdma_client_->GetClientMaxRegisterSize(
+                  local_blob_data + blob_data_offset, 1, max_register_size);
               if (size > 0) {
                 max_register_size = size;
                 break;
@@ -852,8 +854,9 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
         if (status.IsIOError()) {
           // probe the max register size again
           LOG(INFO) << "Probe the max register size again.";
-          while(true) {
-            size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+          while (true) {
+            size_t size = rdma_client_->GetClientMaxRegisterSize(
+                local_blob_data + blob_data_offset, 1, max_register_size);
             if (size > 0) {
               max_register_size = size;
               break;
@@ -987,8 +990,9 @@ Status RPCClient::GetRemoteBlobs(
           if (status.IsIOError()) {
             // probe the max register size again
             LOG(INFO) << "Probe the max register size again.";
-            while(true) {
-              size_t size = rdma_client_->GetClientMaxRegisterSize(local_blob_data + blob_data_offset, 1, max_register_size);
+            while (true) {
+              size_t size = rdma_client_->GetClientMaxRegisterSize(
+                  local_blob_data + blob_data_offset, 1, max_register_size);
               if (size > 0) {
                 max_register_size = size;
                 break;

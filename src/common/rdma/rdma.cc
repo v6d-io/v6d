@@ -57,7 +57,8 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
   size_t size_ = (r_size + l_size) / 2;
   while (l_size < r_size - 1) {
     size_t buffer_size = size_ * 1024 * 1024 * 1024;
-    VLOG(100) << "Register size: " << (double)buffer_size / 1024 / 1024 / 1024 << "GB";
+    VLOG(100) << "Register size: "
+              << static_cast<double>(buffer_size) / 1024 / 1024 / 1024 << "GB";
     Status status =
         RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
     if (status.ok()) {
