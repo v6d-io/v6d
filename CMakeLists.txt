@@ -63,7 +63,7 @@ option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
 option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" ON)
-option(BUILD_VINEYARD_RDMA "Enable RDMA support" OFF)
+option(BUILD_VINEYARD_RDMA "Enable RDMA support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -667,6 +667,29 @@ add_custom_target(vineyard_codegen_java)
 include("cmake/GenerateVineyard.cmake")
 include("cmake/GenerateVineyardJava.cmake")
 
+if(BUILD_VINEYARD_RDMA)
+    add_custom_target(
+        fabric ALL
+        COMMAND ./autogen.sh > /dev/null
+        COMMAND ./configure > /dev/null
+        COMMAND make -j$(nproc) > /dev/null
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1 ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+    )
+    set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1")
+    message("libfabric static library: ${LIBFABRIC}")
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+            PATTERN "*.h"
+    )
+    include_directories(BEFORE SYSTEM
+                        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
+                        $<INSTALL_INTERFACE:include/vineyard/contrib>
+    )
+endif()
+
 # boost is only required by some components
 if(BUILD_VINEYARD_SERVER OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_GRAPH)
     find_boost()
@@ -753,7 +776,8 @@ if(BUILD_VINEYARD_SERVER)
 
     if(BUILD_VINEYARD_RDMA)
         target_compile_options(vineyardd PRIVATE -DVINEYARD_WITH_RDMA)
-        target_link_libraries(vineyardd PRIVATE fabric)
+        target_link_libraries(vineyardd PRIVATE ${LIBFABRIC})
+        add_dependencies(vineyardd fabric)
     endif()
 
     install_vineyard_target(vineyardd)
@@ -831,7 +855,8 @@ if(BUILD_VINEYARD_CLIENT)
 
     if(BUILD_VINEYARD_RDMA)
         target_compile_options(vineyard_client PRIVATE -DVINEYARD_WITH_RDMA)
-        target_link_libraries(vineyard_client PRIVATE fabric)
+        target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC})
+        add_dependencies(vineyard_client fabric)
     endif()
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
