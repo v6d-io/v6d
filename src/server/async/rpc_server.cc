@@ -362,11 +362,17 @@ void RPCServer::doRDMARecv() {
       VineyardMsg* recv_msg =
           reinterpret_cast<VineyardMsg*>(recv_context->attr.msg_buffer);
       if (recv_msg->type == VINEYARD_MSG_REQUEST_MEM) {
-        doVineyardRequestMemory(recv_context, recv_msg);
+        boost::asio::post(vs_ptr_->GetContext(), [this, recv_context, recv_msg] {
+          doVineyardRequestMemory(recv_context, recv_msg);
+        });
       } else if (recv_msg->type == VINEYARD_RELEASE_MEM) {
-        doVineyardReleaseMemory(recv_context, recv_msg);
+        boost::asio::post(vs_ptr_->GetContext(), [this, recv_context, recv_msg] {
+          doVineyardReleaseMemory(recv_context, recv_msg);
+        });
       } else if (recv_msg->type == VINEYARD_MSG_CLOSE) {
-        doVineyardClose(recv_context);
+        boost::asio::post(vs_ptr_->GetContext(), [this, recv_context] {
+          doVineyardClose(recv_context);
+        });
       } else {
         LOG(ERROR) << "Unknown message type: " << recv_msg->type;
       }
