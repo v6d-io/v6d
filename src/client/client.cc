@@ -388,9 +388,10 @@ Status Client::PullNextStreamChunk(ObjectID const id,
                          buffer->meta().GetTypeName() + "'");
 }
 
-std::shared_ptr<Object> Client::GetObject(const ObjectID id) {
+std::shared_ptr<Object> Client::GetObject(const ObjectID id,
+                                          const bool sync_remote) {
   ObjectMeta meta;
-  RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, true));
+  RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, sync_remote));
   RETURN_NULL_ON_ASSERT(!meta.MetaData().empty(),
                         "metadata shouldn't be empty");
   auto object = ObjectFactory::Create(meta.GetTypeName());
@@ -401,15 +402,17 @@ std::shared_ptr<Object> Client::GetObject(const ObjectID id) {
   return object;
 }
 
-std::shared_ptr<Object> Client::FetchAndGetObject(const ObjectID id) {
+std::shared_ptr<Object> Client::FetchAndGetObject(const ObjectID id,
+                                                  const bool sync_remote) {
   ObjectID local_object_id;
   RETURN_NULL_ON_ERROR(this->MigrateObject(id, local_object_id));
-  return this->GetObject(local_object_id);
+  return this->GetObject(local_object_id, sync_remote);
 }
 
-Status Client::GetObject(const ObjectID id, std::shared_ptr<Object>& object) {
+Status Client::GetObject(const ObjectID id, std::shared_ptr<Object>& object,
+                         bool sync_remote) {
   ObjectMeta meta;
-  RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
+  RETURN_ON_ERROR(this->GetMetaData(id, meta, sync_remote));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
   object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
@@ -420,17 +423,18 @@ Status Client::GetObject(const ObjectID id, std::shared_ptr<Object>& object) {
 }
 
 Status Client::FetchAndGetObject(const ObjectID id,
-                                 std::shared_ptr<Object>& object) {
+                                 std::shared_ptr<Object>& object,
+                                 const bool sync_remote) {
   ObjectID local_object_id;
   RETURN_ON_ERROR(this->MigrateObject(id, local_object_id));
-  return this->GetObject(local_object_id, object);
+  return this->GetObject(local_object_id, object, sync_remote);
 }
 
 std::vector<std::shared_ptr<Object>> Client::GetObjects(
-    const std::vector<ObjectID>& ids) {
+    const std::vector<ObjectID>& ids, const bool sync_remote) {
   std::vector<std::shared_ptr<Object>> objects(ids.size());
   std::vector<ObjectMeta> metas;
-  if (!this->GetMetaData(ids, metas, true).ok()) {
+  if (!this->GetMetaData(ids, metas, sync_remote).ok()) {
     for (size_t index = 0; index < ids.size(); ++index) {
       objects[index] = nullptr;
     }
