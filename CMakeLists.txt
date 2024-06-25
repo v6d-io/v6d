@@ -668,17 +668,27 @@ include("cmake/GenerateVineyard.cmake")
 include("cmake/GenerateVineyardJava.cmake")
 
 if(BUILD_VINEYARD_RDMA)
-    add_custom_target(
-        fabric ALL
+    set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
+    add_custom_command(
+        OUTPUT ${FABRIC_MAKEFILE}
         COMMAND ./autogen.sh > /dev/null
         COMMAND ./configure > /dev/null
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+    )
+    add_custom_target(
+        fabric_configure
+        DEPENDS ${FABRIC_MAKEFILE}
+    )
+    add_custom_target(
+        fabric ALL
         COMMAND make -j$(nproc) > /dev/null
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1 ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1
+        DEPENDS fabric_configure
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
     )
-    set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1")
+    set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so")
     message("libfabric static library: ${LIBFABRIC}")
     install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
             DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
