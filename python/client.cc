@@ -664,7 +664,8 @@ void bind_client(py::module& mod) {
           "object_ids"_a, py::arg("unsafe") = false, doc::IPCClient_get_blobs)
       .def(
           "get_object",
-          [](Client* self, const ObjectIDWrapper object_id, bool const fetch) {
+          [](Client* self, const ObjectIDWrapper object_id, bool const fetch,
+             bool const sync_remote) {
             // Release GIL to avoid blocking the other threads
             // See also
             // https://pybind11.readthedocs.io/en/stable/advanced/misc.html#global-interpreter-lock-gil
