@@ -1069,8 +1069,8 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
             }
           };
 
-          auto eval_task = [self, callback, remote_endpoint, rdma_endpoint, object_id,
-                            metadata](const json& meta) -> Status {
+          auto eval_task = [self, callback, remote_endpoint, rdma_endpoint,
+                            object_id, metadata](const json& meta) -> Status {
             std::lock_guard<std::mutex> lock(
                 self->migrations_origin_to_target_mutex_);
             auto it = self->migrations_origin_to_target_.find(object_id);
@@ -1080,13 +1080,13 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
             }
 
             boost::asio::post(self->GetIOContext(), [self, callback,
-                                                     remote_endpoint, 
+                                                     remote_endpoint,
                                                      rdma_endpoint, object_id,
                                                      metadata]() {
               auto remote = std::make_shared<RemoteClient>(self);
-              
-              Status status =
-                  remote->Connect(remote_endpoint, self->session_id(), rdma_endpoint);
+
+              Status status = remote->Connect(
+                  remote_endpoint, self->session_id(), rdma_endpoint);
               if (!status.ok()) {
                 return callback(status, InvalidObjectID());
               }
