@@ -25,11 +25,9 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "common/util/logging.h"
-#include "common/util/status.h"
-
 #include "common/rdma/rdma_server.h"
 #include "common/rdma/util.h"
+#include "common/util/status.h"
 
 namespace vineyard {
 
@@ -59,7 +57,6 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, int port) {
 Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
                         int port) {
   if (!hints) {
-    LOG(ERROR) << "Invalid fabric hints info.";
     return Status::Invalid("Invalid fabric hints info.");
   }
 
@@ -129,7 +126,6 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
 
   ptr->port = port;
 
-  VLOG(100) << "RDMAServer listen....";
   CHECK_ERROR(!fi_listen(ptr->pep), "fi_listen failed.");
 
   ptr->state = READY;
@@ -167,7 +163,6 @@ Status RDMAServer::Close() {
 
   FreeInfo(fi);
 
-  VLOG(100) << "Free sources from server successfully";
   return Status::OK();
 }
 
@@ -190,7 +185,6 @@ Status RDMAServer::WaitConnect(uint64_t& rdma_conn_id) {
     CHECK_ERROR(rd == sizeof entry, "fi_eq_sread failed.");
     if (event == FI_SHUTDOWN) {
       fid_ep* closed_ep = container_of(entry.fid, fid_ep, fid);
-      VLOG(100) << "Connection closed.";
       RemoveClient(closed_ep);
       continue;
     }
@@ -348,7 +342,6 @@ Status RDMAServer::GetTXFreeMsgBuffer(void*& buffer) {
     }
     buffer = reinterpret_cast<void*>(reinterpret_cast<uint64_t>(tx_msg_buffer) +
                                      index * sizeof(VineyardMsg));
-    VLOG(100) << "Get TX buffer index:" << index;
     return Status::OK();
   }
 }
@@ -385,7 +378,6 @@ Status RDMAServer::ReleaseRXBuffer(void* buffer) {
   std::lock_guard<std::mutex> lock(rx_msg_buffer_mutex_);
   int index =
       ((uint64_t) buffer - (uint64_t) rx_msg_buffer) / sizeof(VineyardMsg);
-  VLOG(100) << "Release RX buffer index:" << index;
   rx_buffer_bitmaps[index / 64] |= 1 << (index % 64);
   return Status::OK();
 }
@@ -405,7 +397,6 @@ Status RDMAServer::ReleaseTXBuffer(void* buffer) {
   std::lock_guard<std::mutex> lock(tx_msg_buffer_mutex_);
   int index =
       ((uint64_t) buffer - (uint64_t) tx_msg_buffer) / sizeof(VineyardMsg);
-  VLOG(100) << "Release TX buffer index:" << index;
   tx_buffer_bitmaps[index / 64] |= 1 << (index % 64);
   return Status::OK();
 }
@@ -451,7 +442,6 @@ Status RDMAServer::GetTXCompletion(int timeout, void** context) {
 }
 
 Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
-  VLOG(100) << "Close connection endpoint!";
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   if (ep_map_.find(rdma_conn_id) == ep_map_.end()) {
     return Status::Invalid("Failed to find buffer context.");

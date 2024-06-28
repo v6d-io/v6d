@@ -22,6 +22,7 @@ limitations under the License.
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/rdma_server.h"
 #include "common/rdma/util.h"
+#include "common/util/logging.h"
 
 #define MEM_SIZE 1024
 #define TEST_CLIENT_ID 0

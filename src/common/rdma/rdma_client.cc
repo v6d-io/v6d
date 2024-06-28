@@ -26,11 +26,9 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "common/util/logging.h"
-#include "common/util/status.h"
-
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/util.h"
+#include "common/util/status.h"
 
 namespace vineyard {
 
@@ -230,7 +228,6 @@ Status RDMAClient::Close() {
   delete rx_msg_buffer;
   delete tx_msg_buffer;
 
-  VLOG(100) << "Free sources from client successfully";
   return Status::OK();
 }
 
@@ -325,7 +322,6 @@ Status RDMAClientCreator::Clear() {
 
 Status RDMAClientCreator::Release(std::string rdma_endpoint) {
   if (servers_.find(rdma_endpoint) != servers_.end()) {
-    VLOG(100) << "Release RDMA resources for " << rdma_endpoint;
     RDMARemoteNodeInfo& info = servers_[rdma_endpoint];
     // before closing domain and fabric, we need to close all the resources
     // bound to them, otherwise, the close operation will failed with -FI_EBUSY

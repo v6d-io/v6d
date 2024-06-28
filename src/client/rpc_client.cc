@@ -33,7 +33,6 @@ limitations under the License.
 #include "client/utils.h"
 #include "common/compression/compressor.h"
 #include "common/util/env.h"
-#include "common/util/logging.h"
 #include "common/util/protocols.h"
 #include "common/util/version.h"
 

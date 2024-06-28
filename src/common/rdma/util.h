@@ -19,9 +19,9 @@ limitations under the License.
 #ifdef VINEYARD_WITH_RDMA
 
 #include <rdma/fabric.h>
+#include <unistd.h>
 #include <string>
 
-#include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {
@@ -41,7 +41,7 @@ namespace vineyard {
       }                                                            \
                                                                    \
       if (ret != -FI_EAGAIN) {                                     \
-        LOG(ERROR) << op_str << " " << ret;                        \
+        std::cout << op_str << " " << ret << std::endl;            \
         std::string msg = "Failed to post " + std::string(op_str); \
         return Status::Invalid(msg);                               \
       }                                                            \

@@ -42,7 +42,6 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
       buffer = mmap(NULL, max_buffer_size, PROT_READ | PROT_WRITE,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
       if (buffer == MAP_FAILED) {
-        VLOG(100) << "map failed!";
         r_size /= 2;
         max_buffer_size = r_size * 1024 * 1024 * 1024;
       } else {
@@ -57,19 +56,14 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
   size_t size_ = (r_size + l_size) / 2;
   while (l_size < r_size - 1) {
     size_t buffer_size = size_ * 1024 * 1024 * 1024;
-    VLOG(100) << "Register size: "
-              << static_cast<double>(buffer_size) / 1024 / 1024 / 1024 << "GB";
     Status status =
         RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
     if (status.ok()) {
-      VLOG(100) << "Register memory size: " << buffer_size / 1024 / 1024 / 1024
-                << "GB success";
       register_size = buffer_size;
       VINEYARD_CHECK_OK(CloseResource(mr, "memory region"));
       l_size = size_;
       size_ = (size_ + r_size) / 2;
     } else {
-      VLOG(100) << "Register failed:" << status.message();
       r_size = size_;
       size_ = (size_ + l_size) / 2;
     }
@@ -99,7 +93,6 @@ Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
   mr_attr.offset = 0;
   mr_attr.iface = FI_HMEM_SYSTEM;
   mr_attr.context = NULL;
-  VLOG(100) << "Try to register memory region: size = " << size;
 
   int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
   if (ret == -FI_EIO) {
