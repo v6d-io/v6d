@@ -509,6 +509,8 @@ def pandas_dataframe_resolver(obj, resolver):
         elif len(np_value.shape) == 1:
             values = np.expand_dims(np_value, 0).view(ndarray)
             setattr(values, '__vineyard_ref', getattr(np_value, '__vineyard_ref', None))
+            if isinstance(np_value, ndarray):
+                values = np.asarray(values)
             block = Block(values, placement, ndim=2)
         else:
             values = NDArrayArray(np.expand_dims(np_value, 0).view(ndarray), dim=2)
