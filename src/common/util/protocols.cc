@@ -716,56 +716,63 @@ Status ReadShrinkBufferReply(const json& root) {
   return Status::OK();
 }
 
-void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg) {
-  WriteCreateRemoteBufferRequest(size, false, msg);
+void WriteCreateRemoteBufferRequest(const size_t size, bool use_rdma,
+                                    std::string& msg) {
+  WriteCreateRemoteBufferRequest(size, false, use_rdma, msg);
 }
 
 void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
-                                    std::string& msg) {
+                                    bool use_rdma, std::string& msg) {
   json root;
   root["type"] = command_t::CREATE_REMOTE_BUFFER_REQUEST;
   root["size"] = size;
   root["compress"] = compress;
+  root["use_rdma"] = use_rdma;
 
   encode_msg(root, msg);
 }
 
 Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
-                                     bool& compress) {
+                                     bool& compress, bool& use_rdma) {
   CHECK_IPC_ERROR(root, command_t::CREATE_REMOTE_BUFFER_REQUEST);
   size = root["size"].get<size_t>();
   compress = root.value("compress", false);
+  use_rdma = root.value("use_rdma", false);
   return Status::OK();
 }
 
 void WriteCreateRemoteBuffersRequest(const std::vector<size_t>& size,
-                                     const bool compress, std::string& msg) {
+                                     const bool compress, bool use_rdma,
+                                     std::string& msg) {
   json root;
   root["type"] = command_t::CREATE_REMOTE_BUFFERS_REQUEST;
   root["num"] = size.size();
   root["sizes"] = size;
   root["compress"] = compress;
+  root["use_rdma"] = use_rdma;
 
   encode_msg(root, msg);
 }
 
 Status ReadCreateRemoteBuffersRequest(const json& root,
-                                      std::vector<size_t>& size,
-                                      bool& compress) {
+                                      std::vector<size_t>& size, bool& compress,
+                                      bool& use_rdma) {
   CHECK_IPC_ERROR(root, command_t::CREATE_REMOTE_BUFFERS_REQUEST);
   size = root["sizes"].get<std::vector<size_t>>();
   compress = root.value("compress", false);
+  use_rdma = root.value("use_rdma", false);
   return Status::OK();
 }
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
-                                  const bool unsafe, std::string& msg) {
-  WriteGetRemoteBuffersRequest(ids, unsafe, false, msg);
+                                  const bool unsafe, bool use_rdma,
+                                  std::string& msg) {
+  WriteGetRemoteBuffersRequest(ids, unsafe, false, use_rdma, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
                                   const bool unsafe, const bool compress,
-                                  std::string& msg) {
+                                  bool use_rdma, std::string& msg) {
   json root;
   root["type"] = command_t::GET_REMOTE_BUFFERS_REQUEST;
   int idx = 0;
@@ -775,18 +782,20 @@ void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
   root["num"] = ids.size();
   root["unsafe"] = unsafe;
   root["compress"] = compress;
+  root["use_rdma"] = use_rdma;
 
   encode_msg(root, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  const bool unsafe, std::string& msg) {
-  WriteGetRemoteBuffersRequest(ids, unsafe, false, msg);
+                                  const bool unsafe, bool use_rdma,
+                                  std::string& msg) {
+  WriteGetRemoteBuffersRequest(ids, unsafe, false, use_rdma, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   const bool unsafe, const bool compress,
-                                  std::string& msg) {
+                                  bool use_rdma, std::string& msg) {
   json root;
   root["type"] = command_t::GET_REMOTE_BUFFERS_REQUEST;
   int idx = 0;
@@ -796,12 +805,14 @@ void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
   root["num"] = ids.size();
   root["unsafe"] = unsafe;
   root["compress"] = compress;
+  root["use_rdma"] = use_rdma;
 
   encode_msg(root, msg);
 }
 
 Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                   bool& unsafe, bool& compress) {
+                                   bool& unsafe, bool& compress,
+                                   bool& use_rdma) {
   CHECK_IPC_ERROR(root, command_t::GET_REMOTE_BUFFERS_REQUEST);
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
@@ -809,6 +820,7 @@ Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
   }
   unsafe = root.value("unsafe", false);
   compress = root.value("compress", false);
+  use_rdma = root.value("use_rdma", false);
   return Status::OK();
 }
 

@@ -564,6 +564,8 @@ void IMetaService::registerToEtcd() {
               op_t::Put(key + "/ipc_socket", self->server_ptr_->IPCSocket()));
           ops.emplace_back(op_t::Put(key + "/timestamp", timestamp));
           ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
+          ops.emplace_back(op_t::Put(key + "/rdma_endpoint",
+                                     self->server_ptr_->RDMAEndpoint()));
           LOG(INFO) << "Decide to set rank as " << rank;
           return status;
         } else {

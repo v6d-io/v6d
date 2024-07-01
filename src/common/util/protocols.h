@@ -330,37 +330,42 @@ void WriteRequestFDReply(const ObjectID id,
 Status ReadRequestFDReply(const json& root, ObjectID& id, Payload& object,
                           int& fd_sent);
 
-void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
-
-void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
+void WriteCreateRemoteBufferRequest(const size_t size, bool use_rdma,
                                     std::string& msg);
 
+void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
+                                    bool use_rdma, std::string& msg);
+
 Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
-                                     bool& compress);
+                                     bool& compress, bool& use_rdma);
 
 void WriteCreateRemoteBuffersRequest(const std::vector<size_t>& sizes,
-                                     const bool compress, std::string& msg);
+                                     const bool compress, bool use_rdma,
+                                     std::string& msg);
 
 Status ReadCreateRemoteBuffersRequest(const json& root,
-                                      std::vector<size_t>& size,
-                                      bool& compress);
+                                      std::vector<size_t>& size, bool& compress,
+                                      bool& use_rdma);
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
-                                  const bool unsafe, std::string& msg);
-
-void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  const bool unsafe, std::string& msg);
-
-void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
-                                  const bool unsafe, const bool compress,
+                                  const bool unsafe, bool use_rdma,
                                   std::string& msg);
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  const bool unsafe, const bool compress,
+                                  const bool unsafe, bool use_rdma,
                                   std::string& msg);
+
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  bool use_rdma, std::string& msg);
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  bool use_rdma, std::string& msg);
 
 Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                   bool& unsafe, bool& compress);
+                                   bool& unsafe, bool& compress,
+                                   bool& use_rdma);
 
 void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
                                         std::string& msg);
