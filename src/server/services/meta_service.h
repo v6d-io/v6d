@@ -94,7 +94,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   static std::shared_ptr<IMetaService> Get(
       std::shared_ptr<VineyardServer> vs_ptr);
 
-  Status Start();
+  Status Start(bool create_new_instance = true);
 
   virtual void Stop();
 
@@ -226,7 +226,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   std::string meta_sync_lock_;
 
  private:
-  virtual Status preStart() { return Status::OK(); }
+  virtual Status preStart(bool create_new_instance) { return Status::OK(); }
 
   bool deleteable(ObjectID const object_id);
 

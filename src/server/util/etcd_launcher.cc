@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
+#include "common/util/status.h"
 
 #if defined(BUILD_VINEYARDD_ETCD)
 
@@ -132,7 +133,9 @@ Status checkEtcdctlCommand(const std::string& etcdctl_cmd) {
   return Status::OK();
 }
 
-EtcdLauncher::EtcdLauncher(const json& etcd_spec) : etcd_spec_(etcd_spec) {}
+EtcdLauncher::EtcdLauncher(const json& etcd_spec,
+                           const bool create_new_instance)
+    : etcd_spec_(etcd_spec), create_new_instance_(create_new_instance) {}
 
 EtcdLauncher::~EtcdLauncher() {
   if (etcd_proc_) {
@@ -176,6 +179,12 @@ Status EtcdLauncher::LaunchEtcdServer(
     etcd_client.reset(new etcd::Client(etcd_endpoint));
     if (probeEtcdServer(etcd_client, sync_lock)) {
       etcd_cluster_existing = true;
+      if (!create_new_instance_) {
+        etcd_endpoints_ = etcd_endpoint;
+        std::cout << "Etcd cluster already exists at, not to add new instance: "
+                  << etcd_endpoint << std::endl;
+        return Status::OK();
+      }
       break;
     }
     retries += 1;

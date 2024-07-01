@@ -76,10 +76,10 @@ void IMetaService::Stop() {
   LOG(INFO) << "meta service is stopping ...";
 }
 
-Status IMetaService::Start() {
+Status IMetaService::Start(bool create_new_instance) {
   LOG(INFO) << "meta service is starting, waiting the metadata backend "
                "service becoming ready ...";
-  RETURN_ON_ERROR(this->preStart());
+  RETURN_ON_ERROR(this->preStart(create_new_instance));
   auto current = std::chrono::system_clock::now();
   auto timeout =
       std::chrono::seconds(server_ptr_->GetSpec()["metastore_spec"].value(

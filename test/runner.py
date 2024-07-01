@@ -248,6 +248,7 @@ def start_vineyardd(
             **kw,
         )
         yield stack.enter_context(proc), rpc_socket_port
+    time.sleep(10)
 
 
 @contextlib.contextmanager

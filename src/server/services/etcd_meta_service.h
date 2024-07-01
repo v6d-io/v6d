@@ -181,7 +181,7 @@ class EtcdMetaService : public IMetaService {
     return std::static_pointer_cast<EtcdMetaService>(shared_from_this());
   }
 
-  Status preStart() override;
+  Status preStart(bool create_new_instance) override;
 
   std::unique_ptr<etcd::Client> etcd_;
   std::shared_ptr<etcd::Watcher> watcher_;

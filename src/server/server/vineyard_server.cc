@@ -26,6 +26,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "common/util/uuid.h"
 #include "gulrak/filesystem.hpp"
 
 #include "common/util/callback.h"
@@ -91,7 +92,8 @@ std::shared_ptr<PlasmaBulkStore> VineyardServer::GetBulkStore<PlasmaID>() {
   return plasma_bulk_store_;
 }
 
-Status VineyardServer::Serve(StoreType const& bulk_store_type) {
+Status VineyardServer::Serve(StoreType const& bulk_store_type,
+                             const bool create_new_instance) {
   stopped_.store(false);
   this->bulk_store_type_ = bulk_store_type;
 
@@ -106,7 +108,7 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   }
 
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
-  RETURN_ON_ERROR(this->meta_service_ptr_->Start());
+  RETURN_ON_ERROR(this->meta_service_ptr_->Start(create_new_instance));
 
   auto memory_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
   auto allocator = spec_["bulkstore_spec"]["allocator"].get<std::string>();

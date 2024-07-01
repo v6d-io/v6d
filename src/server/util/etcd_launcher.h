@@ -34,7 +34,7 @@ namespace vineyard {
 
 class EtcdLauncher {
  public:
-  explicit EtcdLauncher(const json& etcd_spec);
+  explicit EtcdLauncher(const json& etcd_spec, const bool create_new_instance);
   ~EtcdLauncher();
 
   Status LaunchEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
@@ -77,6 +77,7 @@ class EtcdLauncher {
   Status initHostInfo();
 
   const json etcd_spec_;
+  const bool create_new_instance_;
   std::string endpoint_host_;
   std::string etcd_data_dir_;
   int endpoint_port_;
