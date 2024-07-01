@@ -201,6 +201,23 @@ def make_metadata_settings(meta, endpoint, prefix):
         ]
     raise ValueError("invalid argument: unknown metadata backend: '%s'" % meta)
 
+def check_vineyard_for_ready(rpc_socket_port, timeout=60):
+    """Check if vineyardd and internal etcd is ready."""
+    ready = False
+    end_time = time.time() + timeout
+    while time.time() < end_time and not ready:
+        try:
+            cmd = f"lsof -i :{rpc_socket_port}"
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            lines = result.stdout.strip().split('\n')
+            process_count = len(lines) - 1 if lines[0].startswith('COMMAND') else len(lines)
+            # If there are two processes listening on the rpc socket port, it means vineyardd and internal etcd are ready.
+            if process_count == 2:
+                ready = True
+        except Exception as e:
+            print(f"Error checking port {rpc_socket_port}: {e}", flush=True)
+        time.sleep(1)
+    return ready
 
 @contextlib.contextmanager
 def start_vineyardd(
@@ -247,9 +264,11 @@ def start_vineyardd(
             verbose=True,
             **kw,
         )
-        yield stack.enter_context(proc), rpc_socket_port
-    time.sleep(10)
-
+        proc_context = stack.enter_context(proc)
+        if rpc_socket_port is not None:
+            while not check_vineyard_for_ready(rpc_socket_port):
+                time.sleep(1)
+        yield proc_context, rpc_socket_port
 
 @contextlib.contextmanager
 def start_multiple_vineyardd(
@@ -483,6 +502,8 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
 
 def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
+    #client_port = find_port()
+    #endpoints = 'http://127.0.0.1:%d' % client_port
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
