@@ -273,12 +273,10 @@ Status EtcdLauncher::LaunchEtcdServer(
     }
 
     endpoint = boost::algorithm::join(client_urls, ",");
-    if (addMember(new_member_name, peer_endpoint, endpoint).ok()) {
-      LOG(INFO) << "Added new member " << new_member_name
-                << " to the etcd cluster";
-    } else {
+    if (!addMember(new_member_name, peer_endpoint, endpoint).ok()) {
       return Status::EtcdError("Failed to add new member to the etcd cluster");
     }
+
     args.emplace_back("--initial-cluster-state");
     args.emplace_back("existing");
     args.emplace_back("--initial-cluster");
@@ -373,23 +371,7 @@ Status EtcdLauncher::LaunchEtcdServer(
            retries < max_probe_retries) {
       etcd_client.reset(new etcd::Client(client_endpoint));
       if (probeEtcdServer(etcd_client, sync_lock)) {
-        auto members = listMembers(etcd_endpoints_);
-        bool found = false;
-        for (const auto& member : members) {
-          if (member["name"].get<std::string>() == new_member_name) {
-            std::stringstream ss;
-            ss << std::hex << member["ID"].get<uint64_t>();
-            etcd_member_id_ = ss.str();
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          LOG(ERROR) << "Failed to find the new member id"
-                     << ", retries: " << retries << "/" << max_probe_retries;
-          retries += 1;
-          sleep(1);
-        }
+        etcd_member_id_ = findMemberID(new_member_name, etcd_endpoints_);
         // reset the etcd watcher
         break;
       }
@@ -397,18 +379,28 @@ Status EtcdLauncher::LaunchEtcdServer(
       sleep(1);
     }
     if (!etcd_proc_) {
-      return Status::IOError(
+      return handleEtcdFailure(
+          new_member_name,
           "Failed to wait until etcd ready: operation has been interrupted");
     } else if (err) {
-      return Status::IOError("Failed to check the process status: " +
-                             err.message());
+      return handleEtcdFailure(
+          new_member_name, "Failed to wait until etcd ready: " + err.message());
     } else if (retries >= max_probe_retries) {
-      return Status::EtcdError(
+      return handleEtcdFailure(
+          new_member_name,
           "Etcd has been launched but failed to connect to it");
     } else {
       return Status::OK();
     }
   }
+}
+
+Status EtcdLauncher::handleEtcdFailure(const std::string& member_name,
+                                       const std::string& errMessage) {
+  auto member_id = findMemberID(member_name, etcd_endpoints_);
+  RETURN_ON_ERROR(removeMember(etcd_member_id_));
+  etcd_member_id_.clear();
+  return Status::IOError(errMessage);
 }
 
 Status EtcdLauncher::addMember(std::string& member_name,
@@ -508,6 +500,34 @@ Status EtcdLauncher::removeMember(std::string& member_id, int max_retries) {
                            std::to_string(max_retries) + " retries");
 }
 
+std::string EtcdLauncher::findMemberID(const std::string& member_name,
+                                       const std::string& etcd_endpoints) {
+  std::string member_id = "";
+  auto members = listMembers(etcd_endpoints);
+  for (const auto& member : members) {
+    if (member["name"].get<std::string>() == member_name) {
+      std::stringstream ss;
+      ss << std::hex << member["ID"].get<uint64_t>();
+      member_id = ss.str();
+      break;
+    }
+  }
+  return member_id;
+}
+
+bool EtcdLauncher::memberIsStarted(const std::string& member_id,
+                                   const std::string& etcd_endpoints) {
+  auto members = listMembers(etcd_endpoints);
+  for (const auto& member : members) {
+    std::stringstream ss;
+    ss << std::hex << member["ID"].get<uint64_t>();
+    if (ss.str() == member_id && member.find("clientURLs") != member.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::vector<json> EtcdLauncher::listMembers(const std::string& etcd_endpoints) {
   std::vector<json> members;
   boost::process::ipstream output_stream;
@@ -547,6 +567,9 @@ std::vector<std::string> EtcdLauncher::listPeerURLs(
   std::vector<std::string> peerURLs;
 
   for (const auto& member : members) {
+    if (member.find("peerURLs") == member.end()) {
+      continue;
+    }
     auto peers = member["peerURLs"];
     for (const auto& peer : peers) {
       peerURLs.emplace_back(peer.get<std::string>());
@@ -560,6 +583,9 @@ std::vector<std::string> EtcdLauncher::listClientURLs(
   std::vector<std::string> clientURLs;
 
   for (const auto& member : members) {
+    if (member.find("clientURLs") == member.end()) {
+      continue;
+    }
     auto clients = member["clientURLs"];
     for (const auto& client : clients) {
       clientURLs.emplace_back(client.get<std::string>());

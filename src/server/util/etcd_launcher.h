@@ -46,11 +46,18 @@ class EtcdLauncher {
                               std::string const& key);
 
  private:
+  Status handleEtcdFailure(const std::string& member_name,
+                           const std::string& errMessage);
+
   Status removeMember(std::string& member_id, int max_retries = 5);
 
-  Status parseEndpoint();
+  std::string findMemberID(const std::string& member_name,
+                           const std::string& etcd_endpoints);
 
-  std::string GetMemberID() { return etcd_member_id_; }
+  bool memberIsStarted(const std::string& member_id,
+                       const std::string& etcd_endpoints);
+
+  Status parseEndpoint();
 
   Status addMember(std::string& member_name, std::string& peer_endpoint,
                    const std::string& etcd_endpoints, int max_retries = 5);
@@ -58,11 +65,12 @@ class EtcdLauncher {
   std::vector<json> listMembers(const std::string& etcd_endpoints);
   std::vector<std::string> listPeerURLs(const std::vector<json>& members);
   std::vector<std::string> listClientURLs(const std::vector<json>& members);
-
   std::vector<std::string> listMembersName(const std::vector<json>& members);
 
   std::string generateMemberName(
       std::vector<std::string> const& existing_members_name);
+
+  std::string GetMemberID() { return etcd_member_id_; }
 
   Status UpdateEndpoint();
 
