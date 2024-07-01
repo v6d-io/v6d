@@ -278,6 +278,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::string instance_name_;
   std::string hostname_;
   std::string nodename_;
+  std::map<InstanceID, std::string> instance_id_to_member_id_;
 
   std::mutex migrations_origin_to_target_mutex_;
   std::mutex migrations_target_to_origin_mutex_;

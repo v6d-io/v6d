@@ -65,6 +65,8 @@ class ILock {
   const unsigned rev_;
 };
 
+class EtcdMetaService;
+
 /**
  * @brief IMetaService is the base class of EtcdMetaService
  *
@@ -147,6 +149,12 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   virtual void TryReleaseLock(std::string key, callback_t<bool> callback) = 0;
 
+  Status RemoveEtcdMember(const std::string& member_id);
+
+  std::string GetEtcdMemberID();
+
+  Status UpdateEtcdEndpoint();
+
  private:
   void registerToEtcd();
 
@@ -194,6 +202,17 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
+
+  template <typename Func, typename ReturnType = void>
+  ReturnType callIfEtcdMetaService(Func&& func,
+                                   ReturnType defaultValue = ReturnType()) {
+    std::shared_ptr<EtcdMetaService> etcd_meta_service =
+        std::dynamic_pointer_cast<EtcdMetaService>(shared_from_this());
+    if (etcd_meta_service) {
+      return func(etcd_meta_service);
+    }
+    return defaultValue;
+  }
 
   void printDepsGraph();
 
@@ -243,6 +262,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   std::unique_ptr<asio::steady_timer> heartbeat_timer_;
   std::set<InstanceID> instances_list_;
+  std::map<InstanceID, std::string> instance_to_member_id_;
   int64_t target_latest_time_ = 0;
   size_t timeout_count_ = 0;
 

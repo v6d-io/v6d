@@ -131,6 +131,12 @@ class EtcdMetaService : public IMetaService {
 
   void TryReleaseLock(std::string key, callback_t<bool>) override;
 
+  Status RemoveMember(std::string member_id);
+
+  std::string GetMemberID() { return etcd_launcher_->GetMemberID(); }
+
+  Status UpdateEndpoint();
+
  protected:
   explicit EtcdMetaService(std::shared_ptr<VineyardServer>& server_ptr)
       : IMetaService(server_ptr),

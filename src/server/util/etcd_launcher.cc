@@ -34,6 +34,7 @@ limitations under the License.
 namespace vineyard {
 
 constexpr int max_probe_retries = 15;
+constexpr int first_probe_retries = 5;
 
 static bool validate_advertise_hostname(std::string& ipaddress,
                                         std::string const& hostname) {
@@ -78,6 +79,59 @@ static bool check_port_in_use(boost::asio::io_context& context,
   return ec == boost::asio::error::address_in_use;
 }
 
+std::string lookupCommand(const json& etcd_spec, const std::string& command) {
+  std::string cmd = etcd_spec.value(command + "_cmd", "");
+  if (cmd.empty()) {
+    setenv("LC_ALL", "C", 1);
+    cmd = boost::process::search_path(command).string();
+  }
+
+  if (cmd.empty()) {
+    setenv("LC_ALL", "en_US.UTF-8", 1);
+    cmd = boost::process::search_path(command).string();
+  }
+
+  return cmd;
+}
+
+Status checkEtcdCmd(const std::string& etcd_cmd) {
+  if (etcd_cmd.empty()) {
+    std::string error_message =
+        "Failed to find etcd binary, please specify its path using the "
+        "`--etcd_cmd` argument and try again.";
+    LOG(WARNING) << error_message;
+    return Status::EtcdError("Failed to find etcd binary");
+  }
+  if (!ghc::filesystem::exists(ghc::filesystem::path(etcd_cmd))) {
+    std::string error_message =
+        "The etcd binary '" + etcd_cmd +
+        "' does not exist, please specify the correct path using "
+        "the `--etcd_cmd` argument and try again.";
+    LOG(WARNING) << error_message;
+    return Status::EtcdError("The etcd binary does not exist");
+  }
+  return Status::OK();
+}
+
+Status checkEtcdctlCommand(const std::string& etcdctl_cmd) {
+  if (etcdctl_cmd.empty()) {
+    std::string error_message =
+        "Failed to find etcdctl binary, please specify its path using the "
+        "`--etcdctl_cmd` argument and try again.";
+    LOG(WARNING) << error_message;
+    return Status::EtcdError("Failed to find etcdctl binary");
+  }
+  if (!ghc::filesystem::exists(ghc::filesystem::path(etcdctl_cmd))) {
+    std::string error_message =
+        "The etcd binary '" + etcdctl_cmd +
+        "' does not exist, please specify the correct path using "
+        "the `--etcdctl_cmd` argument and try again.";
+    LOG(WARNING) << error_message;
+    return Status::EtcdError("The etcdctl binary does not exist");
+  }
+  return Status::OK();
+}
+
 EtcdLauncher::EtcdLauncher(const json& etcd_spec) : etcd_spec_(etcd_spec) {}
 
 EtcdLauncher::~EtcdLauncher() {
@@ -106,9 +160,26 @@ Status EtcdLauncher::LaunchEtcdServer(
     return Status::OK();
   }
 
+  // resolve etcdctl binary
+  std::string etcdctl_cmd = etcd_spec_.value("etcdctl_cmd", "");
+  if (etcdctl_cmd.empty()) {
+    etcdctl_cmd = lookupCommand(etcd_spec_, "etcdctl");
+  }
+  RETURN_ON_ERROR(checkEtcdctlCommand(etcdctl_cmd));
+  etcdctl_cmd_ = etcdctl_cmd;
+  LOG(INFO) << "Found etcdctl at: " << etcdctl_cmd;
+
+  bool etcd_cluster_existing = false;
   etcd_client.reset(new etcd::Client(etcd_endpoint));
-  if (probeEtcdServer(etcd_client, sync_lock)) {
-    return Status::OK();
+  int retries = 0;
+  while (retries < first_probe_retries) {
+    etcd_client.reset(new etcd::Client(etcd_endpoint));
+    if (probeEtcdServer(etcd_client, sync_lock)) {
+      etcd_cluster_existing = true;
+      break;
+    }
+    retries += 1;
+    sleep(1);
   }
 
   RETURN_ON_ERROR(initHostInfo());
@@ -127,29 +198,9 @@ Status EtcdLauncher::LaunchEtcdServer(
   // resolve etcd binary
   std::string etcd_cmd = etcd_spec_.value("etcd_cmd", "");
   if (etcd_cmd.empty()) {
-    setenv("LC_ALL", "C", 1);  // makes boost's path works as expected.
-    etcd_cmd = boost::process::search_path("etcd").string();
+    etcd_cmd = lookupCommand(etcd_spec_, "etcd");
   }
-  if (etcd_cmd.empty()) {
-    // try en_US.UTF-8 and search again.
-    setenv("LC_ALL", "en_US.UTF-8", 1);
-    etcd_cmd = boost::process::search_path("etcd").string();
-  }
-  if (etcd_cmd.empty()) {
-    std::string error_message =
-        "Failed to find etcd binary, please specify its path using the "
-        "`--etcd_cmd` argument and try again.";
-    LOG(WARNING) << error_message;
-    return Status::EtcdError("Failed to find etcd binary");
-  }
-  if (!ghc::filesystem::exists(ghc::filesystem::path(etcd_cmd))) {
-    std::string error_message =
-        "The etcd binary '" + etcd_cmd +
-        "' does not exist, please specify the correct path using "
-        "the `--etcd_cmd` argument and try again.";
-    LOG(WARNING) << error_message;
-    return Status::EtcdError("The etcd binary does not exist");
-  }
+  RETURN_ON_ERROR(checkEtcdCmd(etcd_cmd));
   LOG(INFO) << "Found etcd at: " << etcd_cmd;
 
   std::string host_to_advertise;
@@ -177,10 +228,22 @@ Status EtcdLauncher::LaunchEtcdServer(
   }
 
   boost::asio::io_context context;
+  if (etcd_cluster_existing) {
+    while (check_port_in_use(context, endpoint_port_)) {
+      endpoint_port_ += 1;
+    }
+  }
+
   unsigned int etcd_peer_port = endpoint_port_ + 1;
   while (check_port_in_use(context, etcd_peer_port)) {
     etcd_peer_port += 1;
   }
+
+  std::string etcd_endpoints;
+  std::vector<std::string> existing_members;
+  std::vector<std::string> peer_urls;
+  std::vector<std::string> client_urls;
+  std::string new_member_name = generateMemberName(existing_members);
 
   std::string client_endpoint =
       "http://" + host_to_advertise + ":" + std::to_string(endpoint_port_);
@@ -188,21 +251,73 @@ Status EtcdLauncher::LaunchEtcdServer(
       "http://" + host_to_advertise + ":" + std::to_string(etcd_peer_port);
 
   std::vector<std::string> args;
+  std::string endpoint;
+
+  if (etcd_cluster_existing) {
+    std::string cluster_name;
+
+    std::vector<json> members = listMembers(etcd_endpoint);
+    if (members.size() == 0) {
+      return Status::EtcdError("No members found via etcdctl");
+    }
+
+    existing_members = listMembersName(members);
+    new_member_name = generateMemberName(existing_members);
+    peer_urls = listPeerURLs(members);
+    if (peer_urls.size() == 0) {
+      return Status::EtcdError("No peer urls found via etcdctl");
+    }
+    std::vector<std::string> client_urls = listClientURLs(members);
+    if (peer_urls.size() == 0) {
+      return Status::EtcdError("No client urls found via etcdctl");
+    }
+
+    endpoint = boost::algorithm::join(client_urls, ",");
+    if (addMember(new_member_name, peer_endpoint, endpoint).ok()) {
+      LOG(INFO) << "Added new member " << new_member_name
+                << " to the etcd cluster";
+    } else {
+      return Status::EtcdError("Failed to add new member to the etcd cluster");
+    }
+    args.emplace_back("--initial-cluster-state");
+    args.emplace_back("existing");
+    args.emplace_back("--initial-cluster");
+    if (existing_members.size() != peer_urls.size()) {
+      return Status::EtcdError(
+          "The number of existing members is not equal to the number of peer "
+          "urls");
+    }
+    for (size_t i = 0; i < existing_members.size(); i++) {
+      cluster_name += existing_members[i] + "=" + peer_urls[i] + ",";
+    }
+    cluster_name += new_member_name + "=" + peer_endpoint;
+    args.emplace_back(cluster_name);
+  } else {
+    args.emplace_back("--initial-cluster-state");
+    args.emplace_back("new");
+    args.emplace_back("--initial-cluster");
+    args.emplace_back(new_member_name + "=" + peer_endpoint);
+  }
+  args.emplace_back("--name");
+  args.emplace_back(new_member_name);
   args.emplace_back("--listen-client-urls");
   args.emplace_back("http://0.0.0.0:" + std::to_string(endpoint_port_));
   args.emplace_back("--advertise-client-urls");
   args.emplace_back(client_endpoint);
   args.emplace_back("--listen-peer-urls");
   args.emplace_back("http://0.0.0.0:" + std::to_string(etcd_peer_port));
-  args.emplace_back("--initial-cluster");
-  args.emplace_back("default=" + peer_endpoint);
   args.emplace_back("--initial-advertise-peer-urls");
   args.emplace_back(peer_endpoint);
 
-  // use a random etcd data dir
+  if (endpoint == "") {
+    etcd_endpoints_ = client_endpoint;
+  } else {
+    etcd_endpoints_ = endpoint + "," + client_endpoint;
+  }
+
   etcd_data_dir_ = etcd_spec_.value("etcd_data_dir", "");
   if (etcd_data_dir_.empty()) {
-    std::string file_template = "/tmp/vineyard-etcd-XXXXXX";
+    std::string file_template = "/tmp/" + new_member_name + ".etcd.XXXXXX";
     char* data_dir = mkdtemp(const_cast<char*>(file_template.c_str()));
     if (data_dir == nullptr) {
       return Status::EtcdError(
@@ -239,7 +354,8 @@ Status EtcdLauncher::LaunchEtcdServer(
   env.set("ETCD_LOG_LEVEL", "error");
 #endif
 
-  DLOG(INFO) << "Launching etcd with: " << boost::algorithm::join(args, " ");
+  // leave a log here for getting the etcd endpoints of each member
+  LOG(INFO) << "Launching etcd with: " << boost::algorithm::join(args, " ");
   std::error_code ec;
   etcd_proc_ = std::unique_ptr<boost::process::child>(new boost::process::child(
       etcd_cmd, boost::process::args(args), boost::process::std_out > stdout,
@@ -255,8 +371,26 @@ Status EtcdLauncher::LaunchEtcdServer(
     std::error_code err;
     while (etcd_proc_ && etcd_proc_->running(err) && !err &&
            retries < max_probe_retries) {
-      etcd_client.reset(new etcd::Client(etcd_endpoint));
+      etcd_client.reset(new etcd::Client(client_endpoint));
       if (probeEtcdServer(etcd_client, sync_lock)) {
+        auto members = listMembers(etcd_endpoints_);
+        bool found = false;
+        for (const auto& member : members) {
+          if (member["name"].get<std::string>() == new_member_name) {
+            std::stringstream ss;
+            ss << std::hex << member["ID"].get<uint64_t>();
+            etcd_member_id_ = ss.str();
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          LOG(ERROR) << "Failed to find the new member id"
+                     << ", retries: " << retries << "/" << max_probe_retries;
+          retries += 1;
+          sleep(1);
+        }
+        // reset the etcd watcher
         break;
       }
       retries += 1;
@@ -273,6 +407,186 @@ Status EtcdLauncher::LaunchEtcdServer(
           "Etcd has been launched but failed to connect to it");
     } else {
       return Status::OK();
+    }
+  }
+}
+
+Status EtcdLauncher::addMember(std::string& member_name,
+                               std::string& peer_endpoint,
+                               const std::string& etcd_endpoints,
+                               int max_retries) {
+  int retries = 0;
+
+  while (retries < max_retries) {
+    std::error_code ec;
+    std::unique_ptr<boost::process::child> etcdctl_proc_ =
+        std::make_unique<boost::process::child>(
+            etcdctl_cmd_, "member", "add", member_name,
+            "--peer-urls=" + peer_endpoint, "--endpoints=" + etcd_endpoints,
+            boost::process::std_out > stdout, boost::process::std_err > stderr,
+            ec);
+    if (!etcdctl_proc_) {
+      LOG(ERROR) << "Failed to start etcdctl";
+      return Status::EtcdError("Failed to start etcdctl");
+    }
+    if (ec) {
+      LOG(ERROR) << "Failed to add etcd member: " << ec.message();
+      return Status::EtcdError("Failed to add etcd member: " + ec.message());
+    }
+
+    // wait for the etcdctl to finish the add member operation
+    etcdctl_proc_->wait();
+    int exit_code = etcdctl_proc_->exit_code();
+
+    if (exit_code != 0) {
+      LOG(ERROR) << "Failed to add etcd member: exit code: " << exit_code
+                 << ", retries: " << retries << "/" << max_retries;
+      retries += 1;
+      sleep(1);
+      continue;
+    } else {
+      return Status::OK();
+    }
+  }
+  return Status::EtcdError("Failed to add etcd member after " +
+                           std::to_string(max_retries) + " retries");
+}
+
+Status EtcdLauncher::removeMember(std::string& member_id, int max_retries) {
+  int retries = 0;
+
+  auto members = listMembers(etcd_endpoints_);
+  bool member_exist = false;
+  for (const auto& member : members) {
+    std::stringstream ss;
+    ss << std::hex << member["ID"].get<uint64_t>();
+    if (ss.str() == member_id) {
+      member_exist = true;
+      break;
+    }
+  }
+  if (!member_exist) {
+    LOG(INFO) << "The member id " << member_id << " has been removed";
+    return Status::OK();
+  }
+
+  if (members.size() == 1) {
+    LOG(INFO) << "The last member can not be removed";
+    return Status::OK();
+  }
+
+  while (retries < max_retries) {
+    std::error_code ec;
+    std::unique_ptr<boost::process::child> etcdctl_proc_ =
+        std::make_unique<boost::process::child>(
+            etcdctl_cmd_, "member", "remove", member_id,
+            "--endpoints=" + etcd_endpoints_, boost::process::std_out > stdout,
+            boost::process::std_err > stderr, ec);
+    if (!etcdctl_proc_) {
+      LOG(ERROR) << "Failed to start etcdctl";
+      return Status::EtcdError("Failed to start etcdctl");
+    }
+    if (ec) {
+      LOG(ERROR) << "Failed to remove etcd member: " << ec.message();
+      return Status::EtcdError("Failed to remove etcd member: " + ec.message());
+    }
+    // wait for the etcdctl to finish the remove member operation
+    etcdctl_proc_->wait();
+    int exit_code = etcdctl_proc_->exit_code();
+
+    if (exit_code != 0) {
+      LOG(ERROR) << "Failed to remove etcd member: exit code: " << exit_code
+                 << ", retries: " << retries << "/" << max_retries;
+      retries += 1;
+      sleep(1);
+      continue;
+    } else {
+      return Status::OK();
+    }
+  }
+  return Status::EtcdError("Failed to remove etcd member after " +
+                           std::to_string(max_retries) + " retries");
+}
+
+std::vector<json> EtcdLauncher::listMembers(const std::string& etcd_endpoints) {
+  std::vector<json> members;
+  boost::process::ipstream output_stream;
+  std::error_code ec;
+
+  std::unique_ptr<boost::process::child> etcdctl_proc_ =
+      std::make_unique<boost::process::child>(
+          etcdctl_cmd_, "member", "list", "--endpoints=" + etcd_endpoints,
+          "--write-out=json", boost::process::std_out > output_stream,
+          boost::process::std_err > stderr, ec);
+
+  if (!etcdctl_proc_) {
+    LOG(ERROR) << "Failed to start etcdctl";
+    return members;
+  }
+  if (ec) {
+    LOG(ERROR) << "Failed to list etcd members: " << ec.message();
+    return members;
+  }
+
+  std::stringstream buffer;
+  std::string line;
+  while (std::getline(output_stream, line)) {
+    buffer << line << '\n';
+  }
+
+  std::string output = buffer.str();
+  auto result = json::parse(output);
+  for (const auto& member : result["members"]) {
+    members.emplace_back(member);
+  }
+  return members;
+}
+
+std::vector<std::string> EtcdLauncher::listPeerURLs(
+    const std::vector<json>& members) {
+  std::vector<std::string> peerURLs;
+
+  for (const auto& member : members) {
+    auto peers = member["peerURLs"];
+    for (const auto& peer : peers) {
+      peerURLs.emplace_back(peer.get<std::string>());
+    }
+  }
+  return peerURLs;
+}
+
+std::vector<std::string> EtcdLauncher::listClientURLs(
+    const std::vector<json>& members) {
+  std::vector<std::string> clientURLs;
+
+  for (const auto& member : members) {
+    auto clients = member["clientURLs"];
+    for (const auto& client : clients) {
+      clientURLs.emplace_back(client.get<std::string>());
+    }
+  }
+  return clientURLs;
+}
+
+std::vector<std::string> EtcdLauncher::listMembersName(
+    const std::vector<json>& members) {
+  std::vector<std::string> members_name;
+  for (const auto& member : members) {
+    auto name = member["name"];
+    members_name.emplace_back(name.get<std::string>());
+  }
+  return members_name;
+}
+
+std::string EtcdLauncher::generateMemberName(
+    std::vector<std::string> const& existing_members_name) {
+  // by default, the member name is the hostname + the current timestamp
+  while (true) {
+    std::string member_name =
+        get_hostname() + "-" + std::to_string(std::time(nullptr));
+    if (std::find(existing_members_name.begin(), existing_members_name.end(),
+                  member_name) == existing_members_name.end()) {
+      return member_name;
     }
   }
 }
@@ -340,6 +654,13 @@ bool EtcdLauncher::probeEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
   auto task = etcd_client->ls(key, 1);
   auto response = task.get();
   return etcd_client && response.is_ok();
+}
+
+Status EtcdLauncher::UpdateEndpoint() {
+  auto members = listMembers(etcd_endpoints_);
+  auto client_urls = listClientURLs(members);
+  etcd_endpoints_ = boost::algorithm::join(client_urls, ",");
+  return Status::OK();
 }
 
 }  // namespace vineyard
