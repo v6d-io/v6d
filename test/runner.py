@@ -202,6 +202,32 @@ def make_metadata_settings(meta, endpoint, prefix):
     raise ValueError("invalid argument: unknown metadata backend: '%s'" % meta)
 
 
+def check_vineyard_for_ready(rpc_socket_port, timeout=60):
+    """Check if vineyardd and internal etcd is ready."""
+    ready = False
+    end_time = time.time() + timeout
+    while time.time() < end_time and not ready:
+        try:
+            result = subprocess.run(
+                ['lsof', '-i', f':{rpc_socket_port}'],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            lines = result.stdout.strip().split('\n')
+            process_count = (
+                len(lines) - 1 if lines[0].startswith('COMMAND') else len(lines)
+            )
+            # If there are two processes listening on the rpc socket port,
+            # it means vineyardd and internal etcd are ready.
+            if process_count == 2:
+                ready = True
+        except Exception as e:
+            print(f"Error checking port {rpc_socket_port}: {e}", flush=True)
+        time.sleep(1)
+    return ready
+
+
 @contextlib.contextmanager
 def start_vineyardd(
     metadata_settings,
@@ -247,7 +273,11 @@ def start_vineyardd(
             verbose=True,
             **kw,
         )
-        yield stack.enter_context(proc), rpc_socket_port
+        proc_context = stack.enter_context(proc)
+        if rpc_socket_port is not None:
+            while not check_vineyard_for_ready(rpc_socket_port):
+                time.sleep(1)
+        yield proc_context, rpc_socket_port
 
 
 @contextlib.contextmanager
@@ -683,7 +713,8 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
             instances[0][0].terminate()
             time.sleep(5)
 
-    # run with serious contention on etcd.
+    # wait to make sure the previous etcd are cleaned up
+    time.sleep(10)
     with start_multiple_vineyardd(
         metadata_settings,
         ['--allocator', allocator],
@@ -998,76 +1029,64 @@ def parse_sys_args():
 
 def execute_tests(args):
     python_test_args = []
+    client_port = find_port()
+    endpoints = 'http://127.0.0.1:%d' % client_port
     if args.tests:
         for test in args.tests:
             python_test_args.append('-k')
             python_test_args.append(test)
 
     if args.with_cpp:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_vineyard_cpp_tests(args.meta, args.allocator, endpoints, args.tests)
-            run_vineyard_spill_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_vineyard_cpp_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_vineyard_spill_tests(args.meta, args.allocator, endpoints, args.tests)
 
     if args.with_graph:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_graph_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_graph_tests(args.meta, args.allocator, endpoints, args.tests)
 
     if args.with_python:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_python_tests(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_contrib or args.with_contrib_ml:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_contrib_tests(
-                args.meta, args.allocator, endpoints, python_test_args, 'ml'
-            )
+        run_python_contrib_tests(
+            args.meta, args.allocator, endpoints, python_test_args, 'ml'
+        )
 
     if args.with_contrib or args.with_contrib_dask:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_contrib_distributed_tests(
-                args.meta, args.allocator, endpoints, python_test_args, 'dask'
-            )
+        run_python_contrib_distributed_tests(
+            args.meta, args.allocator, endpoints, python_test_args, 'dask'
+        )
 
     if args.with_contrib or args.with_contrib_pyspark:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_contrib_tests(
-                args.meta, args.allocator, endpoints, python_test_args, 'pyspark'
-            )
+        run_python_contrib_tests(
+            args.meta, args.allocator, endpoints, python_test_args, 'pyspark'
+        )
 
     if args.with_deployment:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_scale_in_out_tests(
-                args.meta, args.allocator, endpoints, instance_size=4
-            )
+        run_scale_in_out_tests(args.meta, args.allocator, endpoints, instance_size=4)
 
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_deploy_tests(
-                args.meta,
-                args.allocator,
-                endpoints,
-                python_test_args,
-                args.with_migration,
-            )
+        run_python_deploy_tests(
+            args.meta,
+            args.allocator,
+            endpoints,
+            python_test_args,
+            args.with_migration,
+        )
 
     if args.with_io:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_io_adaptor_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_io_adaptor_tests(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_fuse:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
+        run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_llm:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_llm_tests(
-                args.meta,
-                args.allocator,
-                endpoints,
-            )
+        run_llm_tests(
+            args.meta,
+            args.allocator,
+            endpoints,
+        )
 
     if args.with_llm_python:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_llm_python_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_llm_python_tests(args.meta, args.allocator, endpoints, python_test_args)
 
 
 def main():
