@@ -713,6 +713,8 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
             instances[0][0].terminate()
             time.sleep(5)
 
+    # wait to make sure the previous etcd are cleaned up
+    time.sleep(10)
     with start_multiple_vineyardd(
         metadata_settings,
         ['--allocator', allocator],
@@ -1062,8 +1064,6 @@ def execute_tests(args):
     if args.with_deployment:
         run_scale_in_out_tests(args.meta, args.allocator, endpoints, instance_size=4)
 
-        # wait to make sure the previous etcd are cleaned up
-        time.sleep(10)
         run_python_deploy_tests(
             args.meta,
             args.allocator,
