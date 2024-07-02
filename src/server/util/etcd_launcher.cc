@@ -181,8 +181,9 @@ Status EtcdLauncher::LaunchEtcdServer(
       etcd_cluster_existing = true;
       if (!create_new_instance_) {
         etcd_endpoints_ = etcd_endpoint;
-        std::cout << "Etcd cluster already exists at, not to add new instance: "
-                  << etcd_endpoint << std::endl;
+        std::cout
+            << "Etcd cluster already exists, not to add the new instance: "
+            << etcd_endpoint << std::endl;
         return Status::OK();
       }
       break;

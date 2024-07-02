@@ -558,7 +558,7 @@ void IMetaService::registerToEtcd() {
           auto etcd_member_id = self->GetEtcdMemberID();
           std::string key = "/instances/" + self->server_ptr_->instance_name();
           ops.emplace_back(op_t::Put(key + "/hostid", self_host_id));
-          if (!etcd_member_id.empty()) {
+          if (etcd_member_id != "") {
             ops.emplace_back(op_t::Put(key + "/member_id", etcd_member_id));
           }
           ops.emplace_back(op_t::Put(key + "/hostname", hostname));
