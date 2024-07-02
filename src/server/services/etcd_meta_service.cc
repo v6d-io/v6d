@@ -426,14 +426,14 @@ Status EtcdMetaService::probe() {
   }
 }
 
-Status EtcdMetaService::preStart(bool create_new_instance) {
+Status EtcdMetaService::preStart(const bool create_new_instance) {
   etcd_launcher_ = std::unique_ptr<EtcdLauncher>(
       new EtcdLauncher(etcd_spec_, create_new_instance));
   return etcd_launcher_->LaunchEtcdServer(etcd_, meta_sync_lock_);
 }
 
-Status EtcdMetaService::RemoveMember(std::string member_id) {
-  auto status = etcd_launcher_->removeMember(member_id);
+Status EtcdMetaService::RemoveMember(const std::string member_id) {
+  auto status = etcd_launcher_->RemoveMember(member_id);
   if (!status.ok()) {
     LOG(ERROR) << "Failed to remove member " << member_id
                << " from etcd: " << status.ToString();

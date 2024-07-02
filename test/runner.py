@@ -1062,6 +1062,8 @@ def execute_tests(args):
     if args.with_deployment:
         run_scale_in_out_tests(args.meta, args.allocator, endpoints, instance_size=4)
 
+        # wait to make sure the previous etcd are cleaned up
+        time.sleep(10)
         run_python_deploy_tests(
             args.meta,
             args.allocator,
