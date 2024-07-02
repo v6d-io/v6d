@@ -208,8 +208,12 @@ def check_vineyard_for_ready(rpc_socket_port, timeout=60):
     end_time = time.time() + timeout
     while time.time() < end_time and not ready:
         try:
-            cmd = f"lsof -i :{rpc_socket_port}"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(
+                ['lsof', '-i', f':{rpc_socket_port}'],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
             lines = result.stdout.strip().split('\n')
             process_count = (
                 len(lines) - 1 if lines[0].startswith('COMMAND') else len(lines)
@@ -508,8 +512,8 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
 
 def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
-    # client_port = find_port()
-    # endpoints = 'http://127.0.0.1:%d' % client_port
+    client_port = find_port()
+    endpoints = 'http://127.0.0.1:%d' % client_port
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
