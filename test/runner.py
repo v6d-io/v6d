@@ -523,6 +523,83 @@ def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'spill_test')
 
 
+def run_etcd_member_tests(meta, allocator, endpoints, tests):
+    """
+    Here we start 2 vineyard instances,
+    and test if the etcd member is also started.
+    """
+    with start_multiple_vineyardd(
+        make_metadata_settings(meta, endpoints, 'vineyard_test_%s' % time.time()),
+        ['--allocator', allocator],
+        instance_size=2,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ):
+        vineyard_ipc_socket = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
+        # wait for each vineyard instance status has been updated to etcd
+        time.sleep(20)
+        etcdctl_cmd = find_executable('etcdctl')
+        run_test(
+            tests,
+            'etcd_member_test',
+            etcdctl_cmd,
+            endpoints,
+            vineyard_ipc_socket=vineyard_ipc_socket,
+        )
+
+
+def run_vineyardd_failure_tests(meta, allocator, endpoints, test_args):
+    """Here we start 3 vineyard instances, and test the single node failure scenario."""
+
+    def run_test(test_function, rpc_socket_port):
+        args = [
+            'pytest',
+            '-s',
+            '-vvv',
+            '--exitfirst',
+            '--durations=0',
+            '--log-cli-level',
+            'DEBUG',
+            'python/vineyard/deploy/tests/test_vineyardd_failure.py',
+            '-k',
+            test_function,
+            '--vineyard-endpoint=127.0.0.1:%s' % rpc_socket_port,
+        ]
+
+        subprocess.check_call(
+            args, cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+        )
+
+    with start_multiple_vineyardd(
+        make_metadata_settings(meta, endpoints, 'vineyard_test_%s' % time.time()),
+        ['--allocator', allocator],
+        instance_size=3,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ) as instances:
+        start_time = time.time()
+        rpc_socket_port = instances[0][1]
+        run_test('test_put_meta_before_failure', rpc_socket_port)
+
+        instances[0][0].terminate()
+        rpc_socket_port = instances[1][1]
+        # check the etcd can serve the read request
+        run_test('test_get_meta_after_failure', rpc_socket_port)
+        # check the etcd can serve the write request
+        run_test('test_put_meta_after_failure', rpc_socket_port)
+
+        instances[1][0].terminate()
+        rpc_socket_port = instances[2][1]
+        try:
+            run_test('test_get_meta_after_failure', rpc_socket_port)
+        except subprocess.CalledProcessError as e:
+            print(f"Expected error, as the etcd is scaled down to 1: {e}")
+
+        print(
+            'running vineyardd failure tests use %s seconds'
+            % (time.time() - start_time),
+            flush=True,
+        )
+
+
 def run_graph_extend_test(tests):
     data_dir = os.getenv('VINEYARD_DATA_DIR')
     vdata = pd.read_csv(data_dir + '/p2p_v.csv')
@@ -823,7 +900,9 @@ def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migratio
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
-                'python/vineyard/deploy/tests',
+                'python/vineyard/deploy/tests/test_distributed.py',
+                'python/vineyard/deploy/tests/test_local.py',
+                'python/vineyard/deploy/tests/test_migration.py',
                 'python/vineyard/drivers/io/tests/test_migrate_stream.py',
                 *test_args,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
@@ -1008,7 +1087,6 @@ def parse_sys_args():
         default=False,
         help="Whether to run python contrib pyspark tests",
     )
-
     arg_parser.add_argument(
         '--with-fuse',
         action='store_true',
@@ -1070,6 +1148,12 @@ def execute_tests(args):
             endpoints,
             python_test_args,
             args.with_migration,
+        )
+
+        run_etcd_member_tests(args.meta, args.allocator, endpoints, args.tests)
+
+        run_vineyardd_failure_tests(
+            args.meta, args.allocator, endpoints, python_test_args
         )
 
     if args.with_io:
