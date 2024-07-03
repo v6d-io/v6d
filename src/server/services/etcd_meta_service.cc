@@ -428,7 +428,7 @@ Status EtcdMetaService::probe() {
 
 Status EtcdMetaService::preStart(const bool create_new_instance) {
   etcd_launcher_ = std::unique_ptr<EtcdLauncher>(
-      new EtcdLauncher(etcd_spec_, create_new_instance));
+      new EtcdLauncher(etcd_spec_, rpc_socket_port_, create_new_instance));
   return etcd_launcher_->LaunchEtcdServer(etcd_, meta_sync_lock_);
 }
 

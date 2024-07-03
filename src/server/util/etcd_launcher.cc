@@ -134,8 +134,11 @@ Status checkEtcdctlCommand(const std::string& etcdctl_cmd) {
 }
 
 EtcdLauncher::EtcdLauncher(const json& etcd_spec,
+                           const uint32_t& rpc_socket_port,
                            const bool create_new_instance)
-    : etcd_spec_(etcd_spec), create_new_instance_(create_new_instance) {}
+    : etcd_spec_(etcd_spec),
+      rpc_socket_port_(rpc_socket_port),
+      create_new_instance_(create_new_instance) {}
 
 EtcdLauncher::~EtcdLauncher() {
   if (etcd_proc_) {
@@ -239,13 +242,15 @@ Status EtcdLauncher::LaunchEtcdServer(
 
   boost::asio::io_context context;
   if (etcd_cluster_existing) {
-    while (check_port_in_use(context, endpoint_port_)) {
+    while (endpoint_port_ == rpc_socket_port_ ||
+           check_port_in_use(context, endpoint_port_)) {
       endpoint_port_ += 1;
     }
   }
 
   unsigned int etcd_peer_port = endpoint_port_ + 1;
-  while (check_port_in_use(context, etcd_peer_port)) {
+  while (etcd_peer_port == rpc_socket_port_ ||
+         check_port_in_use(context, etcd_peer_port)) {
     etcd_peer_port += 1;
   }
 

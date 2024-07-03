@@ -208,20 +208,10 @@ def check_vineyard_for_ready(rpc_socket_port, timeout=60):
     end_time = time.time() + timeout
     while time.time() < end_time and not ready:
         try:
-            result = subprocess.run(
-                ['lsof', '-i', f':{rpc_socket_port}'],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            lines = result.stdout.strip().split('\n')
-            process_count = (
-                len(lines) - 1 if lines[0].startswith('COMMAND') else len(lines)
-            )
-            # If there are two processes listening on the rpc socket port,
-            # it means vineyardd and internal etcd are ready.
-            if process_count == 2:
-                ready = True
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                if sock.connect_ex(('localhost', rpc_socket_port)) == 0:
+                    print(f"Port {rpc_socket_port} is ready.", flush=True)
+                    ready = True
         except Exception as e:
             print(f"Error checking port {rpc_socket_port}: {e}", flush=True)
         time.sleep(1)
@@ -535,8 +525,6 @@ def run_etcd_member_tests(meta, allocator, endpoints, tests):
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ):
         vineyard_ipc_socket = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
-        # wait for each vineyard instance status has been updated to etcd
-        time.sleep(20)
         etcdctl_cmd = find_executable('etcdctl')
         run_test(
             tests,

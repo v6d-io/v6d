@@ -32,15 +32,15 @@ Status Etcdctl::addMember(const std::string& member_name,
                           const std::string& peer_endpoint,
                           const std::string& etcd_endpoints, int max_retries) {
   int retries = 0;
-
   while (retries < max_retries) {
     std::error_code ec;
     std::unique_ptr<boost::process::child> etcdctl_proc_ =
         std::make_unique<boost::process::child>(
             etcdctl_cmd_, "member", "add", member_name,
             "--peer-urls=" + peer_endpoint, "--endpoints=" + etcd_endpoints,
-            boost::process::std_out > stdout, boost::process::std_err > stderr,
-            ec);
+            "--command-timeout=30s", "--keepalive-timeout=30s",
+            "--dial-timeout=20s", boost::process::std_out > stdout,
+            boost::process::std_err > stderr, ec);
     if (!etcdctl_proc_) {
       LOG(ERROR) << "Failed to start etcdctl";
       return Status::EtcdError("Failed to start etcdctl");

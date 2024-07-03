@@ -143,6 +143,10 @@ class EtcdMetaService : public IMetaService {
         etcd_spec_(server_ptr_->GetSpec()["metastore_spec"]),
         prefix_(etcd_spec_["etcd_prefix"].get<std::string>() + "/" +
                 SessionIDToString(server_ptr->session_id())) {
+    if (server_ptr_->GetSpec()["rpc_spec"]["rpc"].get<bool>()) {
+      rpc_socket_port_ =
+          server_ptr_->GetSpec()["rpc_spec"]["port"].get<uint32_t>();
+    }
     this->handled_rev_.store(0);
   }
 
@@ -175,6 +179,7 @@ class EtcdMetaService : public IMetaService {
 
   const json etcd_spec_;
   const std::string prefix_;
+  uint32_t rpc_socket_port_;
 
  private:
   std::shared_ptr<EtcdMetaService> shared_from_base() {
