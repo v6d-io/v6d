@@ -257,10 +257,12 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
     RDMARemoteNodeInfo node_info;
     RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(node_info, server_address, port));
     RETURN_ON_ERROR(RDMAClient::Make(ptr, node_info));
+    node_info.refcnt++;
 
     servers_[server_endpoint] = node_info;
   } else {
     RETURN_ON_ERROR(RDMAClient::Make(ptr, servers_[server_endpoint]));
+    servers_[server_endpoint].refcnt++;
   }
   return Status::OK();
 }
@@ -321,16 +323,20 @@ Status RDMAClientCreator::Clear() {
 }
 
 Status RDMAClientCreator::Release(std::string rdma_endpoint) {
+  std::lock_guard<std::mutex> lock(servers_mtx_);
   if (servers_.find(rdma_endpoint) != servers_.end()) {
     RDMARemoteNodeInfo& info = servers_[rdma_endpoint];
-    // before closing domain and fabric, we need to close all the resources
-    // bound to them, otherwise, the close operation will failed with -FI_EBUSY
-    RETURN_ON_ERROR(IRDMA::CloseResource(info.domain, "domain"));
-    RETURN_ON_ERROR(IRDMA::CloseResource(info.fabric, "fabric"));
 
-    IRDMA::FreeInfo(info.fi);
-
-    servers_.erase(rdma_endpoint);
+    info.refcnt--;
+    if (info.refcnt == 0) {
+      // before closing domain and fabric, we need to close all the resources
+      // bound to them, otherwise, the close operation will failed with
+      // -FI_EBUSY
+      RETURN_ON_ERROR(IRDMA::CloseResource(info.domain, "domain"));
+      RETURN_ON_ERROR(IRDMA::CloseResource(info.fabric, "fabric"));
+      IRDMA::FreeInfo(info.fi);
+      servers_.erase(rdma_endpoint);
+    }
   }
 
   return Status::OK();

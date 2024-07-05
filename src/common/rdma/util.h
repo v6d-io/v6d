@@ -45,7 +45,6 @@ namespace vineyard {
         std::string msg = "Failed to post " + std::string(op_str); \
         return Status::Invalid(msg);                               \
       }                                                            \
-      usleep(1000);                                                \
     }                                                              \
   } while (0)
 
@@ -110,6 +109,7 @@ struct RDMARemoteNodeInfo {
   fi_info* fi;
   fid_fabric* fabric;
   fid_domain* domain;
+  int refcnt = 0;
 };
 
 #define VINEYARD_FIVERSION FI_VERSION(1, 21)
