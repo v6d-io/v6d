@@ -80,6 +80,7 @@ def parse_dataframe(vineyard_socket, stream_id, write_options, proc_num, proc_in
             delimiter = instream.params['delimiter']
     if delimiter is None:
         delimiter = ','
+    escapechar = write_options.get('escapechar', None)
 
     stream = ByteStream.new(client, params=instream.params)
     client.persist(stream.id)
@@ -101,7 +102,7 @@ def parse_dataframe(vineyard_socket, stream_id, write_options, proc_num, proc_in
                 batch = chunk_hook(batch)
             df = batch.to_pandas()
             csv_content = df.to_csv(
-                header=first_write, index=False, sep=delimiter
+                header=first_write, index=False, sep=delimiter, escapechar=escapechar
             ).encode('utf-8')
 
             # write to byte stream
