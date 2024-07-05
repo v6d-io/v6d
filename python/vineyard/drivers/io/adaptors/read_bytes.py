@@ -159,7 +159,7 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
             params[k] = v
 
     try:
-        # files would be empty if it's a glob pattern and globbed nothing.
+        # files would be empty if it's a glob pattern and glob nothing.
         fs, _, files = infer_fsspec_paths(path, storage_options=storage_options)
     except Exception:  # pylint: disable=broad-except
         report_error(
