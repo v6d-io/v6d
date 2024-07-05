@@ -313,8 +313,6 @@ void RPCServer::doVineyardClose(VineyardRecvContext* recv_context) {
   std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
   remote_mem_infos_.erase(recv_context->rdma_conn_id);
   rdma_server_->ReleaseRXBuffer(recv_context->attr.msg_buffer);
-
-  delete recv_context;
 }
 #endif
 
@@ -350,7 +348,6 @@ void RPCServer::doRDMARecv() {
       }
       memcpy(recv_msg_tmp, recv_msg, sizeof(VineyardMsg));
       memcpy(recv_context_tmp, recv_context, sizeof(VineyardRecvContext));
-      recv_context_tmp->attr.msg_buffer = nullptr;
 
       if (recv_msg->type == VINEYARD_MSG_REQUEST_MEM) {
         boost::asio::post(
@@ -379,6 +376,7 @@ void RPCServer::doRDMARecv() {
                             delete recv_context_tmp;
                             delete recv_msg_tmp;
                           });
+        delete recv_context;
       } else {
         LOG(ERROR) << "Unknown message type: " << recv_msg->type;
         rdma_server_->Recv(
