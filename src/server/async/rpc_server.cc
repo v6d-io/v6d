@@ -236,9 +236,6 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
     rdma_server_->Send(recv_context->rdma_conn_id,
                        recv_context->attr.msg_buffer, sizeof(VineyardMsg),
                        recv_context);
-    rdma_server_->Recv(recv_context->rdma_conn_id,
-                       reinterpret_cast<void*>(recv_msg), sizeof(VineyardMsg),
-                       reinterpret_cast<void*>(recv_context));
     return;
   }
 
@@ -271,9 +268,6 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
 
   std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
   remote_mem_infos_[recv_context->rdma_conn_id].insert(remote_request_mem_info);
-  rdma_server_->Recv(recv_context->rdma_conn_id,
-                     reinterpret_cast<void*>(recv_msg), sizeof(VineyardMsg),
-                     reinterpret_cast<void*>(recv_context));
 }
 
 void RPCServer::doVineyardReleaseMemory(VineyardRecvContext* recv_context,
@@ -294,9 +288,6 @@ void RPCServer::doVineyardReleaseMemory(VineyardRecvContext* recv_context,
           remote_request_mem_info) ==
       remote_mem_infos_[recv_context->rdma_conn_id].end()) {
     LOG(ERROR) << "Receive release mem info from unknown address!";
-    rdma_server_->Recv(recv_context->rdma_conn_id,
-                       reinterpret_cast<void*>(recv_msg), sizeof(VineyardMsg),
-                       reinterpret_cast<void*>(recv_context));
     return;
   }
 
@@ -313,10 +304,6 @@ void RPCServer::doVineyardReleaseMemory(VineyardRecvContext* recv_context,
             << " fid_mr:" << remote_request_mem_info.mr;
   VINEYARD_CHECK_OK(rdma_server_->DeregisterMemory(remote_request_mem_info));
   remote_mem_infos_[recv_context->rdma_conn_id].erase(remote_request_mem_info);
-  VLOG(100) << "Wait next request.";
-  rdma_server_->Recv(recv_context->rdma_conn_id,
-                     reinterpret_cast<void*>(recv_msg), sizeof(VineyardMsg),
-                     recv_context);
 }
 
 void RPCServer::doVineyardClose(VineyardRecvContext* recv_context) {
@@ -354,22 +341,49 @@ void RPCServer::doRDMARecv() {
 
       VineyardMsg* recv_msg =
           reinterpret_cast<VineyardMsg*>(recv_context->attr.msg_buffer);
+
+      VineyardRecvContext* recv_context_tmp = new VineyardRecvContext();
+      VineyardMsg* recv_msg_tmp = new VineyardMsg();
+      if (recv_msg_tmp == nullptr || recv_context_tmp == nullptr) {
+        LOG(ERROR) << "Failed to allocate memory!";
+        return;
+      }
+      memcpy(recv_msg_tmp, recv_msg, sizeof(VineyardMsg));
+      memcpy(recv_context_tmp, recv_context, sizeof(VineyardRecvContext));
+      recv_context_tmp->attr.msg_buffer = nullptr;
+
       if (recv_msg->type == VINEYARD_MSG_REQUEST_MEM) {
-        boost::asio::post(vs_ptr_->GetIOContext(),
-                          [this, recv_context, recv_msg] {
-                            doVineyardRequestMemory(recv_context, recv_msg);
-                          });
+        boost::asio::post(
+            vs_ptr_->GetIOContext(), [this, recv_context_tmp, recv_msg_tmp] {
+              doVineyardRequestMemory(recv_context_tmp, recv_msg_tmp);
+              delete recv_msg_tmp;
+              delete recv_context_tmp;
+            });
+        rdma_server_->Recv(
+            recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
+            sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
       } else if (recv_msg->type == VINEYARD_RELEASE_MEM) {
-        boost::asio::post(vs_ptr_->GetIOContext(),
-                          [this, recv_context, recv_msg] {
-                            doVineyardReleaseMemory(recv_context, recv_msg);
-                          });
+        boost::asio::post(
+            vs_ptr_->GetIOContext(), [this, recv_context_tmp, recv_msg_tmp] {
+              doVineyardReleaseMemory(recv_context_tmp, recv_msg_tmp);
+              delete recv_msg_tmp;
+              delete recv_context_tmp;
+            });
+        rdma_server_->Recv(
+            recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
+            sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
       } else if (recv_msg->type == VINEYARD_MSG_CLOSE) {
-        boost::asio::post(vs_ptr_->GetIOContext(), [this, recv_context] {
-          doVineyardClose(recv_context);
-        });
+        boost::asio::post(vs_ptr_->GetIOContext(),
+                          [this, recv_context_tmp, recv_msg_tmp] {
+                            doVineyardClose(recv_context_tmp);
+                            delete recv_context_tmp;
+                            delete recv_msg_tmp;
+                          });
       } else {
         LOG(ERROR) << "Unknown message type: " << recv_msg->type;
+        rdma_server_->Recv(
+            recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
+            sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
       }
     }
   }

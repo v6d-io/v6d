@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <thread>
-#include <chrono>
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
@@ -31,15 +31,16 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 constexpr uint64_t total_mem = 1024UL * 1024 * 1024;
 
-void PrepareData(std::vector<std::vector<std::shared_ptr<RemoteBlobWriter>>> &remote_blob_writers_list,
+void PrepareData(std::vector<std::vector<std::shared_ptr<RemoteBlobWriter>>>&
+                     remote_blob_writers_list,
                  size_t size, int parallel) {
   uint64_t iterator = total_mem / size;
-  
+
   for (int i = 0; i < parallel; i++) {
     std::vector<std::shared_ptr<RemoteBlobWriter>> remote_blob_writers;
     for (size_t j = 0; j < iterator; j++) {
       auto remote_blob_writer = std::make_shared<RemoteBlobWriter>(size);
-      uint8_t *data = reinterpret_cast<uint8_t *>(remote_blob_writer->data());
+      uint8_t* data = reinterpret_cast<uint8_t*>(remote_blob_writer->data());
       for (size_t k = 0; k < size; k++) {
         data[k] = k % 256;
       }
@@ -49,9 +50,10 @@ void PrepareData(std::vector<std::vector<std::shared_ptr<RemoteBlobWriter>>> &re
   }
 }
 
-void TestCreateBlob(std::shared_ptr<RPCClient> &client,
-                    std::vector<std::shared_ptr<RemoteBlobWriter>> &remote_blob_writers,
-                    std::vector<ObjectID> &ids, size_t size) {
+void TestCreateBlob(
+    std::shared_ptr<RPCClient>& client,
+    std::vector<std::shared_ptr<RemoteBlobWriter>>& remote_blob_writers,
+    std::vector<ObjectID>& ids, size_t size) {
   uint64_t iterator = total_mem / size;
   std::vector<ObjectMeta> metas;
   metas.reserve(iterator);
@@ -62,17 +64,25 @@ void TestCreateBlob(std::shared_ptr<RPCClient> &client,
   VINEYARD_CHECK_OK(client->CreateRemoteBlobs(remote_blob_writers, metas));
 
   auto end = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-  LOG(INFO) << "Iterator: " << iterator << ", Size: " << size << ", Time: " << duration.count() << "us" << " average time:" << (double)duration.count() / iterator << "us";
-  LOG(INFO) << "Speed:" << (double)(iterator * size) / 1024 / 1024 / ((double)duration.count() / 1000 / 1000) << "MB/s\n";
+  auto duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+  LOG(INFO) << "Iterator: " << iterator << ", Size: " << size
+            << ", Time: " << duration.count() << "us"
+            << " average time:"
+            << static_cast<double>(duration.count()) / iterator << "us";
+  LOG(INFO) << "Speed:"
+            << static_cast<double>(iterator * size) / 1024 / 1024 /
+                   (static_cast<double>(duration.count()) / 1000 / 1000)
+            << "MB/s\n";
 
   for (size_t i = 0; i < iterator; i++) {
     ids.push_back(metas[i].GetId());
   }
 }
 
-void TestGetBlob(std::shared_ptr<RPCClient> &client, std::vector<ObjectID> &ids, size_t size,
-                 std::vector<std::shared_ptr<RemoteBlob>> &local_buffers) {
+void TestGetBlob(std::shared_ptr<RPCClient>& client, std::vector<ObjectID>& ids,
+                 size_t size,
+                 std::vector<std::shared_ptr<RemoteBlob>>& local_buffers) {
   uint64_t iterator = total_mem / size;
 
   local_buffers.reserve(iterator);
@@ -80,15 +90,23 @@ void TestGetBlob(std::shared_ptr<RPCClient> &client, std::vector<ObjectID> &ids,
   auto start = std::chrono::high_resolution_clock::now();
   VINEYARD_CHECK_OK(client->GetRemoteBlobs(ids, local_buffers));
   auto end = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+  auto duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-  LOG(INFO) << "Iterator: " << iterator << ", Size: " << size << ", Time: " << duration.count() << "us" << " average time:" << (double)duration.count() / iterator << "us";
-  LOG(INFO) << "Speed:" << (double)(iterator * size) / 1024 / 1024 / ((double)duration.count() / 1000 / 1000) << "MB/s\n";
+  LOG(INFO) << "Iterator: " << iterator << ", Size: " << size
+            << ", Time: " << duration.count() << "us"
+            << " average time:"
+            << static_cast<double>(duration.count()) / iterator << "us";
+  LOG(INFO) << "Speed:"
+            << static_cast<double>(iterator * size) / 1024 / 1024 /
+                   (static_cast<double>(duration.count()) / 1000 / 1000)
+            << "MB/s\n";
 }
 
-void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>> &local_buffers) {
+void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>>& local_buffers) {
   for (size_t i = 0; i < local_buffers.size(); i++) {
-    const uint8_t *data = reinterpret_cast<const uint8_t *>(local_buffers[i]->data());
+    const uint8_t* data =
+        reinterpret_cast<const uint8_t*>(local_buffers[i]->data());
     for (size_t j = 0; j < local_buffers[i]->size(); j++) {
       CHECK_EQ(data[j], j % 256);
     }
@@ -98,7 +116,11 @@ void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>> &local_buffers) {
 // Test 512K~512M blob
 int main(int argc, const char** argv) {
   if (argc < 6) {
-    LOG(ERROR) << "usage: " << argv[0] << " <rpc_endpoint>" << " <rdma_endpoint>" << " <min_size>" << " <max_size>" << " <parallel>";
+    LOG(ERROR) << "usage: " << argv[0] << " <rpc_endpoint>"
+               << " <rdma_endpoint>"
+               << " <min_size>"
+               << " <max_size>"
+               << " <parallel>";
     return -1;
   }
   std::string rpc_endpoint = std::string(argv[1]);
@@ -110,8 +132,8 @@ int main(int argc, const char** argv) {
     VINEYARD_CHECK_OK(clients[i]->Connect(rpc_endpoint, "", "", rdma_endpoint));
   }
 
-  uint64_t min_size = 1024 * 1024 * 2; // 512K
-  uint64_t max_size = 1024 * 1024 * 2; // 64M
+  uint64_t min_size = 1024 * 1024 * 2;  // 512K
+  uint64_t max_size = 1024 * 1024 * 2;  // 64M
   min_size = std::stoull(argv[3]) * 1024 * 1024;
   max_size = std::stoull(argv[4]) * 1024 * 1024;
   if (min_size == 0) {
@@ -123,51 +145,66 @@ int main(int argc, const char** argv) {
   std::vector<std::vector<std::vector<ObjectID>>> blob_ids_lists;
   std::vector<size_t> sizes;
 
-
   LOG(INFO) << "Test Create Blob(RDMA write / TCP)";
   LOG(INFO) << "----------------------------";
   for (size_t size = min_size; size <= max_size; size *= 2) {
     std::vector<std::vector<ObjectID>> ids_list;
     ids_list.resize(parallel);
     std::vector<std::thread> threads;
-    std::vector<std::vector<std::shared_ptr<RemoteBlobWriter>>> remote_blob_writers_list;
+    std::vector<std::vector<std::shared_ptr<RemoteBlobWriter>>>
+        remote_blob_writers_list;
     PrepareData(remote_blob_writers_list, size, parallel);
-    
+
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < parallel; i++) {
-      threads.push_back(std::thread(TestCreateBlob, std::ref(clients[i]), std::ref(remote_blob_writers_list[i]), std::ref(ids_list[i]), size));
+      threads.push_back(std::thread(TestCreateBlob, std::ref(clients[i]),
+                                    std::ref(remote_blob_writers_list[i]),
+                                    std::ref(ids_list[i]), size));
     }
     for (int i = 0; i < parallel; i++) {
       threads[i].join();
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     uint64_t iterator = total_mem / size;
-    LOG(INFO) << "Total time:" << duration.count() << "ms" << " average speed:" << (double) iterator * size * parallel / 1024 / 1024 / ((double)duration.count() / 1000) << "MB/s\n";
+    LOG(INFO) << "Total time:" << duration.count() << "ms"
+              << " average speed:"
+              << static_cast<double>(iterator * size * parallel) / 1024 / 1024 /
+                     (static_cast<double>(duration.count()) / 1000)
+              << "MB/s\n";
 
     blob_ids_lists.push_back(ids_list);
     sizes.push_back(size);
   }
 
-  std::vector<std::vector<std::vector<std::shared_ptr<RemoteBlob>>>> local_buffers_lists;
+  std::vector<std::vector<std::vector<std::shared_ptr<RemoteBlob>>>>
+      local_buffers_lists;
   LOG(INFO) << "Test Get Blob(RDMA read / TCP)";
   LOG(INFO) << "----------------------------";
   int index = 0;
-  for (auto &blob_ids_list : blob_ids_lists) {
+  for (auto& blob_ids_list : blob_ids_lists) {
     std::vector<std::vector<std::shared_ptr<RemoteBlob>>> local_buffers_list;
     std::vector<std::thread> threads;
     local_buffers_list.resize(parallel);
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < parallel; i++) {
-      threads.push_back(std::thread(TestGetBlob, std::ref(clients[i]), std::ref(blob_ids_list[i]), sizes[index], std::ref(local_buffers_list[i])));
+      threads.push_back(std::thread(TestGetBlob, std::ref(clients[i]),
+                                    std::ref(blob_ids_list[i]), sizes[index],
+                                    std::ref(local_buffers_list[i])));
     }
     for (int i = 0; i < parallel; i++) {
       threads[i].join();
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     int iterator = total_mem / sizes[0];
-    LOG(INFO) << "Total time:" << duration.count() << "ms" << " average speed:" << (double) iterator * sizes[0] * parallel / 1024 / 1024 / ((double)duration.count() / 1000) << "MB/s\n";
+    LOG(INFO) << "Total time:" << duration.count() << "ms"
+              << " average speed:"
+              << static_cast<double>(iterator * sizes[0] * parallel) / 1024 /
+                     1024 / (static_cast<double>(duration.count()) / 1000)
+              << "MB/s\n";
     local_buffers_lists.push_back(local_buffers_list);
     index++;
   }
