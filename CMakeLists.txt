@@ -669,44 +669,51 @@ include("cmake/GenerateVineyardJava.cmake")
 
 include(CheckIncludeFile)
 check_include_files(infiniband/verbs.h HAVE_INFINIBAND_VERBS_H)
-if (HAVE_INFINIBAND_VERBS_H)
-    message(STATUS "Infiniband verbs found.")
-else()
-    message(STATUS "Infiniband verbs not found.")
-endif()
-
 
 if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
-    set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
-    add_custom_command(
-        OUTPUT ${FABRIC_MAKEFILE}
-        COMMAND ./autogen.sh > /dev/null
-        COMMAND ./configure > /dev/null
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
-    )
-    add_custom_target(
-        fabric_configure
-        DEPENDS ${FABRIC_MAKEFILE}
-    )
-    add_custom_target(
-        fabric ALL
-        COMMAND make -j$(nproc) > /dev/null
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1
-        DEPENDS fabric_configure
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
-    )
-    set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so")
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
-            PATTERN "*.h"
-    )
-    include_directories(BEFORE SYSTEM
-                        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
-                        $<INSTALL_INTERFACE:include/vineyard/contrib>
-    )
-    list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
+    find_library(LIBFABRIC NAMES fabric)
+    if(LIBFABRIC)
+        message(STATUS "Using system libfabric.")
+        add_custom_target(fabric)
+    else()
+        set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
+        add_custom_command(
+            OUTPUT ${FABRIC_MAKEFILE}
+            COMMAND ./autogen.sh > /dev/null
+            COMMAND ./configure > /dev/null
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+        )
+        add_custom_target(
+            fabric_configure
+            DEPENDS ${FABRIC_MAKEFILE}
+        )
+        add_custom_target(
+            fabric ALL
+            COMMAND make -j$(nproc) > /dev/null
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
+            COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1
+            DEPENDS fabric_configure
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+        )
+        set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1")
+        install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+                PATTERN "*.h"
+        )
+        install(FILES ${LIBFABRIC}
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+        include_directories(BEFORE SYSTEM
+                            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
+                            $<INSTALL_INTERFACE:include/vineyard/contrib>
+        )
+        list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
+
+        set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+                     ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so
+                     ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1)
+
+    endif()
 endif()
 
 # boost is only required by some components
