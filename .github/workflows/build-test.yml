@@ -119,6 +119,8 @@ jobs:
                               protobuf-compiler-grpc \
                               python3-pip \
                               uuid-dev \
+                              automake  \
+                              libtool \
                               wget
 
           # install apache-arrow

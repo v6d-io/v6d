@@ -188,7 +188,7 @@ Status FileStorage::Update(
         upper_bound += 1;
         if (createFileSet.find(this->rootPath + pathList[i]) !=
             createFileSet.end()) {
-          TouchFile(this->rootPath + pathList[i]);
+          VINEYARD_DISCARD(TouchFile(this->rootPath + pathList[i]));
         }
       } else {
         break;
@@ -383,7 +383,7 @@ Status FileStorage::Update(
             createFileSet.find(this->rootPath + pathList[i]) !=
                 createFileSet.end()) {
           // Only this part is created.
-          TouchFile(this->rootPath + pathList[i]);
+          VINEYARD_DISCARD(TouchFile(this->rootPath + pathList[i]));
         }
       } else {
         break;
@@ -787,7 +787,7 @@ Status FileStorage::GlobalGCFunc() {
       VLOG(100) << "Global GC: " << path << " is dead!";
       VLOG(100) << "Access time: " << GetTimestamp(accessTime);
       VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
-      Delete(path);
+      VINEYARD_DISCARD(Delete(path));
     } else {
       VLOG(100) << "Global GC: " << path << " is alive!";
       VLOG(100) << "Access time: " << GetTimestamp(accessTime);
