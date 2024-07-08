@@ -689,7 +689,6 @@ if(BUILD_VINEYARD_RDMA)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
     )
     set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so")
-    message("libfabric static library: ${LIBFABRIC}")
     install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
             DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
             PATTERN "*.h"
@@ -698,6 +697,7 @@ if(BUILD_VINEYARD_RDMA)
                         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
                         $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
+    list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
 endif()
 
 # boost is only required by some components
