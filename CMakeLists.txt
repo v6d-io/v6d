@@ -667,7 +667,16 @@ add_custom_target(vineyard_codegen_java)
 include("cmake/GenerateVineyard.cmake")
 include("cmake/GenerateVineyardJava.cmake")
 
-if(BUILD_VINEYARD_RDMA AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+include(CheckIncludeFile)
+check_include_files(infiniband/verbs.h HAVE_INFINIBAND_VERBS_H)
+if (HAVE_INFINIBAND_VERBS_H)
+    message(STATUS "Infiniband verbs found.")
+else()
+    message(STATUS "Infiniband verbs not found.")
+endif()
+
+
+if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
     set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
     add_custom_command(
         OUTPUT ${FABRIC_MAKEFILE}
@@ -784,7 +793,7 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    if(BUILD_VINEYARD_RDMA AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
         target_compile_options(vineyardd PRIVATE -DVINEYARD_WITH_RDMA)
         target_link_libraries(vineyardd PRIVATE ${LIBFABRIC})
         add_dependencies(vineyardd fabric)
@@ -863,7 +872,7 @@ if(BUILD_VINEYARD_CLIENT)
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    if(BUILD_VINEYARD_RDMA AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
         target_compile_options(vineyard_client PRIVATE -DVINEYARD_WITH_RDMA)
         target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC})
         add_dependencies(vineyard_client fabric)
@@ -929,7 +938,7 @@ macro(setup_pybind11_module target relpath)
         target_add_link_options(${target} PRIVATE OPTIONS -Os)
     endif()
 
-    if(BUILD_VINEYARD_RDMA AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
         target_compile_options(_C PRIVATE -DVINEYARD_WITH_RDMA)
     endif()
 
