@@ -542,11 +542,14 @@ Status RPCClient::CreateRemoteBlob(
           // probe the max register size again
           while (true) {
             size_t size = rdma_client_->GetClientMaxRegisterSize(
-                local_blob_data + blob_data_offset, 1, local_info.size);
+                local_blob_data + blob_data_offset, 8192, local_info.size);
             if (size > 0) {
               max_register_size = size;
               break;
             }
+            // Maybe the registered size is too large. There is no enough
+            // memory to register. Wait for next time.
+            usleep(1000);
           }
           local_info.size = std::min(remain_blob_bytes, max_register_size);
         } else {
@@ -556,10 +559,18 @@ Status RPCClient::CreateRemoteBlob(
 
       // Request mem info
       RegisterMemInfo remote_info;
-      remote_info.address =
-          reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-      remote_info.size = local_info.size;
-      RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+      while (true) {
+        remote_info.address =
+            reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
+        remote_info.size = local_info.size;
+        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        if (remote_info.size > 0) {
+          break;
+        }
+        // Maybe the registered size is too large. There is no enough
+        // memory to register on server. Wait for next time.
+        usleep(1000);
+      }
       size_t send_bytes = remote_info.size;
 
       // Write data
@@ -673,11 +684,14 @@ Status RPCClient::CreateRemoteBlobs(
             // probe the max register size again
             while (true) {
               size_t size = rdma_client_->GetClientMaxRegisterSize(
-                  local_blob_data + blob_data_offset, 1, local_info.size);
+                  local_blob_data + blob_data_offset, 8192, local_info.size);
               if (size > 0) {
                 max_register_size = size;
                 break;
               }
+              // Maybe the registered size is too large. There is no enough
+              // memory to register. Wait for next time.
+              usleep(1000);
             }
             local_info.size = std::min(remain_blob_bytes, max_register_size);
           } else {
@@ -687,10 +701,18 @@ Status RPCClient::CreateRemoteBlobs(
 
         // Request mem info
         RegisterMemInfo remote_info;
-        remote_info.address =
-            reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-        remote_info.size = local_info.size;
-        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        while (true) {
+          remote_info.address =
+              reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
+          remote_info.size = local_info.size;
+          RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+          if (remote_info.size > 0) {
+            break;
+          }
+          // Maybe the registered size is too large. There is no enough
+          // memory to register on server. Wait for next time.
+          usleep(1000);
+        }
         size_t send_bytes = remote_info.size;
 
         // Write data
@@ -822,11 +844,14 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
           // probe the max register size again
           while (true) {
             size_t size = rdma_client_->GetClientMaxRegisterSize(
-                local_blob_data + blob_data_offset, 1, local_info.size);
+                local_blob_data + blob_data_offset, 8192, local_info.size);
             if (size > 0) {
               max_register_size = size;
               break;
             }
+            // Maybe the registered size is too large. There is no enough
+            // memory to register. Wait for next time.
+            usleep(1000);
           }
           local_info.size = std::min(remain_blob_bytes, max_register_size);
         } else {
@@ -836,10 +861,18 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
 
       // Request mem info
       RegisterMemInfo remote_info;
-      remote_info.address =
-          reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-      remote_info.size = local_info.size;
-      RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+      while (true) {
+        remote_info.address =
+            reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
+        remote_info.size = local_info.size;
+        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        if (remote_info.size > 0) {
+          break;
+        }
+        // Maybe the registered size is too large. There is no enough
+        // memory to register on server. Wait for next time.
+        usleep(1000);
+      }
       receive_bytes = remote_info.size;
 
       // Write data
@@ -947,11 +980,14 @@ Status RPCClient::GetRemoteBlobs(
             // probe the max register size again
             while (true) {
               size_t size = rdma_client_->GetClientMaxRegisterSize(
-                  local_blob_data + blob_data_offset, 1, local_info.size);
+                  local_blob_data + blob_data_offset, 8192, local_info.size);
               if (size > 0) {
                 max_register_size = size;
                 break;
               }
+              // Maybe the registered size is too large. There is no enough
+              // memory to register. Wait for next time.
+              usleep(1000);
             }
             local_info.size = std::min(remain_blob_bytes, max_register_size);
           } else {
@@ -961,10 +997,18 @@ Status RPCClient::GetRemoteBlobs(
 
         // Request mem info
         RegisterMemInfo remote_info;
-        remote_info.address =
-            reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
-        remote_info.size = local_info.size;
-        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        while (true) {
+          remote_info.address =
+              reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset;
+          remote_info.size = local_info.size;
+          RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+          if (remote_info.size > 0) {
+            break;
+          }
+          // Maybe the registered size is too large. There is no enough
+          // memory to register on server. Wait for next time.
+          usleep(1000);
+        }
         size_t receive_bytes = remote_info.size;
 
         // Read data

@@ -160,16 +160,6 @@ Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   return Status::OK();
 }
 
-Status RemoteClient::RDMACheckMaxRegisterSize() {
-  max_register_size = rdma_client_->GetClientMaxRegisterSize();
-  if (max_register_size == 0) {
-    return Status::IOError("Failed to get max register size.");
-  }
-  VLOG(100) << "Max register size is:" << max_register_size / 1024 / 1024 / 1024
-            << " GB.";
-  return Status::OK();
-}
-
 #endif
 
 Status RemoteClient::ConnectRDMAServer(const std::string& host,
@@ -180,7 +170,6 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
   }
 
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, host, port));
-  RETURN_ON_ERROR(RDMACheckMaxRegisterSize());
 
   VLOG(100) << "Try to connect to RDMA server " << host << ":" << port << "...";
   RETURN_ON_ERROR(this->rdma_client_->Connect());
@@ -416,6 +405,7 @@ Status RemoteClient::migrateBuffers(
       }
       size_t remain_blob_bytes = payloads[i].data_size;
       uint8_t* local_blob_data = results[i]->pointer;
+      size_t max_register_size = payloads[i].data_size;
 
       do {
         size_t blob_data_offset = payloads[i].data_size - remain_blob_bytes;
@@ -435,9 +425,15 @@ Status RemoteClient::migrateBuffers(
           if (status.IsIOError()) {
             // probe the max register size again
             VLOG(100) << "Probe the max register size again.";
-            max_register_size = rdma_client_->GetClientMaxRegisterSize();
-            if (max_register_size == 0) {
-              return Status::Invalid("Failed to get max register size.");
+            while (true) {
+              size_t size = rdma_client_->GetClientMaxRegisterSize();
+              if (size > 0) {
+                max_register_size = size;
+                break;
+              }
+              // Maybe the registered size is too large. There is no enough
+              // memory to register. Wait for next time.
+              usleep(1000);
             }
             local_info.size = std::min(remain_blob_bytes, max_register_size);
           } else {
@@ -447,12 +443,18 @@ Status RemoteClient::migrateBuffers(
 
         // Exchange mem info
         RegisterMemInfo remote_info;
-        remote_info.address = (uint64_t) server_pointer + blob_data_offset;
-        remote_info.size = local_info.size;
-        VLOG(100) << "Request remote address: "
-                  << reinterpret_cast<void*>(remote_info.address)
-                  << ", size: " << remote_info.size;
-        RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+        while (true) {
+          remote_info.address = (uint64_t) server_pointer + blob_data_offset;
+          remote_info.size = local_info.size;
+          VLOG(100) << "Request remote address: "
+                    << reinterpret_cast<void*>(remote_info.address)
+                    << ", size: " << remote_info.size;
+          RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+          if (remote_info.size > 0) {
+            break;
+          }
+          usleep(1000);
+        }
         size_t receive_size = remote_info.size;
 
         // Read data

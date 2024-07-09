@@ -73,8 +73,8 @@ class RDMAClient : public IRDMA {
 
   size_t GetMaxTransferBytes() { return fi->ep_attr->max_msg_size; }
 
-  size_t GetClientMaxRegisterSize(void* addr = nullptr, size_t min_size = 0,
-                                  size_t max_size = 0);
+  size_t GetClientMaxRegisterSize(void* addr = nullptr, size_t min_size = 8192,
+                                  size_t max_size = 64UL * 1024 * 1024 * 1024);
 
  private:
   static Status Make(std::shared_ptr<RDMAClient>& ptr,

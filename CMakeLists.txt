@@ -673,7 +673,7 @@ check_include_files(infiniband/verbs.h HAVE_INFINIBAND_VERBS_H)
 if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
     find_library(LIBFABRIC NAMES fabric)
     if(LIBFABRIC)
-        message(STATUS "Using system libfabric.")
+        message(STATUS "Using system libfabric : ${LIBFABRIC}")
         add_custom_target(fabric)
     else()
         set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
@@ -696,13 +696,16 @@ if(BUILD_VINEYARD_RDMA AND HAVE_INFINIBAND_VERBS_H)
             DEPENDS fabric_configure
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
         )
-        set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1")
+        set(LIBFABRIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so")
+        set(LIBFABRIC_VERSION "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libfabric.so.1")
         install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
                 DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
                 PATTERN "*.h"
         )
         install(FILES ${LIBFABRIC}
                 DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+        install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink libfabric.so libfabric.so.1
+                WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/lib)")
         include_directories(BEFORE SYSTEM
                             $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
                             $<INSTALL_INTERFACE:include/vineyard/contrib>

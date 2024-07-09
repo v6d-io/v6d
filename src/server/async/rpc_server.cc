@@ -207,8 +207,8 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
       VLOG(100) << "Probe the max register size again.";
       while (true) {
         size_t size = rdma_server_->GetServerMaxRegisterSize(
-            reinterpret_cast<void*>(remote_request_mem_info.address), 1,
-            max_register_size / 1024 / 1024 / 1024);
+            reinterpret_cast<void*>(remote_request_mem_info.address), 8192,
+            max_register_size);
         if (size > 0) {
           max_register_size = size;
           break;
@@ -220,7 +220,7 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
       break;
     }
   }
-  if (!status.ok()) {
+  if (!status.ok() || remote_request_mem_info.size == 0) {
     LOG(ERROR) << "Failed to register mem.";
     void* msg = nullptr;
     rdma_server_->GetTXFreeMsgBuffer(msg);

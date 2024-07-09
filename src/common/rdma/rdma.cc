@@ -23,19 +23,23 @@ limitations under the License.
 namespace vineyard {
 
 size_t IRDMA::max_register_size_ = 0;
-constexpr size_t min_l_size = 1;
-constexpr size_t max_r_size = 64;
+constexpr size_t min_l_size = 8192;                       // 8KB
+constexpr size_t max_r_size = 64UL * 1024 * 1024 * 1024;  // 64GB
 
 size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
                                      size_t max_size, fid_domain* domain) {
-  size_t l_size = min_size == 0 ? min_l_size : min_size;
-  size_t r_size = max_size == 0 ? max_r_size : max_size;
+  size_t l_size = min_size < min_l_size ? min_l_size : min_size;
+  size_t r_size = max_size > max_r_size ? max_r_size : max_size;
+  if (l_size >= r_size) {
+    return 0;
+  }
+
   fid_mr* mr = nullptr;
   void* mr_desc = nullptr;
   uint64_t rkey = 0;
   void* buffer = addr;
   size_t register_size = 0;
-  size_t max_buffer_size = r_size * 1024 * 1024 * 1024;
+  size_t max_buffer_size = r_size;
 
   if (addr == nullptr) {
     do {
@@ -43,7 +47,7 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
       if (buffer == MAP_FAILED) {
         r_size /= 2;
-        max_buffer_size = r_size * 1024 * 1024 * 1024;
+        max_buffer_size = r_size;
       } else {
         break;
       }
@@ -53,12 +57,14 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
     }
   }
 
+  bool registered = false;
   size_t size_ = (r_size + l_size) / 2;
   while (l_size < r_size - 1) {
-    size_t buffer_size = size_ * 1024 * 1024 * 1024;
+    size_t buffer_size = size_;
     Status status =
         RegisterMemory(&mr, domain, buffer, buffer_size, rkey, mr_desc);
     if (status.ok()) {
+      registered = true;
       register_size = buffer_size;
       VINEYARD_CHECK_OK(CloseResource(mr, "memory region"));
       l_size = size_;
@@ -73,12 +79,16 @@ size_t IRDMA::GetMaxRegisterSizeImpl(void* addr, size_t min_size,
     munmap(buffer, max_buffer_size);
   }
 
+  if (!registered) {
+    return 0;
+  }
+
   /**
    * The memory registered by the rpc client may be not page aligned. So we need
    * to subtract the page size from the registered memory size to avoid the
    * memory registration failure.
    */
-  return register_size - 4096;
+  return register_size - min_l_size;
 }
 
 Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
