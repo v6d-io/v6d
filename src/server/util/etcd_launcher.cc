@@ -196,15 +196,6 @@ Status EtcdLauncher::LaunchEtcdServer(
   }
 
   RETURN_ON_ERROR(initHostInfo());
-  bool try_launch = false;
-  if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
-      local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
-    try_launch = true;
-  }
-
-  if (!try_launch) {
-    return Status::OK();
-  }
 
   LOG(INFO) << "Starting the etcd server";
 
