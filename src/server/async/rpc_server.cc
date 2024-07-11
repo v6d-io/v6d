@@ -314,6 +314,18 @@ void RPCServer::doVineyardClose(VineyardRecvContext* recv_context) {
   remote_mem_infos_.erase(recv_context->rdma_conn_id);
   rdma_server_->ReleaseRXBuffer(recv_context->attr.msg_buffer);
 }
+
+void RPCServer::doPrepareRecv(uint64_t rdma_conn_id) {
+  VineyardRecvContext* recv_context = new VineyardRecvContext();
+  memset(&recv_context->attr, 0, sizeof(recv_context->attr));
+  recv_context->rdma_conn_id = rdma_conn_id;
+  void* context = reinterpret_cast<void*>(recv_context);
+  void* msg = nullptr;
+  rdma_server_->GetRXFreeMsgBuffer(msg);
+  recv_context->attr.msg_buffer = msg;
+  rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
+}
+
 #endif
 
 void RPCServer::doRDMARecv() {
@@ -398,14 +410,9 @@ void RPCServer::doRDMAAccept() {
                 << status.message();
       return;
     }
-    VineyardRecvContext* recv_context = new VineyardRecvContext();
-    memset(&recv_context->attr, 0, sizeof(recv_context->attr));
-    recv_context->rdma_conn_id = rdma_conn_id;
-    void* context = reinterpret_cast<void*>(recv_context);
-    void* msg = nullptr;
-    rdma_server_->GetRXFreeMsgBuffer(msg);
-    recv_context->attr.msg_buffer = msg;
-    rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
+    boost::asio::post(vs_ptr_->GetIOContext(), [this, rdma_conn_id] {
+      doPrepareRecv(rdma_conn_id);
+    });
   }
 #endif
 }

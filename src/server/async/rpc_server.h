@@ -80,6 +80,8 @@ class RPCServer : public SocketServer,
                                VineyardMsg* recv_msg);
 
   void doVineyardClose(VineyardRecvContext* recv_context);
+
+  void doPrepareRecv(uint64_t rdma_conn_id);
 #endif
 
   const json rpc_spec_;
