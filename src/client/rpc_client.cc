@@ -211,7 +211,17 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
                                             static_cast<int>(rdma_port)));
 
-  RETURN_ON_ERROR(this->rdma_client_->Connect());
+  int retry = 0;
+  do {
+    if (this->rdma_client_->Connect().ok()) {
+      break;
+    }
+    if (retry == 10) {
+      return Status::Invalid("Failed to connect to RDMA server.");
+    }
+    retry++;
+    usleep(1000);
+  } while (true);
   this->rdma_connected_ = true;
   return Status::OK();
 #else
