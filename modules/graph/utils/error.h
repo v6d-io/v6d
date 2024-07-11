@@ -20,6 +20,8 @@ limitations under the License.
 #include <string>
 #include <utility>
 #include <vector>
+#include <iomanip>
+#include <sstream>
 
 #if defined(__has_include) && __has_include(<version>)
 #include <version>
@@ -41,21 +43,21 @@ using result_of_t = typename std::result_of<T(Args...)>::type;
 namespace vineyard {
 
 enum class ErrorCode {
-  kOk,
-  kIOError,
-  kArrowError,
-  kVineyardError,
-  kUnspecificError,
-  kDistributedError,
-  kNetworkError,
-  kCommandError,
-  kDataTypeError,
-  kIllegalStateError,
-  kInvalidValueError,
-  kInvalidOperationError,
-  kUnsupportedOperationError,
-  kUnimplementedMethod,
-  kGraphArError,
+  kOk = 0,
+  kIOError = 100,
+  kArrowError = 101,
+  kVineyardError = 102,
+  kUnspecificError = 103,
+  kDistributedError = 104,
+  kNetworkError = 105,
+  kCommandError = 106,
+  kDataTypeError = 107,
+  kIllegalStateError = 108,
+  kInvalidValueError = 109,
+  kInvalidOperationError = 110,
+  kUnsupportedOperationError = 111,
+  kUnimplementedMethod = 112,
+  kGraphArError = 113,
 };
 
 inline const char* ErrorCodeToString(ErrorCode ec) {
@@ -95,19 +97,27 @@ inline const char* ErrorCodeToString(ErrorCode ec) {
   }
 }
 
+inline std::string formatEnumValue(const ErrorCode& value) {
+  std::stringstream ss;
+  // Format the integer value with leading zeros (4 digits)
+  ss << "02-" << std::setw(4) << std::setfill('0') << static_cast<int>(value);
+  return ss.str();
+}
+
 struct GSError {
   ErrorCode error_code;
   std::string error_msg;
   std::string backtrace;
-  GSError() : error_code(ErrorCode::kOk) {}
+  std::string ec;
+  GSError() : GSError(ErrorCode::kOk) {}
 
   explicit GSError(ErrorCode code) : GSError(code, "") {}
 
   GSError(ErrorCode code, std::string msg)
-      : error_code(code), error_msg(std::move(msg)) {}
+      : GSError(code, msg, "") {}
 
   GSError(ErrorCode code, std::string msg, std::string bt)
-      : error_code(code), error_msg(std::move(msg)), backtrace(std::move(bt)) {}
+      : error_code(code), error_msg(std::move(msg)), backtrace(std::move(bt)), ec(formatEnumValue(code)) {}
 
   explicit operator bool() const { return error_code != ErrorCode::kOk; }
 
@@ -119,6 +129,7 @@ inline grape::InArchive& operator<<(grape::InArchive& archive,
   archive << e.error_code;
   archive << e.error_msg;
   archive << e.backtrace;
+  archive << e.ec;
   return archive;
 }
 
@@ -126,6 +137,7 @@ inline grape::OutArchive& operator>>(grape::OutArchive& archive, GSError& e) {
   archive >> e.error_code;
   archive >> e.error_msg;
   archive >> e.backtrace;
+  archive >> e.ec;
   return archive;
 }
 
