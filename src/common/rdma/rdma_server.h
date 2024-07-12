@@ -79,8 +79,6 @@ class RDMAServer : public IRDMA {
     return Status::OK();
   }
 
-  Status WaitConnect(uint64_t& rdma_conn_id);
-
   Status Close() override;
 
   Status Stop() {
@@ -100,6 +98,12 @@ class RDMAServer : public IRDMA {
 
   size_t GetServerMaxRegisterSize(void* addr = nullptr, size_t min_size = 8192,
                                   size_t max_size = 64UL * 1024 * 1024 * 1024);
+
+  Status GetEvent(VineyardEventEntry& event);
+
+  Status PrepareConnection(VineyardEventEntry event);
+
+  Status FinishConnection(uint64_t& rdma_conn_id, VineyardEventEntry event);
 
  private:
   Status RemoveClient(uint64_t ep_token);
@@ -141,10 +145,14 @@ class RDMAServer : public IRDMA {
   void* data_mem_desc = NULL;
   fid_mr *tx_mr = NULL, *rx_mr = NULL;
   std::vector<fid_mr*> mr_array;
+  std::mutex mr_array_mutex_;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
 
   RDMA_STATE state = INIT;
   uint64_t current_conn_id = 0;
+
+  std::map<fid_t, fid_ep*> wait_conn_ep_map_;
+  std::mutex wait_conn_ep_map_mutex_;
 };
 
 }  // namespace vineyard

@@ -62,12 +62,19 @@ struct VineyardMsg {
       uint64_t remote_address;
       uint64_t len;
       uint64_t key;
+      void* mr_desc;
     } remoteMemInfo;
     struct {
       bool isReady;
     } ConnectState;
   };
   int type;
+};
+
+struct VineyardEventEntry {
+  uint32_t event_id;
+  fi_info* fi;
+  fid_t fid;
 };
 
 struct VineyardRecvContext {
@@ -113,6 +120,8 @@ struct RDMARemoteNodeInfo {
 };
 
 #define VINEYARD_FIVERSION FI_VERSION(1, 21)
+#define VINEYARD_CONNREQ FI_CONNREQ
+#define VINEYARD_CONNECTED FI_CONNECTED
 
 }  // namespace vineyard
 

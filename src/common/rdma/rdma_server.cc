@@ -166,45 +166,10 @@ Status RDMAServer::Close() {
   return Status::OK();
 }
 
-Status RDMAServer::WaitConnect(uint64_t& rdma_conn_id) {
-  struct fi_eq_cm_entry entry;
-  uint32_t event;
-
-  while (true) {
-    int rd = fi_eq_sread(eq, &event, &entry, sizeof entry, 500, 0);
-
-    if (rd < 0 && (rd != -FI_ETIMEDOUT && rd != -FI_EAGAIN)) {
-      return Status::IOError("fi_eq_sread broken. ret:" + std::to_string(rd));
-    }
-    if (rd == -FI_ETIMEDOUT || rd == -FI_EAGAIN) {
-      if (state == STOPED) {
-        return Status::Invalid("Server is stoped.");
-      }
-      continue;
-    }
-    CHECK_ERROR(rd == sizeof entry, "fi_eq_sread failed.");
-    if (event == FI_SHUTDOWN) {
-      fid_ep* closed_ep = container_of(entry.fid, fid_ep, fid);
-      RemoveClient(closed_ep);
-      continue;
-    }
-    break;
-  }
-
-  fi_info* client_fi = entry.info;
-  CHECK_ERROR(event == FI_CONNREQ, "Unexpected event:" + std::to_string(event));
-
-  if (!entry.info || !entry.info->fabric_attr || !entry.info->domain_attr ||
-      !entry.info->ep_attr || !entry.info->tx_attr || !entry.info->rx_attr)
-    return Status::Invalid("Invalid fabric info when prepare connection.");
-
-  if (!entry.info->fabric_attr->prov_name || !entry.info->fabric_attr->name ||
-      !entry.info->domain_attr->name ||
-      entry.info->fabric_attr->api_version != fi->fabric_attr->api_version)
-    return Status::Invalid("Invalid fabric info when prepare connection.");
-
+Status RDMAServer::PrepareConnection(VineyardEventEntry vineyard_entry) {
   // prepare new ep
   fid_ep* ep = NULL;
+  fi_info* client_fi = vineyard_entry.fi;
   CHECK_ERROR(!fi_endpoint(domain, client_fi, &ep, NULL),
               "fi_endpoint failed.");
 
@@ -218,17 +183,51 @@ Status RDMAServer::WaitConnect(uint64_t& rdma_conn_id) {
 
   CHECK_ERROR(!fi_accept(ep, NULL, 0), "fi_accept failed.");
 
-  CHECK_ERROR(
-      fi_eq_sread(eq, &event, &entry, sizeof(entry), -1, 0) == sizeof entry,
-      "fi_eq_sread failed.");
-
-  if (event != FI_CONNECTED || entry.fid != &ep->fid) {
-    return Status::Invalid("Unexpected event:" + std::to_string(event));
-  }
-
-  AddClient(rdma_conn_id, ep);
-
+  std::lock_guard<std::mutex> lock(wait_conn_ep_map_mutex_);
+  wait_conn_ep_map_[&ep->fid] = ep;
   return Status::OK();
+}
+
+Status RDMAServer::FinishConnection(uint64_t& rdma_conn_id,
+                                    VineyardEventEntry event) {
+  fid_ep* ep = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(wait_conn_ep_map_mutex_);
+    if (wait_conn_ep_map_.find(event.fid) == wait_conn_ep_map_.end()) {
+      return Status::Invalid("Failed to find buffer context.");
+    }
+    ep = wait_conn_ep_map_[event.fid];
+    wait_conn_ep_map_.erase(event.fid);
+  }
+  AddClient(rdma_conn_id, ep);
+  return Status::OK();
+}
+
+Status RDMAServer::GetEvent(VineyardEventEntry& vineyard_entry) {
+  struct fi_eq_cm_entry entry;
+  uint32_t event;
+  while (true) {
+    int rd = fi_eq_sread(eq, &event, &entry, sizeof entry, 500, 0);
+
+    if (rd < 0 && (rd != -FI_ETIMEDOUT && rd != -FI_EAGAIN)) {
+      return Status::IOError("fi_eq_sread broken. ret:" + std::to_string(rd));
+    }
+    if (rd == -FI_ETIMEDOUT || rd == -FI_EAGAIN) {
+      if (state == STOPED) {
+        return Status::Invalid("Server is stoped.");
+      }
+      continue;
+    }
+    if (event == FI_SHUTDOWN) {
+      fid_ep* closed_ep = container_of(entry.fid, fid_ep, fid);
+      RemoveClient(closed_ep);
+      continue;
+    }
+    vineyard_entry.fi = entry.info;
+    vineyard_entry.event_id = event;
+    vineyard_entry.fid = entry.fid;
+    return Status::OK();
+  }
 }
 
 Status RDMAServer::AddClient(uint64_t& ep_token, void* ep) {
@@ -260,6 +259,7 @@ Status RDMAServer::RegisterMemory(RegisterMemInfo& memInfo) {
   RETURN_ON_ERROR(IRDMA::RegisterMemory(
       &new_mr, domain, reinterpret_cast<void*>(memInfo.address), memInfo.size,
       memInfo.rkey, memInfo.mr_desc));
+  std::lock_guard<std::mutex> lock(mr_array_mutex_);
   mr_array.push_back(new_mr);
   memInfo.mr = new_mr;
   return Status::OK();
@@ -272,6 +272,7 @@ Status RDMAServer::RegisterMemory(fid_mr** mr, void* address, size_t size,
 
 Status RDMAServer::DeregisterMemory(RegisterMemInfo& memInfo) {
   VINEYARD_CHECK_OK(IRDMA::CloseResource(memInfo.mr, "memory region"));
+  std::lock_guard<std::mutex> lock(mr_array_mutex_);
   mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
                  mr_array.end());
   return Status::OK();

@@ -220,7 +220,9 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
       return Status::Invalid("Failed to connect to RDMA server.");
     }
     retry++;
-    usleep(1000);
+    usleep(300 * 1000);
+    std::cout << "Connect rdma server failed! retry: " << retry << " times."
+              << std::endl;
   } while (true);
   this->rdma_connected_ = true;
   return Status::OK();
@@ -252,6 +254,7 @@ Status RPCClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
     remote_info.address = vmsg->remoteMemInfo.remote_address;
     remote_info.rkey = vmsg->remoteMemInfo.key;
     remote_info.size = vmsg->remoteMemInfo.len;
+    remote_info.mr_desc = vmsg->remoteMemInfo.mr_desc;
   } else {
     std::cout << "Unknown message type: " << vmsg->type << std::endl;
   }
@@ -265,8 +268,10 @@ Status RPCClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   msg->type = VINEYARD_RELEASE_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
   msg->remoteMemInfo.len = remote_info.size;
+  msg->remoteMemInfo.mr_desc = remote_info.mr_desc;
 
-  this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
+  VINEYARD_CHECK_OK(
+      this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr));
   VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
 
   return Status::OK();
