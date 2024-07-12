@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #ifdef VINEYARD_WITH_RDMA
 #include <memory>
 #include <string>
@@ -152,8 +151,14 @@ void ServerExchangeKeys() {
 
 void StartServer() {
   VINEYARD_CHECK_OK(RDMAServer::Make(server, port));
+  VineyardEventEntry event_entry;
   uint64_t rdma_conn_id;
-  VINEYARD_CHECK_OK(server->WaitConnect(rdma_conn_id));
+  VINEYARD_CHECK_OK(server->GetEvent(event_entry));
+  VINEYARD_ASSERT(event_entry.event_id == VINEYARD_CONNREQ, "event id error");
+  VINEYARD_CHECK_OK(server->PrepareConnection(event_entry));
+  VINEYARD_CHECK_OK(server->GetEvent(event_entry));
+  VINEYARD_ASSERT(event_entry.event_id == VINEYARD_CONNECTED, "event id error");
+  VINEYARD_CHECK_OK(server->FinishConnection(rdma_conn_id, event_entry));
 
   void* buffer = nullptr;
   VINEYARD_CHECK_OK(server->GetRXFreeMsgBuffer(buffer));
@@ -175,6 +180,8 @@ void StartServer() {
 
   HelloToClient();
   VINEYARD_CHECK_OK(server->Stop());
+  sleep(1);
+  VINEYARD_CHECK_OK(server->Close());
 }
 
 void StartClient(std::string server_address) {
@@ -202,6 +209,8 @@ void StartClient(std::string server_address) {
   ClientExchangeKeys();
   HelloToServer();
   VINEYARD_CHECK_OK(client->Stop());
+  VINEYARD_CHECK_OK(client->Close());
+  RDMAClientCreator::Release(server_address + ":" + std::to_string(port));
 }
 #endif
 
