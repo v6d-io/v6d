@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer
+spec:
+  selector:
+    matchLabels:
+      app: consumer
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: consumer
+    spec:
+      containers:
+      - name: consumer
+        image: python:3.10
+        command:
+        - bash
+        - -c
+        - |
+          pip install vineyard numpy pandas --index-url https://pypi.tuna.tsinghua.edu.cn/simple;
+          cat << EOF >> consumer.py
+          import vineyard
+          client = vineyard.connect(host="vineyardd-svc.default.svc.cluster.local",port=9600)
+          obj_id = client.get_name("test_data")
+          print(obj_id)
+          client.close()
+          EOF
+          python consumer.py;
+          sleep infinity;

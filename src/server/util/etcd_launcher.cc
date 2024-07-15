@@ -18,6 +18,7 @@ limitations under the License.
 #include <netdb.h>
 #include <sys/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -184,9 +185,9 @@ Status EtcdLauncher::LaunchEtcdServer(
       etcd_cluster_existing = true;
       if (!create_new_instance_) {
         etcd_endpoints_ = etcd_endpoint;
-        std::cout
+        LOG(INFO)
             << "Etcd cluster already exists, not to add the new instance: "
-            << etcd_endpoint << std::endl;
+            << etcd_endpoint;
         return Status::OK();
       }
       break;
@@ -262,9 +263,10 @@ Status EtcdLauncher::LaunchEtcdServer(
   if (etcd_cluster_existing) {
     std::string cluster_name;
 
-    std::vector<json> members = etcdctl_->listMembers(etcd_endpoint);
+    std::vector<json> all_members = etcdctl_->listMembers(etcd_endpoint);
+    std::vector<json> members = etcdctl_->listHealthyMembers(all_members);
     if (members.size() == 0) {
-      return Status::EtcdError("No members found via etcdctl");
+      return Status::EtcdError("No healthy members found via etcdctl");
     }
 
     existing_members = etcdctl_->listMembersName(members);
@@ -286,11 +288,6 @@ Status EtcdLauncher::LaunchEtcdServer(
     args.emplace_back("--initial-cluster-state");
     args.emplace_back("existing");
     args.emplace_back("--initial-cluster");
-    if (existing_members.size() != peer_urls.size()) {
-      return Status::EtcdError(
-          "The number of existing members is not equal to the number of peer "
-          "urls");
-    }
     for (size_t i = 0; i < existing_members.size(); i++) {
       cluster_name += existing_members[i] + "=" + peer_urls[i] + ",";
     }
@@ -375,10 +372,10 @@ Status EtcdLauncher::LaunchEtcdServer(
     std::error_code err;
     while (etcd_proc_ && etcd_proc_->running(err) && !err &&
            retries < max_probe_retries) {
-      etcd_client.reset(new etcd::Client(client_endpoint));
+      etcd_client.reset(new etcd::Client(etcd_endpoints_));
       if (probeEtcdServer(etcd_client, sync_lock)) {
         etcd_member_id_ =
-            etcdctl_->findMemberID(new_member_name, etcd_endpoints_);
+            etcdctl_->findMemberID(peer_endpoint, etcd_endpoints_);
         // reset the etcd watcher
         break;
       }
@@ -387,24 +384,23 @@ Status EtcdLauncher::LaunchEtcdServer(
     }
     if (!etcd_proc_) {
       return handleEtcdFailure(
-          new_member_name,
+          peer_endpoint,
           "Failed to wait until etcd ready: operation has been interrupted");
     } else if (err) {
       return handleEtcdFailure(
-          new_member_name, "Failed to wait until etcd ready: " + err.message());
+          peer_endpoint, "Failed to wait until etcd ready: " + err.message());
     } else if (retries >= max_probe_retries) {
       return handleEtcdFailure(
-          new_member_name,
-          "Etcd has been launched but failed to connect to it");
+          peer_endpoint, "Etcd has been launched but failed to connect to it");
     } else {
       return Status::OK();
     }
   }
 }
 
-Status EtcdLauncher::handleEtcdFailure(const std::string& member_name,
+Status EtcdLauncher::handleEtcdFailure(const std::string& peer_urls,
                                        const std::string& errMessage) {
-  auto member_id = etcdctl_->findMemberID(member_name, etcd_endpoints_);
+  auto member_id = etcdctl_->findMemberID(peer_urls, etcd_endpoints_);
   RETURN_ON_ERROR(etcdctl_->removeMember(etcd_member_id_, etcd_endpoints_));
   etcd_member_id_.clear();
   return Status::IOError(errMessage);
@@ -433,7 +429,7 @@ Status EtcdLauncher::parseEndpoint() {
     return Status::Invalid("The etcd endpoint '" + etcd_endpoint +
                            "' is invalid");
   }
-  endpoint_port_ = std::atoi(endpoint_port_string.c_str());
+  endpoint_port_ = uint32_t(std::atoi(endpoint_port_string.c_str()));
   size_t prefix = etcd_endpoint.find_last_of('/');
   endpoint_host_ = etcd_endpoint.substr(prefix + 1, port_pos - prefix - 1);
   if (endpoint_host_.empty()) {
@@ -489,7 +485,8 @@ bool EtcdLauncher::probeEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
 }
 
 Status EtcdLauncher::UpdateEndpoint() {
-  auto members = etcdctl_->listMembers(etcd_endpoints_);
+  auto all_members = etcdctl_->listMembers(etcd_endpoints_);
+  auto members = etcdctl_->listHealthyMembers(all_members);
   auto client_urls = etcdctl_->listClientURLs(members);
   etcd_endpoints_ = boost::algorithm::join(client_urls, ",");
   return Status::OK();

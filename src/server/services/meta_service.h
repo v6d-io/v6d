@@ -42,7 +42,7 @@ limitations under the License.
 #include "server/util/meta_tree.h"
 #include "server/util/metrics.h"
 
-#define HEARTBEAT_TIME 60
+#define HEARTBEAT_TIME 10
 #define MAX_TIMEOUT_COUNT 3
 
 namespace vineyard {

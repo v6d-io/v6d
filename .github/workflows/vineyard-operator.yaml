@@ -75,6 +75,8 @@ jobs:
           - e2e-tests-mars-examples
           - e2e-tests-vineyardctl
           - e2e-tests-deploy-raw-backup-and-recover
+          - e2e-tests-three-etcd-nodes-failover
+          - e2e-tests-five-etcd-nodes-failover
     steps:
       - uses: actions/checkout@v3
         with:
@@ -185,6 +187,8 @@ jobs:
                      e2e-tests-mars-examples \
                      e2e-tests-vineyardctl \
                      e2e-tests-deploy-raw-backup-and-recover \
+                     e2e-tests-three-etcd-nodes-failover \
+                     e2e-tests-five-etcd-nodes-failover
                      unit-tests; do
             mkdir -p $job-logs
             chmod a+rwx $job-logs
@@ -279,6 +283,16 @@ jobs:
         if: ${{ matrix.job == 'e2e-tests-deploy-raw-backup-and-recover' }}
         run: |
           make -C k8s/test/e2e e2e-tests-deploy-raw-backup-and-recover
+
+      - name: e2e-tests-three-etcd-nodes-failover
+        if: ${{ matrix.job == 'e2e-tests-three-etcd-nodes-failover' }}
+        run: |
+          make -C k8s/test/e2e e2e-tests-three-etcd-nodes-failover
+
+      - name: e2e-tests-five-etcd-nodes-failover
+        if: ${{ matrix.job == 'e2e-tests-five-etcd-nodes-failover' }}
+        run: |
+          make -C k8s/test/e2e e2e-tests-five-etcd-nodes-failover
 
       - name: Stop to export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v6

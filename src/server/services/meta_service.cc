@@ -1182,18 +1182,36 @@ void IMetaService::instanceUpdate(const op_t& op, const bool from_remote) {
   if (key_segments[0].empty()) {
     key_segments.erase(key_segments.begin());
   }
-
   if (key_segments[2] == "hostid") {
     uint64_t instance_id = std::stoul(key_segments[1].substr(1));
     if (op.op == op_t::op_type_t::kPut) {
       if (from_remote) {
         LOG(INFO) << "Instance join: " << instance_id;
       }
+      /*auto status = UpdateEtcdEndpoint();
+      if (!status.ok()) {
+        LOG(ERROR) << "Update etcd endpoint failed:" << status.ToString();
+      }
+      // reset the etcd client
+      VINEYARD_CHECK_OK(this->probe());*/
       instances_list_.emplace(instance_id);
     } else if (op.op == op_t::op_type_t::kDel) {
       if (from_remote) {
         LOG(INFO) << "Instance exit: " << instance_id;
       }
+      /* auto self(shared_from_this());
+      if (self->instance_to_member_id_.find(instance_id) !=
+          self->instance_to_member_id_.end()) {
+        auto member_id = self->instance_to_member_id_[instance_id];
+        self->instance_to_member_id_.erase(instance_id);
+        VINEYARD_CHECK_OK(self->RemoveEtcdMember(member_id));
+      }*/
+      /*auto status = UpdateEtcdEndpoint();
+      if (!status.ok()) {
+        LOG(ERROR) << "Update etcd endpoint failed:" << status.ToString();
+      }
+      // reset the etcd client
+      VINEYARD_CHECK_OK(this->probe());*/
       instances_list_.erase(instance_id);
     } else {
       if (from_remote) {
@@ -1208,10 +1226,13 @@ void IMetaService::instanceUpdate(const op_t& op, const bool from_remote) {
       if (member_id[0] == '\"' && member_id[member_id.size() - 1] == '\"') {
         member_id = member_id.substr(1, member_id.size() - 2);
       }
-      instance_to_member_id_[instance_id] = member_id;
-      if (!UpdateEtcdEndpoint().ok()) {
-        LOG(ERROR) << "Update etcd endpoint failed!";
+      auto status = UpdateEtcdEndpoint();
+      if (!status.ok()) {
+        LOG(ERROR) << "Update etcd endpoint failed:" << status.ToString();
       }
+      // reset the etcd client
+      VINEYARD_CHECK_OK(this->probe());
+      instance_to_member_id_[instance_id] = member_id;
     } else if (op.op != op_t::op_type_t::kDel) {
       if (from_remote) {
         LOG(ERROR) << "Unknown op type: " << op.ToString();

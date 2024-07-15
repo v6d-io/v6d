@@ -31,14 +31,18 @@ class Etcdctl {
   Status removeMember(const std::string& member_id,
                       const std::string& etcd_endpoints, int max_retries = 5);
 
-  std::string findMemberID(const std::string& member_name,
+  std::string findMemberID(const std::string& peer_urls,
                            const std::string& etcd_endpoints);
+
+  bool checkMemberStatus(const std::string& client_endpoint);
 
   Status addMember(const std::string& member_name,
                    const std::string& peer_endpoint,
                    const std::string& etcd_endpoints, int max_retries = 5);
 
   std::vector<json> listMembers(const std::string& etcd_endpoints);
+
+  std::vector<json> listHealthyMembers(const std::vector<json>& members);
 
   std::vector<std::string> listPeerURLs(const std::vector<json>& members);
 

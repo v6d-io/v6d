@@ -71,7 +71,7 @@ class EtcdLauncher {
   const bool create_new_instance_;
   std::string endpoint_host_;
   std::string etcd_data_dir_;
-  int endpoint_port_;
+  uint32_t endpoint_port_;
   std::set<std::string> local_hostnames_;
   std::set<std::string> local_ip_addresses_;
 

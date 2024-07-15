@@ -1,0 +1,151 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: vineyardd-svc
+  namespace: default
+  labels:
+    app: vineyardd
+spec:
+  ports:
+  - name: rpc
+    port: 9600
+  - name: etcd
+    port: 2379
+  selector:
+    app.vineyard.io/role: vineyardd
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vineyardd
+  namespace: default
+  labels:
+    app.vineyard.io/name: vineyardd
+    app.kubernetes.io/instance: default-vineyardd
+spec:
+  serviceName: "vineyardd-headless"
+  replicas: 5
+  selector:
+    matchLabels:
+      app.vineyard.io/name: vineyardd
+  template:
+    metadata:
+      labels:
+        app.vineyard.io/role: vineyardd
+        app.vineyard.io/name: vineyardd
+        app.kubernetes.io/name: vineyardd
+        app.kubernetes.io/instance: default-vineyardd
+    spec:
+      containers:
+      - name: vineyardd
+        image: vineyardcloudnative/vineyardd:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/bash
+        - -c
+        - |
+          if [ $(hostname) = "vineyardd-0" ]; then
+            if nc -z vineyardd-svc.default.svc.cluster.local 9600; then
+              /usr/local/bin/vineyardd \
+              --sync_crds true \
+              --socket /var/run/vineyard.sock \
+              --size 100Mi \
+              --reserve_memory \
+              --etcd_prefix /vineyard \
+              --etcd_endpoint http://vineyardd-svc.default.svc.cluster.local:2379
+            else
+              /usr/local/bin/vineyardd \
+              --sync_crds true \
+              --socket /var/run/vineyard.sock \
+              --size 100Mi \
+              --reserve_memory \
+              --etcd_prefix /vineyard \
+              --etcd_endpoint http://$(hostname):2379 \
+              --spill_path /spill \
+              --spill_lower_rate 0.2 \
+              --spill_upper_rate 0.8
+            fi
+          else
+            /usr/local/bin/vineyardd \
+            --sync_crds true \
+            --socket /var/run/vineyard.sock \
+            --size 100Mi \
+            --reserve_memory \
+            --etcd_prefix /vineyard \
+            --etcd_endpoint http://vineyardd-svc.default.svc.cluster.local:2379
+          fi
+        env:
+        - name: VINEYARDD_UID
+          value: "1001"
+        - name: VINEYARDD_NAME
+          value: vineyardd
+        - name: VINEYARDD_NAMESPACE
+          value: default
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        - name: MY_UID
+          valueFrom:
+              fieldRef:
+                fieldPath: metadata.uid
+        - name: MY_POD_IP
+          valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        ports:
+        - name: rpc
+          containerPort: 9600
+          protocol: TCP
+        - name: etcd
+          containerPort: 2379
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: 9600
+          periodSeconds: 60
+        readinessProbe:
+          tcpSocket:
+            port: 9600
+          periodSeconds: 10
+        volumeMounts:
+        - name: vineyard-socket
+          mountPath: /var/run
+        - name: shm
+          mountPath: /dev/shm
+        resources:
+          requests:
+            memory: "1Gi"
+          limits:
+            memory: "2Gi"
+      volumes:
+      - name: vineyard-socket
+        emptyDir: {}
+      - name: shm
+        emptyDir:
+          medium: Memory
+      - name: log
+        emptyDir: {}

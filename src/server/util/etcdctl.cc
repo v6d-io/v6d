@@ -126,19 +126,45 @@ Status Etcdctl::removeMember(const std::string& member_id,
                            std::to_string(max_retries) + " retries");
 }
 
-std::string Etcdctl::findMemberID(const std::string& member_name,
+std::string Etcdctl::findMemberID(const std::string& peer_urls,
                                   const std::string& etcd_endpoints) {
   std::string member_id = "";
+
   auto members = listMembers(etcd_endpoints);
   for (const auto& member : members) {
-    if (member["name"].get<std::string>() == member_name) {
-      std::stringstream ss;
-      ss << std::hex << member["ID"].get<uint64_t>();
-      member_id = ss.str();
-      break;
+    auto peers = member["peerURLs"];
+    for (const auto& peer : peers) {
+      if (peer.get<std::string>() == peer_urls) {
+        std::stringstream ss;
+        ss << std::hex << member["ID"].get<uint64_t>();
+        member_id = ss.str();
+        break;
+      }
     }
   }
   return member_id;
+}
+
+bool Etcdctl::checkMemberStatus(const std::string& client_endpoint) {
+  std::error_code ec;
+
+  std::unique_ptr<boost::process::child> etcdctl_proc_ =
+      std::make_unique<boost::process::child>(
+          etcdctl_cmd_, "endpoint", "status", "--endpoints=" + client_endpoint,
+          "--write-out=json", boost::process::std_out > stdout,
+          boost::process::std_err > stderr, ec);
+
+  if (!etcdctl_proc_) {
+    LOG(ERROR) << "Failed to start etcdctl endpoint status";
+    return false;
+  }
+  if (ec) {
+    LOG(ERROR) << "Failed to check the status of " << client_endpoint << ": "
+               << ec.message();
+    return false;
+  }
+
+  return true;
 }
 
 std::vector<json> Etcdctl::listMembers(const std::string& etcd_endpoints) {
@@ -173,6 +199,20 @@ std::vector<json> Etcdctl::listMembers(const std::string& etcd_endpoints) {
     members.emplace_back(member);
   }
   return members;
+}
+
+std::vector<json> Etcdctl::listHealthyMembers(
+    const std::vector<json>& members) {
+  std::vector<json> healthy_members;
+  for (const auto& member : members) {
+    if (member.find("clientURLs") == member.end()) {
+      continue;
+    }
+    if (checkMemberStatus(member["clientURLs"][0].get<std::string>())) {
+      healthy_members.emplace_back(member);
+    }
+  }
+  return healthy_members;
 }
 
 std::vector<std::string> Etcdctl::listPeerURLs(
@@ -211,6 +251,9 @@ std::vector<std::string> Etcdctl::listMembersName(
     const std::vector<json>& members) {
   std::vector<std::string> members_name;
   for (const auto& member : members) {
+    if (member.find("name") == member.end()) {
+      continue;
+    }
     auto name = member["name"];
     members_name.emplace_back(name.get<std::string>());
   }
