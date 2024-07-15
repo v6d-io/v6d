@@ -18,7 +18,6 @@ limitations under the License.
 #include <netdb.h>
 #include <sys/types.h>
 
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -176,24 +175,34 @@ Status EtcdLauncher::LaunchEtcdServer(
   etcdctl_ = std::make_shared<Etcdctl>(etcdctl_cmd);
   LOG(INFO) << "Found etcdctl at: " << etcdctl_cmd;
 
+  bool skip_launch_etcd = etcd_spec_.value("skip_launch_etcd", true);
   bool etcd_cluster_existing = false;
+  // create_new_instance_ is a flag to indicate whether we should launch an etcd
+  // instance or not for different sessions. When the flag is set to false, we
+  // will ignore the skip_launch_etcd flag.
+  if (!create_new_instance_) {
+    skip_launch_etcd = true;
+  }
   etcd_client.reset(new etcd::Client(etcd_endpoint));
   int retries = 0;
   while (retries < first_probe_retries) {
     etcd_client.reset(new etcd::Client(etcd_endpoint));
     if (probeEtcdServer(etcd_client, sync_lock)) {
       etcd_cluster_existing = true;
-      if (!create_new_instance_) {
+      if (skip_launch_etcd) {
         etcd_endpoints_ = etcd_endpoint;
-        LOG(INFO)
-            << "Etcd cluster already exists, not to add the new instance: "
-            << etcd_endpoint;
+        LOG(INFO) << "The etcd endpoint " << etcd_endpoint << " is connected";
         return Status::OK();
       }
       break;
     }
     retries += 1;
     sleep(1);
+  }
+
+  if (!etcd_cluster_existing && skip_launch_etcd) {
+    return Status::EtcdError("The etcd endpoint " + etcd_endpoint +
+                             " is not connectable");
   }
 
   RETURN_ON_ERROR(initHostInfo());

@@ -20,14 +20,12 @@ setup:
     - name: deploy vineyardd
       command: |
         kubectl apply -f k8s/test/e2e/etcd-failover/vineyardd.yaml
+        kubectl scale statefulsets vineyardd --replicas=3
         kubectl rollout status statefulset/vineyardd
     - name: deploy producer
       command: |
         kubectl apply -f k8s/test/e2e/etcd-failover/producer.yaml
-      wait:
-        - namespace: default
-          resource: deployment/producer
-          for: condition=Available
+        kubectl wait --for=condition=complete job/producer --timeout=300s
     - name: random delete one pod for 5 times
       command: |
         for i in {1..5}; do
@@ -40,10 +38,7 @@ setup:
     - name: install consumer
       command: |
         kubectl apply -f k8s/test/e2e/etcd-failover/consumer.yaml
-      wait:
-        - namespace: default
-          resource: deployment/consumer
-          for: condition=Available
+        kubectl wait --for=condition=complete job/consumer --timeout=300s
   timeout: 60m
 
 cleanup:

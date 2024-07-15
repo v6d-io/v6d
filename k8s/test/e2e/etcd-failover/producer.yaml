@@ -13,20 +13,18 @@
 # limitations under the License.
 #
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: producer
 spec:
-  selector:
-    matchLabels:
-      app: producer
-  replicas: 1
+  parallelism: 1
   template:
     metadata:
       labels:
         app: producer
     spec:
+      restartPolicy: Never
       containers:
       - name: producer
         image: python:3.10
@@ -45,4 +43,3 @@ spec:
           client.close()
           EOF
           python producer.py;
-          sleep infinity;

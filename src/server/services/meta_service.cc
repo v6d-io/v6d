@@ -1188,30 +1188,11 @@ void IMetaService::instanceUpdate(const op_t& op, const bool from_remote) {
       if (from_remote) {
         LOG(INFO) << "Instance join: " << instance_id;
       }
-      /*auto status = UpdateEtcdEndpoint();
-      if (!status.ok()) {
-        LOG(ERROR) << "Update etcd endpoint failed:" << status.ToString();
-      }
-      // reset the etcd client
-      VINEYARD_CHECK_OK(this->probe());*/
       instances_list_.emplace(instance_id);
     } else if (op.op == op_t::op_type_t::kDel) {
       if (from_remote) {
         LOG(INFO) << "Instance exit: " << instance_id;
       }
-      /* auto self(shared_from_this());
-      if (self->instance_to_member_id_.find(instance_id) !=
-          self->instance_to_member_id_.end()) {
-        auto member_id = self->instance_to_member_id_[instance_id];
-        self->instance_to_member_id_.erase(instance_id);
-        VINEYARD_CHECK_OK(self->RemoveEtcdMember(member_id));
-      }*/
-      /*auto status = UpdateEtcdEndpoint();
-      if (!status.ok()) {
-        LOG(ERROR) << "Update etcd endpoint failed:" << status.ToString();
-      }
-      // reset the etcd client
-      VINEYARD_CHECK_OK(this->probe());*/
       instances_list_.erase(instance_id);
     } else {
       if (from_remote) {

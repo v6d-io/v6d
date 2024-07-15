@@ -39,7 +39,7 @@ metadata:
     app.kubernetes.io/instance: default-vineyardd
 spec:
   serviceName: "vineyardd-headless"
-  replicas: 5
+  replicas: 3
   selector:
     matchLabels:
       app.vineyard.io/name: vineyardd
@@ -59,6 +59,11 @@ spec:
         - /bin/bash
         - -c
         - |
+          hostname_rank=$(hostname | sed 's/[^0-9]*//g')
+          skip_launch_etcd="true"
+          if [ "${hostname_rank}" -lt 5 ]; then
+            skip_launch_etcd="false"
+          fi
           if [ $(hostname) = "vineyardd-0" ]; then
             if nc -z vineyardd-svc.default.svc.cluster.local 9600; then
               /usr/local/bin/vineyardd \
@@ -67,7 +72,8 @@ spec:
               --size 100Mi \
               --reserve_memory \
               --etcd_prefix /vineyard \
-              --etcd_endpoint http://vineyardd-svc.default.svc.cluster.local:2379
+              --etcd_endpoint http://vineyardd-svc.default.svc.cluster.local:2379 \
+              --skip_launch_etcd=${skip_launch_etcd}
             else
               /usr/local/bin/vineyardd \
               --sync_crds true \
@@ -78,7 +84,8 @@ spec:
               --etcd_endpoint http://$(hostname):2379 \
               --spill_path /spill \
               --spill_lower_rate 0.2 \
-              --spill_upper_rate 0.8
+              --spill_upper_rate 0.8 \
+              --skip_launch_etcd=${skip_launch_etcd}
             fi
           else
             /usr/local/bin/vineyardd \
@@ -87,7 +94,8 @@ spec:
             --size 100Mi \
             --reserve_memory \
             --etcd_prefix /vineyard \
-            --etcd_endpoint http://vineyardd-svc.default.svc.cluster.local:2379
+            --etcd_endpoint http://vineyardd-svc.default.svc.cluster.local:2379 \
+            --skip_launch_etcd=${skip_launch_etcd}
           fi
         env:
         - name: VINEYARDD_UID

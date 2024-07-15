@@ -1,17 +1,15 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: consumer
 spec:
-  selector:
-    matchLabels:
-      app: consumer
-  replicas: 1
+  parallelism: 1
   template:
     metadata:
       labels:
         app: consumer
     spec:
+      restartPolicy: Never
       containers:
       - name: consumer
         image: python:3.10
@@ -28,4 +26,3 @@ spec:
           client.close()
           EOF
           python consumer.py;
-          sleep infinity;
