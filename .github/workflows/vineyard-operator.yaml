@@ -188,7 +188,7 @@ jobs:
                      e2e-tests-vineyardctl \
                      e2e-tests-deploy-raw-backup-and-recover \
                      e2e-tests-three-etcd-nodes-failover \
-                     e2e-tests-five-etcd-nodes-failover
+                     e2e-tests-five-etcd-nodes-failover \
                      unit-tests; do
             mkdir -p $job-logs
             chmod a+rwx $job-logs

@@ -189,7 +189,15 @@ def make_metadata_settings(meta, endpoint, prefix):
     if meta == 'local':
         return ['--meta', 'local']
     if meta == 'etcd':
-        return ['--meta', 'etcd', '--etcd_endpoint', endpoint, '--etcd_prefix', prefix]
+        return [
+            '--meta',
+            'etcd',
+            '--etcd_endpoint',
+            endpoint,
+            '--etcd_prefix',
+            prefix,
+            '--skip_launch_etcd=false',
+        ]
     if meta == 'redis':
         return [
             '--meta',
