@@ -87,4 +87,4 @@ plugins:
       metadata:
         name: "five-etcd-nodes-failover-logs"
       path: e2e-tests-five-etcd-nodes-failover-logs
-      file_viewer: truee2e-tests-five-etcd-nodes-failover
+      file_viewer: true
