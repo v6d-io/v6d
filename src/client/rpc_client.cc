@@ -304,7 +304,7 @@ Status RPCClient::StopRDMA() {
 Status RPCClient::Fork(RPCClient& client) {
   RETURN_ON_ASSERT(!client.Connected(),
                    "The client has already been connected to vineyard server");
-  return client.Connect(rpc_endpoint_, session_id_, rdma_endpoint_);
+  return client.Connect(rpc_endpoint_, session_id_, "", "", rdma_endpoint_);
 }
 
 Status RPCClient::GetMetaData(const ObjectID id, ObjectMeta& meta,
