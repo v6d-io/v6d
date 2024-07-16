@@ -360,6 +360,12 @@ jobs:
             e2e-tests-airflow-integration)
               signed_url_key=2e12
               ;;
+            e2e-tests-three-etcd-nodes-failover)
+              signed_url_key=5c91
+              ;;
+            e2e-tests-five-etcd-nodes-failover)
+              signed_url_key=7793
+              ;;
           esac
 
           echo "::notice:: ${{ matrix.job }}: https://www.stoat.dev/file-viewer?root=https://v6d-io--v6d--$short_sha--e2e-tests-$signed_url_key.stoat.page"

@@ -53,7 +53,7 @@ spec:
     spec:
       containers:
       - name: vineyardd
-        image: vineyardcloudnative/vineyardd:latest
+        image: localhost:5001/vineyardd:latest
         imagePullPolicy: IfNotPresent
         command:
         - /bin/bash
