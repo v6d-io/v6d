@@ -20,7 +20,7 @@ limitations under the License.
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/select.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -201,46 +201,56 @@ Status recv_bytes(int fd, void* data, size_t length) {
   size_t offset = 0;
   char* ptr = static_cast<char*>(data);
 
-  struct timeval timeout;
-  timeout.tv_sec = 300;
-  timeout.tv_usec = 0;
+  int epoll_fd = epoll_create1(0);
+  if (epoll_fd == -1) {
+    return Status::IOError("Failed to create epoll instance: " +
+                           std::string(strerror(errno)));
+  }
 
-  fd_set readfds;
-  FD_ZERO(&readfds);
-  FD_SET(fd, &readfds);
+  struct epoll_event event;
+  event.events = EPOLLIN;
+  event.data.fd = fd;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
+    close(epoll_fd);
+    return Status::IOError("Failed to add file descriptor to epoll: " +
+                           std::string(strerror(errno)));
+  }
+
+  struct epoll_event events[1];
   while (bytes_left > 0) {
-    int ret = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
+    int ret =
+        epoll_wait(epoll_fd, events, 1, 300 * 1000);  // 300 seconds timeout
     if (ret < 0) {
       if (errno == EINTR) {
-        FD_ZERO(&readfds);
-        FD_SET(fd, &readfds);
-        timeout.tv_sec = 300;
-        timeout.tv_usec = 0;
         continue;
       } else {
-        return Status::IOError("Select call failed: " +
+        close(epoll_fd);
+        return Status::IOError("epoll_wait failed: " +
                                std::string(strerror(errno)));
       }
     } else if (ret == 0) {
-      return Status::IOError("Select call timeout: " +
-                             std::string(strerror(errno)));
+      close(epoll_fd);
+      return Status::IOError("epoll_wait timeout");
     }
 
     nbytes = read(fd, ptr + offset, bytes_left);
-
     if (nbytes < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
         continue;
       }
+      close(epoll_fd);
       return Status::IOError("Receive message failed: " +
                              std::string(strerror(errno)));
     } else if (nbytes == 0) {
+      close(epoll_fd);
       return Status::IOError(
           "Receive message failed: encountered unexpected EOF");
     }
     bytes_left -= nbytes;
     offset += nbytes;
   }
+
+  close(epoll_fd);
   return Status::OK();
 }
 
