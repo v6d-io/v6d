@@ -32,6 +32,10 @@ Vineyard client
 
 .. autofunction:: connect
 
+.. autoclass:: Client
+    :inherited-members:
+    :members:
+
 .. autoclass:: IPCClient
     :inherited-members:
     :members:

@@ -70,7 +70,9 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
   the object is local or remote. This capability enables users and internal operators to
   examine essential information (e.g., chunk axis, size) about an object, assisting in
   decision-making processes related to object management (e.g., determining the need for
-  repartitioning, planning the next workload).
+  repartitioning, planning the next workload). With this capability, the `vineyard client`_
+  connects to the Vineyard daemon that stores the object's payloads, retrieves these payloads,
+  and assembles the objects locally.
 
 8. *How does migration work in vineyard? Is it automatically triggered?*
 
@@ -119,3 +121,4 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 .. _post it to discussions: https://github.com/v6d-io/v6d/discussions/new
 .. _guide: ../../tutorials/kubernetes/using-vineyard-operator.rst
 .. _command line tool: ../../notes/cloud-native/vineyardctl.md
+.. _vineyard client: ../../notes/references/python-api.html#vineyard.Client
