@@ -73,7 +73,7 @@ foreach(testfile ${TEST_FILES})
         endif()
     endif()
 
-    if(BUILD_VINEYARD_RDMA)
+    if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
         target_compile_options(${testname} PRIVATE -DVINEYARD_WITH_RDMA)
     endif()
 endforeach()

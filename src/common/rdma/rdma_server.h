@@ -17,8 +17,6 @@ limitations under the License.
 
 #ifdef VINEYARD_WITH_RDMA
 
-#include <rdma/fabric.h>
-
 #include <map>
 #include <memory>
 #include <mutex>
@@ -26,6 +24,7 @@ limitations under the License.
 
 #include "common/rdma/rdma.h"
 #include "common/rdma/util.h"
+#include "libfabric/include/rdma/fabric.h"
 
 namespace vineyard {
 

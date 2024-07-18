@@ -18,11 +18,11 @@ limitations under the License.
 
 #ifdef VINEYARD_WITH_RDMA
 
-#include <rdma/fabric.h>
 #include <unistd.h>
 #include <string>
 
 #include "common/util/status.h"
+#include "libfabric/include/rdma/fabric.h"
 
 namespace vineyard {
 
