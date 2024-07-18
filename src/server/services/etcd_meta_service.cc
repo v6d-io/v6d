@@ -417,9 +417,7 @@ void EtcdMetaService::retryDaeminWatch(
 }
 
 Status EtcdMetaService::probe() {
-  std::string const& etcd_endpoint =
-      etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
-  etcd_.reset(new etcd::Client(etcd_endpoint));
+  etcd_.reset(new etcd::Client(etcd_launcher_->etcd_endpoints_));
   if (EtcdLauncher::probeEtcdServer(etcd_, prefix_)) {
     return Status::OK();
   } else {
@@ -428,9 +426,27 @@ Status EtcdMetaService::probe() {
   }
 }
 
-Status EtcdMetaService::preStart() {
-  etcd_launcher_ = std::unique_ptr<EtcdLauncher>(new EtcdLauncher(etcd_spec_));
+Status EtcdMetaService::preStart(const bool create_new_instance) {
+  etcd_launcher_ = std::unique_ptr<EtcdLauncher>(
+      new EtcdLauncher(etcd_spec_, rpc_socket_port_, create_new_instance));
   return etcd_launcher_->LaunchEtcdServer(etcd_, meta_sync_lock_);
+}
+
+Status EtcdMetaService::RemoveMember(const std::string member_id) {
+  auto status = etcd_launcher_->RemoveMember(member_id);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to remove member " << member_id
+               << " from etcd: " << status.ToString();
+    return status;
+  }
+  return Status::OK();
+}
+
+Status EtcdMetaService::UpdateEndpoint() {
+  if (etcd_launcher_ == nullptr) {
+    return Status::Invalid("etcd launcher is not initialized");
+  }
+  return etcd_launcher_->UpdateEndpoint();
 }
 
 }  // namespace vineyard

@@ -83,7 +83,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                           asio::io_context& meta_context,
                           asio::io_context& io_context,
                           callback_t<std::string const&> callback);
-  Status Serve(StoreType const& bulk_store_type);
+  Status Serve(StoreType const& bulk_store_type,
+               const bool create_new_instance = true);
   Status Finalize();
   inline const json& GetSpec() { return spec_; }
   inline const std::string GetDeployment() {
@@ -278,6 +279,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::string instance_name_;
   std::string hostname_;
   std::string nodename_;
+  std::map<InstanceID, std::string> instance_id_to_member_id_;
 
   std::mutex migrations_origin_to_target_mutex_;
   std::mutex migrations_target_to_origin_mutex_;

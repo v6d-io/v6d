@@ -25,6 +25,7 @@ limitations under the License.
 #include "common/util/env.h"
 #include "common/util/functions.h"
 #include "common/util/logging.h"  // IWYU pragma: keep
+#include "common/util/status.h"
 #include "server/services/local_meta_service.h"
 #if defined(BUILD_VINEYARDD_ETCD)
 #include "server/services/etcd_meta_service.h"
@@ -75,10 +76,10 @@ void IMetaService::Stop() {
   LOG(INFO) << "meta service is stopping ...";
 }
 
-Status IMetaService::Start() {
+Status IMetaService::Start(bool create_new_instance) {
   LOG(INFO) << "meta service is starting, waiting the metadata backend "
                "service becoming ready ...";
-  RETURN_ON_ERROR(this->preStart());
+  RETURN_ON_ERROR(this->preStart(create_new_instance));
   auto current = std::chrono::system_clock::now();
   auto timeout =
       std::chrono::seconds(server_ptr_->GetSpec()["metastore_spec"].value(
@@ -554,8 +555,12 @@ void IMetaService::registerToEtcd() {
           self->meta_["my_nodename"] = nodename;
 
           self->instances_list_.emplace(rank);
+          auto etcd_member_id = self->GetEtcdMemberID();
           std::string key = "/instances/" + self->server_ptr_->instance_name();
           ops.emplace_back(op_t::Put(key + "/hostid", self_host_id));
+          if (etcd_member_id != "") {
+            ops.emplace_back(op_t::Put(key + "/member_id", etcd_member_id));
+          }
           ops.emplace_back(op_t::Put(key + "/hostname", hostname));
           ops.emplace_back(op_t::Put(key + "/nodename", nodename));
           ops.emplace_back(op_t::Put(key + "/rpc_endpoint",
@@ -652,6 +657,7 @@ void IMetaService::checkInstanceStatus(
                     std::string key =
                         "/instances/i" + std::to_string(target_inst);
                     ops.emplace_back(op_t::Del(key + "/hostid"));
+                    ops.emplace_back(op_t::Del(key + "/member_id"));
                     ops.emplace_back(op_t::Del(key + "/timestamp"));
                     ops.emplace_back(op_t::Del(key + "/hostname"));
                     ops.emplace_back(op_t::Del(key + "/nodename"));
@@ -668,6 +674,12 @@ void IMetaService::checkInstanceStatus(
                   }
                   return callback_after_finish(status);
                 });
+            if (self->instance_to_member_id_.find(target_inst) !=
+                self->instance_to_member_id_.end()) {
+              auto member_id = self->instance_to_member_id_[target_inst];
+              self->instance_to_member_id_.erase(target_inst);
+              VINEYARD_CHECK_OK(self->RemoveEtcdMember(member_id));
+            }
             VINEYARD_SUPPRESS(
                 self->server_ptr_->DeleteAllAt(self->meta_, target_inst));
             return status;
@@ -1188,6 +1200,26 @@ void IMetaService::instanceUpdate(const op_t& op, const bool from_remote) {
       }
     }
     LOG_SUMMARY("instances_total", "", instances_list_.size());
+  } else if (key_segments[2] == "member_id") {
+    uint64_t instance_id = std::stoul(key_segments[1].substr(1));
+    if (op.op == op_t::op_type_t::kPut) {
+      std::string member_id = op.kv.value;
+      if (member_id[0] == '\"' && member_id[member_id.size() - 1] == '\"') {
+        member_id = member_id.substr(1, member_id.size() - 2);
+      }
+      auto status = UpdateEtcdEndpoint();
+      if (!status.ok()) {
+        LOG(ERROR) << "Update etcd endpoint failed:" << status.ToString();
+      }
+      // reset the etcd client
+      VINEYARD_CHECK_OK(this->probe());
+      instance_to_member_id_[instance_id] = member_id;
+    } else if (op.op != op_t::op_type_t::kDel) {
+      if (from_remote) {
+        LOG(ERROR) << "Unknown op type: " << op.ToString();
+      }
+    }
+    LOG_SUMMARY("instances_total", "", instances_list_.size());
   }
 }
 
@@ -1226,6 +1258,30 @@ Status IMetaService::daemonWatchHandler(
     self->rev_ = head_index;
   }
   return callback_after_update(Status::OK(), rev);
+}
+
+Status IMetaService::RemoveEtcdMember(const std::string& member_id) {
+  return callIfEtcdMetaService(
+      [&member_id](std::shared_ptr<EtcdMetaService> etcd_meta_service) {
+        return etcd_meta_service->RemoveMember(member_id);
+      },
+      Status::OK());
+}
+
+std::string IMetaService::GetEtcdMemberID() {
+  return callIfEtcdMetaService(
+      [](std::shared_ptr<EtcdMetaService> etcd_meta_service) {
+        return etcd_meta_service->GetMemberID();
+      },
+      std::string());
+}
+
+Status IMetaService::UpdateEtcdEndpoint() {
+  return callIfEtcdMetaService(
+      [](std::shared_ptr<EtcdMetaService> etcd_meta_service) {
+        return etcd_meta_service->UpdateEndpoint();
+      },
+      Status::OK());
 }
 
 }  // namespace vineyard

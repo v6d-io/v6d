@@ -107,7 +107,7 @@ Status VineyardRunner::CreateNewSession(
   sessions_.insert(session_id, vs_ptr);
   LOG(INFO) << "Vineyard creates a new session with ID '"
             << SessionIDToString(session_id) << "'";
-  return vs_ptr->Serve(bulk_store_type);
+  return vs_ptr->Serve(bulk_store_type, false);
 }
 
 Status VineyardRunner::Delete(SessionID const& sid) {

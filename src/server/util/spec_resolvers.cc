@@ -47,10 +47,12 @@ DEFINE_int64(meta_timeout, 60 /* 1 minutes */,
              "Timeout period before waiting the metadata service to be ready, "
              "in seconds");
 #if defined(BUILD_VINEYARDD_ETCD)
+DEFINE_bool(skip_launch_etcd, true, "Whether to skip launching etcd");
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "metadata path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
-DEFINE_string(etcd_data_dir, "default.etcd", "path of etcd's data directory");
+DEFINE_string(etcdctl_cmd, "", "path of etcdctl executable");
+DEFINE_string(etcd_data_dir, "", "path of etcd's data directory");
 #endif
 
 #if defined(BUILD_VINEYARDD_REDIS)
@@ -142,9 +144,11 @@ json MetaStoreSpecResolver::resolve() const {
 
   // resolve for etcd
 #if defined(BUILD_VINEYARDD_ETCD)
+  spec["skip_launch_etcd"] = FLAGS_skip_launch_etcd;
   spec["etcd_prefix"] = FLAGS_etcd_prefix;
   spec["etcd_endpoint"] = FLAGS_etcd_endpoint;
   spec["etcd_cmd"] = FLAGS_etcd_cmd;
+  spec["etcdctl_cmd"] = FLAGS_etcdctl_cmd;
   spec["etcd_data_dir"] = FLAGS_etcd_data_dir;
 #endif
 

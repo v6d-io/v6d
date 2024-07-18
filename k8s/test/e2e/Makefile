@@ -246,6 +246,21 @@ e2e-tests-failover: prepare-e2e-test install-vineyard-cluster
 	@make delete-local-cluster
 .PHONY: e2e-tests-failover
 
+############# etcd failover testing #############################################
+
+e2e-tests-three-etcd-nodes-failover: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@echo "Running three etcd nodes failover e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/etcd-failover/three-etcd-nodes-failover-e2e.yaml
+	@echo "three etcd nodes failover e2e test passed."
+	@make delete-local-cluster
+
+e2e-tests-five-etcd-nodes-failover: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@echo "Running five etcd nodes failover e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/etcd-failover/five-etcd-nodes-failover-e2e.yaml
+	@echo "five etcd nodes failover e2e test passed."
+	@make delete-local-cluster
+
+
 ############# dask repartition testing #############################################
 
 repartition-images: dask-repartition dask-repartition-job1 dask-repartition-job2 dask-worker-with-vineyard

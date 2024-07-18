@@ -26,6 +26,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "common/util/uuid.h"
 #include "gulrak/filesystem.hpp"
 
 #include "common/util/callback.h"
@@ -91,12 +92,17 @@ std::shared_ptr<PlasmaBulkStore> VineyardServer::GetBulkStore<PlasmaID>() {
   return plasma_bulk_store_;
 }
 
-Status VineyardServer::Serve(StoreType const& bulk_store_type) {
+Status VineyardServer::Serve(StoreType const& bulk_store_type,
+                             const bool create_new_instance) {
   stopped_.store(false);
   this->bulk_store_type_ = bulk_store_type;
 
-  // Initialize the ipc/rpc server ptr first to get self endpoints when
-  // initializing the metadata service.
+  this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
+  RETURN_ON_ERROR(this->meta_service_ptr_->Start(create_new_instance));
+
+  // Initialize the ipc/rpc server ptr after the meta service.
+  // It's useful to probe whether the vineyardd and meta service are both
+  // ready.
   ipc_server_ptr_ = std::make_shared<IPCServer>(shared_from_this());
   if (session_id_ == RootSessionID() && spec_["rpc_spec"]["rpc"].get<bool>()) {
     // N.B: the rpc won't be enabled for child sessions. In the handler
@@ -104,9 +110,6 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     // request session as expected.
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
   }
-
-  this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
-  RETURN_ON_ERROR(this->meta_service_ptr_->Start());
 
   auto memory_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
   auto allocator = spec_["bulkstore_spec"]["allocator"].get<std::string>();

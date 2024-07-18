@@ -189,7 +189,15 @@ def make_metadata_settings(meta, endpoint, prefix):
     if meta == 'local':
         return ['--meta', 'local']
     if meta == 'etcd':
-        return ['--meta', 'etcd', '--etcd_endpoint', endpoint, '--etcd_prefix', prefix]
+        return [
+            '--meta',
+            'etcd',
+            '--etcd_endpoint',
+            endpoint,
+            '--etcd_prefix',
+            prefix,
+            '--skip_launch_etcd=false',
+        ]
     if meta == 'redis':
         return [
             '--meta',
@@ -200,6 +208,22 @@ def make_metadata_settings(meta, endpoint, prefix):
             prefix,
         ]
     raise ValueError("invalid argument: unknown metadata backend: '%s'" % meta)
+
+
+def check_vineyard_for_ready(rpc_socket_port, timeout=60):
+    """Check if vineyardd and internal etcd is ready."""
+    ready = False
+    end_time = time.time() + timeout
+    while time.time() < end_time and not ready:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                if sock.connect_ex(('localhost', rpc_socket_port)) == 0:
+                    print(f"Port {rpc_socket_port} is ready.", flush=True)
+                    ready = True
+        except Exception as e:
+            print(f"Error checking port {rpc_socket_port}: {e}", flush=True)
+        time.sleep(1)
+    return ready
 
 
 @contextlib.contextmanager
@@ -247,7 +271,11 @@ def start_vineyardd(
             verbose=True,
             **kw,
         )
-        yield stack.enter_context(proc), rpc_socket_port
+        proc_context = stack.enter_context(proc)
+        if rpc_socket_port is not None:
+            while not check_vineyard_for_ready(rpc_socket_port):
+                time.sleep(1)
+        yield proc_context, rpc_socket_port
 
 
 @contextlib.contextmanager
@@ -493,6 +521,81 @@ def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'spill_test')
 
 
+def run_etcd_member_tests(meta, allocator, endpoints, tests):
+    """
+    Here we start 2 vineyard instances,
+    and test if the etcd member is also started.
+    """
+    with start_multiple_vineyardd(
+        make_metadata_settings(meta, endpoints, 'vineyard_test_%s' % time.time()),
+        ['--allocator', allocator],
+        instance_size=2,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ):
+        vineyard_ipc_socket = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
+        etcdctl_cmd = find_executable('etcdctl')
+        run_test(
+            tests,
+            'etcd_member_test',
+            etcdctl_cmd,
+            endpoints,
+            vineyard_ipc_socket=vineyard_ipc_socket,
+        )
+
+
+def run_vineyardd_failure_tests(meta, allocator, endpoints, test_args):
+    """Here we start 3 vineyard instances, and test the single node failure scenario."""
+
+    def run_test(test_function, rpc_socket_port):
+        args = [
+            'pytest',
+            '-s',
+            '-vvv',
+            '--exitfirst',
+            '--durations=0',
+            '--log-cli-level',
+            'DEBUG',
+            'python/vineyard/deploy/tests/test_vineyardd_failure.py',
+            '-k',
+            test_function,
+            '--vineyard-endpoint=127.0.0.1:%s' % rpc_socket_port,
+        ]
+
+        subprocess.check_call(
+            args, cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+        )
+
+    with start_multiple_vineyardd(
+        make_metadata_settings(meta, endpoints, 'vineyard_test_%s' % time.time()),
+        ['--allocator', allocator],
+        instance_size=3,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ) as instances:
+        start_time = time.time()
+        rpc_socket_port = instances[0][1]
+        run_test('test_put_meta_before_failure', rpc_socket_port)
+
+        instances[0][0].terminate()
+        rpc_socket_port = instances[1][1]
+        # check the etcd can serve the read request
+        run_test('test_get_meta_after_failure', rpc_socket_port)
+        # check the etcd can serve the write request
+        run_test('test_put_meta_after_failure', rpc_socket_port)
+
+        instances[1][0].terminate()
+        rpc_socket_port = instances[2][1]
+        try:
+            run_test('test_get_meta_after_failure', rpc_socket_port)
+        except subprocess.CalledProcessError as e:
+            print(f"Expected error, as the etcd is scaled down to 1: {e}")
+
+        print(
+            'running vineyardd failure tests use %s seconds'
+            % (time.time() - start_time),
+            flush=True,
+        )
+
+
 def run_graph_extend_test(tests):
     data_dir = os.getenv('VINEYARD_DATA_DIR')
     vdata = pd.read_csv(data_dir + '/p2p_v.csv')
@@ -683,7 +786,8 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
             instances[0][0].terminate()
             time.sleep(5)
 
-    # run with serious contention on etcd.
+    # wait to make sure the previous etcd are cleaned up
+    time.sleep(10)
     with start_multiple_vineyardd(
         metadata_settings,
         ['--allocator', allocator],
@@ -792,7 +896,9 @@ def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migratio
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
-                'python/vineyard/deploy/tests',
+                'python/vineyard/deploy/tests/test_distributed.py',
+                'python/vineyard/deploy/tests/test_local.py',
+                'python/vineyard/deploy/tests/test_migration.py',
                 'python/vineyard/drivers/io/tests/test_migrate_stream.py',
                 *test_args,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
@@ -977,7 +1083,6 @@ def parse_sys_args():
         default=False,
         help="Whether to run python contrib pyspark tests",
     )
-
     arg_parser.add_argument(
         '--with-fuse',
         action='store_true',
@@ -998,76 +1103,70 @@ def parse_sys_args():
 
 def execute_tests(args):
     python_test_args = []
+    client_port = find_port()
+    endpoints = 'http://127.0.0.1:%d' % client_port
     if args.tests:
         for test in args.tests:
             python_test_args.append('-k')
             python_test_args.append(test)
 
     if args.with_cpp:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_vineyard_cpp_tests(args.meta, args.allocator, endpoints, args.tests)
-            run_vineyard_spill_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_vineyard_cpp_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_vineyard_spill_tests(args.meta, args.allocator, endpoints, args.tests)
 
     if args.with_graph:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_graph_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_graph_tests(args.meta, args.allocator, endpoints, args.tests)
 
     if args.with_python:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_python_tests(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_contrib or args.with_contrib_ml:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_contrib_tests(
-                args.meta, args.allocator, endpoints, python_test_args, 'ml'
-            )
+        run_python_contrib_tests(
+            args.meta, args.allocator, endpoints, python_test_args, 'ml'
+        )
 
     if args.with_contrib or args.with_contrib_dask:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_contrib_distributed_tests(
-                args.meta, args.allocator, endpoints, python_test_args, 'dask'
-            )
+        run_python_contrib_distributed_tests(
+            args.meta, args.allocator, endpoints, python_test_args, 'dask'
+        )
 
     if args.with_contrib or args.with_contrib_pyspark:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_contrib_tests(
-                args.meta, args.allocator, endpoints, python_test_args, 'pyspark'
-            )
+        run_python_contrib_tests(
+            args.meta, args.allocator, endpoints, python_test_args, 'pyspark'
+        )
 
     if args.with_deployment:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_scale_in_out_tests(
-                args.meta, args.allocator, endpoints, instance_size=4
-            )
+        run_scale_in_out_tests(args.meta, args.allocator, endpoints, instance_size=4)
 
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_python_deploy_tests(
-                args.meta,
-                args.allocator,
-                endpoints,
-                python_test_args,
-                args.with_migration,
-            )
+        run_python_deploy_tests(
+            args.meta,
+            args.allocator,
+            endpoints,
+            python_test_args,
+            args.with_migration,
+        )
+
+        run_etcd_member_tests(args.meta, args.allocator, endpoints, args.tests)
+
+        run_vineyardd_failure_tests(
+            args.meta, args.allocator, endpoints, python_test_args
+        )
 
     if args.with_io:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_io_adaptor_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_io_adaptor_tests(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_fuse:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
+        run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_llm:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_llm_tests(
-                args.meta,
-                args.allocator,
-                endpoints,
-            )
+        run_llm_tests(
+            args.meta,
+            args.allocator,
+            endpoints,
+        )
 
     if args.with_llm_python:
-        with start_metadata_engine(args.meta) as (_, endpoints):
-            run_llm_python_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_llm_python_tests(args.meta, args.allocator, endpoints, python_test_args)
 
 
 def main():

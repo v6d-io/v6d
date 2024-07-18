@@ -78,3 +78,13 @@ plugins:
         name: "schedule-workload-logs"
       path: e2e-tests-schedule-workload-logs
       file_viewer: true
+    e2e-tests-three-etcd-nodes-failover-logs:
+      metadata:
+        name: "three-etcd-nodes-failover-logs"
+      path: e2e-tests-three-etcd-nodes-failover-logs
+      file_viewer: true
+    e2e-tests-five-etcd-nodes-failover-logs:
+      metadata:
+        name: "five-etcd-nodes-failover-logs"
+      path: e2e-tests-five-etcd-nodes-failover-logs
+      file_viewer: true

@@ -42,7 +42,7 @@ limitations under the License.
 #include "server/util/meta_tree.h"
 #include "server/util/metrics.h"
 
-#define HEARTBEAT_TIME 60
+#define HEARTBEAT_TIME 10
 #define MAX_TIMEOUT_COUNT 3
 
 namespace vineyard {
@@ -64,6 +64,8 @@ class ILock {
  private:
   const unsigned rev_;
 };
+
+class EtcdMetaService;
 
 /**
  * @brief IMetaService is the base class of EtcdMetaService
@@ -92,7 +94,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   static std::shared_ptr<IMetaService> Get(
       std::shared_ptr<VineyardServer> vs_ptr);
 
-  Status Start();
+  Status Start(bool create_new_instance = true);
 
   virtual void Stop();
 
@@ -147,6 +149,12 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   virtual void TryReleaseLock(std::string key, callback_t<bool> callback) = 0;
 
+  Status RemoveEtcdMember(const std::string& member_id);
+
+  std::string GetEtcdMemberID();
+
+  Status UpdateEtcdEndpoint();
+
  private:
   void registerToEtcd();
 
@@ -195,6 +203,17 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
 
+  template <typename Func, typename ReturnType = void>
+  ReturnType callIfEtcdMetaService(Func&& func,
+                                   ReturnType defaultValue = ReturnType()) {
+    std::shared_ptr<EtcdMetaService> etcd_meta_service =
+        std::dynamic_pointer_cast<EtcdMetaService>(shared_from_this());
+    if (etcd_meta_service) {
+      return func(etcd_meta_service);
+    }
+    return defaultValue;
+  }
+
   void printDepsGraph();
 
   std::atomic<bool> stopped_;
@@ -207,7 +226,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   std::string meta_sync_lock_;
 
  private:
-  virtual Status preStart() { return Status::OK(); }
+  virtual Status preStart(bool create_new_instance) { return Status::OK(); }
 
   bool deleteable(ObjectID const object_id);
 
@@ -243,6 +262,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   std::unique_ptr<asio::steady_timer> heartbeat_timer_;
   std::set<InstanceID> instances_list_;
+  std::map<InstanceID, std::string> instance_to_member_id_;
   int64_t target_latest_time_ = 0;
   size_t timeout_count_ = 0;
 

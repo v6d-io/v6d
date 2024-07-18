@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #if defined(BUILD_VINEYARDD_ETCD)
 
@@ -28,12 +29,14 @@ limitations under the License.
 #include "etcd/Client.hpp"
 
 #include "common/util/status.h"
+#include "server/util/etcdctl.h"
 
 namespace vineyard {
 
 class EtcdLauncher {
  public:
-  explicit EtcdLauncher(const json& etcd_spec);
+  explicit EtcdLauncher(const json& etcd_spec, const uint32_t& rpc_socket_port,
+                        const bool create_new_instance);
   ~EtcdLauncher();
 
   Status LaunchEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
@@ -45,18 +48,41 @@ class EtcdLauncher {
                               std::string const& key);
 
  private:
+  Status handleEtcdFailure(const std::string& member_name,
+                           const std::string& errMessage);
+
   Status parseEndpoint();
+
+  std::string generateMemberName(
+      const std::vector<std::string>& existing_members_name);
+
+  std::string GetMemberID() { return etcd_member_id_; }
+
+  Status RemoveMember(const std::string member_id) {
+    return etcdctl_->removeMember(member_id, etcd_endpoints_);
+  }
+
+  Status UpdateEndpoint();
 
   Status initHostInfo();
 
   const json etcd_spec_;
+  const uint32_t rpc_socket_port_;
+  const bool create_new_instance_;
   std::string endpoint_host_;
   std::string etcd_data_dir_;
-  int endpoint_port_;
+  uint32_t endpoint_port_;
   std::set<std::string> local_hostnames_;
   std::set<std::string> local_ip_addresses_;
 
+  std::string etcd_member_id_;
+  std::string etcd_endpoints_;
+
+  std::shared_ptr<Etcdctl> etcdctl_;
+
   std::unique_ptr<boost::process::child> etcd_proc_;
+
+  friend class EtcdMetaService;
 };
 
 }  // namespace vineyard
