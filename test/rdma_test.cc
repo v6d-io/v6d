@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef VINEYARD_WITH_RDMA
 #include <memory>
 #include <string>
 #include <vector>
@@ -212,10 +211,8 @@ void StartClient(std::string server_address) {
   VINEYARD_CHECK_OK(client->Close());
   RDMAClientCreator::Release(server_address + ":" + std::to_string(port));
 }
-#endif
 
 int main(int argc, char** argv) {
-#ifdef VINEYARD_WITH_RDMA
   if (argc >= 2) {
     std::string server_address = std::string(argv[1]);
     StartClient(server_address);
@@ -224,7 +221,5 @@ int main(int argc, char** argv) {
   }
 
   LOG(INFO) << "Pass rdma test.";
-
-#endif
   return 0;
 }

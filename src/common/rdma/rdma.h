@@ -16,12 +16,9 @@ limitations under the License.
 #ifndef SRC_COMMON_RDMA_RDMA_H_
 #define SRC_COMMON_RDMA_RDMA_H_
 
-#ifdef VINEYARD_WITH_RDMA
-
 #include <map>
 #include <string>
 #include <vector>
-
 
 #include "common/rdma/util.h"
 #include "common/util/status.h"
@@ -97,7 +94,5 @@ class IRDMA {
 };
 
 }  // namespace vineyard
-
-#endif
 
 #endif  // SRC_COMMON_RDMA_RDMA_H_

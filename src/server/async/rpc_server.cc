@@ -46,7 +46,6 @@ RPCServer::~RPCServer() {
     acceptor_.close();
   }
 
-#ifdef VINEYARD_WITH_RDMA
   if (rdma_stop_) {
     return;
   }
@@ -63,11 +62,9 @@ RPCServer::~RPCServer() {
   }
   VINEYARD_DISCARD(rdma_server_->Close());
   rdma_stop_ = true;
-#endif
 }
 
 Status RPCServer::InitRDMA() {
-#ifdef VINEYARD_WITH_RDMA
   std::string rdma_endpoint = RDMAEndpoint();
   size_t pos = rdma_endpoint.find(':');
   if (pos == std::string::npos) {
@@ -87,9 +84,6 @@ Status RPCServer::InitRDMA() {
   }
 
   return Status::OK();
-#else
-  return Status::Invalid("RDMA is not supported in this build.");
-#endif
 }
 
 void RPCServer::Start() {
@@ -155,7 +149,6 @@ void RPCServer::doAccept() {
 }
 
 void RPCServer::doRDMASend() {
-#ifdef VINEYARD_WITH_RDMA
   while (1) {
     void* context = nullptr;
     Status status = rdma_server_->GetTXCompletion(-1, &context);
@@ -180,10 +173,8 @@ void RPCServer::doRDMASend() {
       delete send_context;
     }
   }
-#endif
 }
 
-#ifdef VINEYARD_WITH_RDMA
 void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
                                         VineyardMsg* recv_msg) {
   VLOG(100) << "Receive vineyard request mem!";
@@ -341,10 +332,7 @@ void RPCServer::doPrepareRecv(uint64_t rdma_conn_id) {
   rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
 }
 
-#endif
-
 void RPCServer::doRDMARecv() {
-#ifdef VINEYARD_WITH_RDMA
   while (1) {
     void* context = nullptr;
     Status status = rdma_server_->GetRXCompletion(-1, &context);
@@ -412,11 +400,9 @@ void RPCServer::doRDMARecv() {
       }
     }
   }
-#endif
 }
 
 void RPCServer::doRDMAAccept() {
-#ifdef VINEYARD_WITH_RDMA
   while (1) {
     VineyardEventEntry event;
     Status status = rdma_server_->GetEvent(event);
@@ -440,7 +426,6 @@ void RPCServer::doRDMAAccept() {
       continue;
     }
   }
-#endif
 }
 
 }  // namespace vineyard

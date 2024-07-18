@@ -13,11 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef VINEYARD_WITH_RDMA
-
 #include <memory>
 #include <string>
-
 
 #include "common/rdma/rdma_server.h"
 #include "common/rdma/util.h"
@@ -460,5 +457,3 @@ size_t RDMAServer::GetServerMaxRegisterSize(void* addr, size_t min_size,
 bool RDMAServer::IsStopped() { return (state == STOPED); }
 
 }  // namespace vineyard
-
-#endif

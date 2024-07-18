@@ -13,12 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef VINEYARD_WITH_RDMA
-
 #include <map>
 #include <memory>
 #include <string>
-
 
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/util.h"
@@ -343,5 +340,3 @@ Status RDMAClientCreator::Release(std::string rdma_endpoint) {
 }
 
 }  // namespace vineyard
-
-#endif

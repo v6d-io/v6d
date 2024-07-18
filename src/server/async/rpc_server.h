@@ -73,7 +73,6 @@ class RPCServer : public SocketServer,
 
   Status InitRDMA();
 
-#ifdef VINEYARD_WITH_RDMA
   void doVineyardRequestMemory(VineyardRecvContext* recv_context,
                                VineyardMsg* recv_msg);
 
@@ -83,14 +82,12 @@ class RPCServer : public SocketServer,
   void doVineyardClose(VineyardRecvContext* recv_context);
 
   void doPrepareRecv(uint64_t rdma_conn_id);
-#endif
 
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;
 
   // connection id to rdma server
-#ifdef VINEYARD_WITH_RDMA
   std::unordered_map<uint64_t, std::map<void*, RegisterMemInfo>>
       remote_mem_infos_;
   std::shared_ptr<RDMAServer> rdma_server_;
@@ -100,7 +97,6 @@ class RPCServer : public SocketServer,
   std::thread rdma_recv_thread_;
   std::thread rdma_send_thread_;
   bool rdma_stop_ = true;
-#endif
 };
 
 }  // namespace vineyard

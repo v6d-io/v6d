@@ -72,8 +72,4 @@ foreach(testfile ${TEST_FILES})
             set_property(TARGET ${testname} PROPERTY CXX_STANDARD 17)
         endif()
     endif()
-
-    if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
-        target_compile_options(${testname} PRIVATE -DVINEYARD_WITH_RDMA)
-    endif()
 endforeach()

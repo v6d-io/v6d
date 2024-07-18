@@ -63,7 +63,6 @@ option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
 option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" ON)
-option(BUILD_VINEYARD_RDMA "Enable RDMA support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -670,7 +669,7 @@ include("cmake/GenerateVineyardJava.cmake")
 find_library(RDMACM_LIB rdmacm)
 find_library(IBVERBS_LIB ibverbs)
 
-if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
+if(IBVERBS_LIB AND RDMACM_LIB)
     set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
     add_custom_command(
         OUTPUT ${FABRIC_MAKEFILE}
@@ -705,7 +704,8 @@ if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
 
     set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
                     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
-
+else()
+    message(FATAL_ERROR "Missing ibverbs and rdmacm library.")
 endif()
 
 # boost is only required by some components
@@ -792,12 +792,9 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
-        target_compile_options(vineyardd PRIVATE -DVINEYARD_WITH_RDMA)
-        target_link_libraries(vineyardd PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
-        set_target_properties(vineyardd PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
-        add_dependencies(vineyardd fabric)
-    endif()
+    target_link_libraries(vineyardd PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
+    set_target_properties(vineyardd PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
+    add_dependencies(vineyardd fabric)
 
     install_vineyard_target(vineyardd)
     if(NOT BUILD_SHARED_LIBS)
@@ -872,12 +869,9 @@ if(BUILD_VINEYARD_CLIENT)
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
-        target_compile_options(vineyard_client PRIVATE -DVINEYARD_WITH_RDMA)
-        target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
-        set_target_properties(vineyard_client PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
-        add_dependencies(vineyard_client fabric)
-    endif()
+    target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
+    set_target_properties(vineyard_client PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
+    add_dependencies(vineyard_client fabric)
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
@@ -937,10 +931,6 @@ macro(setup_pybind11_module target relpath)
     else()
         target_compile_options(${target} PRIVATE -Os)
         target_add_link_options(${target} PRIVATE OPTIONS -Os)
-    endif()
-
-    if(BUILD_VINEYARD_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
-        target_compile_options(_C PRIVATE -DVINEYARD_WITH_RDMA)
     endif()
 
     file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")

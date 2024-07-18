@@ -15,8 +15,6 @@ limitations under the License.
 #ifndef SRC_COMMON_RDMA_RDMA_SERVER_H_
 #define SRC_COMMON_RDMA_RDMA_SERVER_H_
 
-#ifdef VINEYARD_WITH_RDMA
-
 #include <map>
 #include <memory>
 #include <mutex>
@@ -155,7 +153,5 @@ class RDMAServer : public IRDMA {
 };
 
 }  // namespace vineyard
-
-#endif
 
 #endif  // SRC_COMMON_RDMA_RDMA_SERVER_H_

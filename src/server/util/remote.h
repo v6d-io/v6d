@@ -61,11 +61,9 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   Status recreateMetadata(json const& metadata, json& target,
                           std::map<ObjectID, ObjectID> const& result_blobs);
 
-#ifdef VINEYARD_WITH_RDMA
   Status RDMARequestMemInfo(RegisterMemInfo& remote_info);
 
   Status RDMAReleaseMemInfo(RegisterMemInfo& remote_info);
-#endif
 
   Status StopRDMA();
 
@@ -85,9 +83,7 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   bool connected_;
 
   std::string rdma_endpoint_;
-#ifdef VINEYARD_WITH_RDMA
   std::shared_ptr<RDMAClient> rdma_client_;
-#endif
   mutable bool rdma_connected_ = false;
 };
 
