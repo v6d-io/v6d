@@ -38,11 +38,10 @@ three primary components:
 3. The **IPC/RPC servers** manage the IPC/RPC connections from Vineyard
    clients for data sharing.
 
-   Specifically, the client can obtain the metadata of the data stored in Vineyard through
-   both IPC and RPC connections. However, to access the data partition, the client must connect
-   to the Vineyard instance via the UNIX domain socket, as the data
-   sharing occurs through the system call of memory mapping, which requires the client to be on
-   the same machine as the Vineyard instance.
+   Specifically, the client can retrieve both metadata and data partitions stored in
+   Vineyard via IPC and RPC connections. However, when both connection types are available,
+   IPC connections are prioritized due to the greater efficiency of memory mapping for data
+   sharing.
 
 .. _client-side:
 
@@ -64,8 +63,9 @@ routine reuse (e.g., I/O drivers). More specifically,
 2. The **RPC client** communicates with *remote* Vineyard instances by connecting
    to the TCP port that the Vineyard daemon is bound to.
 
-   Unlike the IPC client, the RPC doesn't allow memory-sharing between processes
-   but is useful for retrieving the metadata of objects in the Vineyard cluster.
+   Unlike the IPC client, the RPC client doesn't allow memory sharing between processes
+   and is less efficient in that regard. However, it is still useful for retrieving both
+   metadata and payloads from the Vineyard cluster via TCP or RDMA.
 
 3. The **builders and resolvers** for out-of-the-box high-level data abstractions
    offer a convenient way for applications to consume objects in Vineyard and
@@ -180,11 +180,3 @@ Once a Vineyard object is created and sealed in the Vineyard instance, it
 becomes immutable and can NOT be modified anymore. Thus, Vineyard is not
 suitable for use as a data cache to store mutable data that changes
 rapidly along the processing pipeline.
-
-*NO* instant remote data accessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The partitions of distributed data are stored distributedly in corresponding
-Vineyard instances of the cluster. Only the client on the same machine can access
-the data partition. In order to access a remote partition, data migration APIs of
-Vineyard can be invoked to trigger the migration process, but not for instant accessing.

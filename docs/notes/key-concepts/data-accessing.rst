@@ -293,13 +293,18 @@ In the illustration at the beginning of this section, we demonstrate that vineya
 distributed objects partitioned across multiple hosts. Accessing these distributed objects
 in vineyard can be achieved through two distinct approaches:
 
-- Inspecting metadata using the :code:`RPCClient`:
+- Inspecting metadata of global.
 
   The metadata of global objects can be examined using the :class:`vineyard.RPCClient`. This allows
   computing engines to understand the distribution of partitions of global tensors using the
   RPCClient, and subsequently schedule jobs over those chunks based on the distribution information.
 
   Mars employs this method to consume distributed tensors and dataframes in vineyard.
+
+  Additionally, by leveraging the metadata of global objects and the server metadata accessible 
+  via :meth:`vineyard.Client.meta`, multiple RPC clients can connect to retrieve the corresponding
+  blobs from different nodes. These blobs are then assembled locally into a single object. This approach
+  is also the default method for :class:`vineyard.client`.
 
 - Accessing local partitions of global objects using the :code:`IPCClient`:
 
