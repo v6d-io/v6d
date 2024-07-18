@@ -20,7 +20,12 @@ limitations under the License.
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+
+#if defined(__APPLE__)
+#include <sys/select.h>
+#else
 #include <sys/epoll.h>
+#endif
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -195,6 +200,56 @@ Status send_message(int fd, const std::string& msg) {
   return Status::OK();
 }
 
+#if defined(__APPLE__)
+Status recv_bytes(int fd, void* data, size_t length) {
+  ssize_t nbytes = 0;
+  size_t bytes_left = length;
+  size_t offset = 0;
+  char* ptr = static_cast<char*>(data);
+
+  struct timeval timeout;
+  timeout.tv_sec = 300;
+  timeout.tv_usec = 0;
+
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(fd, &readfds);
+  while (bytes_left > 0) {
+    int ret = select(fd + 1, &readfds, nullptr, nullptr, &timeout);
+    if (ret < 0) {
+      if (errno == EINTR) {
+        FD_ZERO(&readfds);
+        FD_SET(fd, &readfds);
+        timeout.tv_sec = 300;
+        timeout.tv_usec = 0;
+        continue;
+      } else {
+        return Status::IOError("Select call failed: " +
+                               std::string(strerror(errno)));
+      }
+    } else if (ret == 0) {
+      return Status::IOError("Select call timeout: " +
+                             std::string(strerror(errno)));
+    }
+
+    nbytes = read(fd, ptr + offset, bytes_left);
+
+    if (nbytes < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+        continue;
+      }
+      return Status::IOError("Receive message failed: " +
+                             std::string(strerror(errno)));
+    } else if (nbytes == 0) {
+      return Status::IOError(
+          "Receive message failed: encountered unexpected EOF");
+    }
+    bytes_left -= nbytes;
+    offset += nbytes;
+  }
+  return Status::OK();
+}
+#else
 Status recv_bytes(int fd, void* data, size_t length) {
   ssize_t nbytes = 0;
   size_t bytes_left = length;
@@ -253,6 +308,7 @@ Status recv_bytes(int fd, void* data, size_t length) {
   close(epoll_fd);
   return Status::OK();
 }
+#endif
 
 Status recv_message(int fd, std::string& msg) {
   size_t length;
