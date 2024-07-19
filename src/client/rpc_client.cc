@@ -236,7 +236,8 @@ Status RPCClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
   memset(remoteMsg, 0, 64);
   VINEYARD_CHECK_OK(
       this->rdma_client_->Recv(remoteMsg, sizeof(VineyardMsg), nullptr));
-  RETURN_ON_ERROR(this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr));
+  RETURN_ON_ERROR(
+      this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr));
   VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
 
   VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
