@@ -669,39 +669,48 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   auto self(shared_from_this());
   size_t size;
   bool compress = false;
+  bool use_rdma = false;
   std::shared_ptr<Payload> object;
 
-  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress);
+  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress,
+                   use_rdma);
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
-  auto callback = [self, this, compress,
-                   object](const Status& status) -> Status {
-    ReceiveRemoteBuffers(
-        socket_, {object}, compress,
-        [self, object](const Status& status) -> Status {
-          std::string message_out;
-          if (status.ok()) {
-            WriteCreateBufferReply(object->object_id, object, -1, message_out);
-          } else {
-            // cleanup
-            VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        });
-    LOG_SUMMARY("instances_memory_usage_bytes",
-                self->server_ptr_->instance_id(),
-                self->bulk_store_->Footprint());
-    return Status::OK();
-  };
+  if (use_rdma) {
+    std::string message_out;
+    WriteCreateBufferReply(object->object_id, object, -1, message_out);
+    this->doWrite(message_out);
+  } else {
+    auto callback = [self, this, compress,
+                     object](const Status& status) -> Status {
+      ReceiveRemoteBuffers(
+          socket_, {object}, compress,
+          [self, object](const Status& status) -> Status {
+            std::string message_out;
+            if (status.ok()) {
+              WriteCreateBufferReply(object->object_id, object, -1,
+                                     message_out);
+            } else {
+              // cleanup
+              VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
+              WriteErrorReply(status, message_out);
+            }
+            self->doWrite(message_out);
+            return Status::OK();
+          });
+      LOG_SUMMARY("instances_memory_usage_bytes",
+                  self->server_ptr_->instance_id(),
+                  self->bulk_store_->Footprint());
+      return Status::OK();
+    };
 
-  // ok to continue
-  std::string message_out;
-  WriteCreateBufferReply(object->object_id, object, -1, message_out);
-  self->doWrite(message_out, callback, true);
+    // ok to continue
+    std::string message_out;
+    WriteCreateBufferReply(object->object_id, object, -1, message_out);
+    self->doWrite(message_out, callback, true);
+  }
   return false;
 }
 
@@ -709,10 +718,12 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<size_t> sizes;
   bool compress = false;
+  bool use_rdma = false;
   std::vector<ObjectID> object_ids;
   std::vector<std::shared_ptr<Payload>> objects;
 
-  TRY_READ_REQUEST(ReadCreateRemoteBuffersRequest, root, sizes, compress);
+  TRY_READ_REQUEST(ReadCreateRemoteBuffersRequest, root, sizes, compress,
+                   use_rdma);
   for (auto const& size : sizes) {
     ObjectID object_id;
     std::shared_ptr<Payload> object;
@@ -722,35 +733,43 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
     objects.emplace_back(object);
   }
 
-  auto callback = [self, this, compress, object_ids,
-                   objects](const Status& status) -> Status {
-    ReceiveRemoteBuffers(
-        socket_, objects, compress,
-        [self, object_ids, objects](const Status& status) -> Status {
-          std::string message_out;
-          if (status.ok()) {
-            WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
-                                    message_out);
-          } else {
-            // cleanup
-            for (auto const& object : objects) {
-              VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
+  if (use_rdma) {
+    std::string message_out;
+    WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
+                            message_out);
+    this->doWrite(message_out);
+  } else {
+    auto callback = [self, this, compress, object_ids,
+                     objects](const Status& status) -> Status {
+      ReceiveRemoteBuffers(
+          socket_, objects, compress,
+          [self, object_ids, objects](const Status& status) -> Status {
+            std::string message_out;
+            if (status.ok()) {
+              WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
+                                      message_out);
+            } else {
+              // cleanup
+              for (auto const& object : objects) {
+                VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
+              }
+              WriteErrorReply(status, message_out);
             }
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          return Status::OK();
-        });
-    LOG_SUMMARY("instances_memory_usage_bytes",
-                self->server_ptr_->instance_id(),
-                self->bulk_store_->Footprint());
-    return Status::OK();
-  };
+            self->doWrite(message_out);
+            return Status::OK();
+          });
+      LOG_SUMMARY("instances_memory_usage_bytes",
+                  self->server_ptr_->instance_id(),
+                  self->bulk_store_->Footprint());
+      return Status::OK();
+    };
 
-  // ok to continue
-  std::string message_out;
-  WriteCreateBuffersReply(object_ids, objects, std::vector<int>{}, message_out);
-  self->doWrite(message_out, callback, true);
+    // ok to continue
+    std::string message_out;
+    WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
+                            message_out);
+    self->doWrite(message_out, callback, true);
+  }
   return false;
 }
 
@@ -761,24 +780,30 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   bool compress = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
+  bool use_rdma = false;
 
-  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress,
+                   use_rdma);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, compress, message_out);
 
-  this->doWrite(message_out, [self, objects, compress](const Status& status) {
-    SendRemoteBuffers(
-        self->socket_, objects, 0, compress, [self](const Status& status) {
-          if (!status.ok()) {
-            VLOG(100) << "Failed to send buffers to remote client: "
-                      << status.ToString();
-          }
-          return Status::OK();
-        });
-    return Status::OK();
-  });
+  if (!use_rdma) {
+    this->doWrite(message_out, [self, objects, compress](const Status& status) {
+      SendRemoteBuffers(
+          self->socket_, objects, 0, compress, [self](const Status& status) {
+            if (!status.ok()) {
+              VLOG(100) << "Failed to send buffers to remote client: "
+                        << status.ToString();
+            }
+            return Status::OK();
+          });
+      return Status::OK();
+    });
+  } else {
+    this->doWrite(message_out);
+  }
   return false;
 }
 

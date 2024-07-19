@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <queue>
@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/compression/compressor.h"
+#include "common/rdma/rdma_client.h"
 #include "common/util/asio.h"
 #include "common/util/protocols.h"
 #include "server/server/vineyard_server.h"
@@ -34,15 +35,42 @@ RemoteClient::RemoteClient(const std::shared_ptr<VineyardServer> server_ptr)
       context_(server_ptr->GetIOContext()),
       remote_tcp_socket_(context_),
       socket_(context_),
-      connected_(false) {}
+      connected_(false),
+      rdma_connected_(false) {}
 
 RemoteClient::~RemoteClient() {
   boost::system::error_code ec;
   ec = socket_.close(ec);
+  Status status = StopRDMA();
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to stop RDMA client: " << status.message()
+               << ". May "
+                  "cause memory leak.";
+  }
+}
+
+Status RemoteClient::StopRDMA() {
+  if (!rdma_connected_) {
+    return Status::OK();
+  }
+  rdma_connected_ = false;
+
+  void* msg;
+  RETURN_ON_ERROR(rdma_client_->GetTXFreeMsgBuffer(msg));
+  VineyardMsg* vmsg = reinterpret_cast<VineyardMsg*>(msg);
+  vmsg->type = VINEYARD_MSG_CLOSE;
+  RETURN_ON_ERROR(rdma_client_->Send(msg, sizeof(VineyardMsg), nullptr));
+  RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+
+  RETURN_ON_ERROR(rdma_client_->Stop());
+  RETURN_ON_ERROR(rdma_client_->Close());
+  RETURN_ON_ERROR(RDMAClientCreator::Release(rdma_endpoint_));
+  return Status::OK();
 }
 
 Status RemoteClient::Connect(const std::string& rpc_endpoint,
-                             const SessionID session_id) {
+                             const SessionID session_id,
+                             const std::string& rdma_endpoint) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;
   if (pos == std::string::npos) {
@@ -52,7 +80,95 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
     host = rpc_endpoint.substr(0, pos);
     port = rpc_endpoint.substr(pos + 1);
   }
-  return Connect(host, static_cast<uint32_t>(std::stoul(port)), session_id);
+
+  RETURN_ON_ERROR(
+      Connect(host, static_cast<uint32_t>(std::stoul(port)), session_id));
+
+  std::string rdma_host, rdma_port;
+  pos = rdma_endpoint.find(":");
+  if (pos == std::string::npos) {
+    VLOG(100) << "No RDMA endpoint provided. Fall back to TCP.";
+  } else {
+    rdma_host = rdma_endpoint.substr(0, pos);
+    rdma_port = rdma_endpoint.substr(pos + 1);
+  }
+
+  Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
+  if (status.ok()) {
+    rdma_endpoint_ = rdma_host + ":" + rdma_port;
+    VLOG(100) << "Connect to RDMA server successfully. RDMA host:" << rdma_host
+              << ", port:" << rdma_port;
+  } else {
+    VLOG(100) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
+              << status.message();
+  }
+
+  return Status::OK();
+}
+
+Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
+  void* buffer;
+  this->rdma_client_->GetTXFreeMsgBuffer(buffer);
+  VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
+  msg->type = VINEYARD_MSG_REQUEST_MEM;
+  msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
+  msg->remoteMemInfo.len = remote_info.size;
+  VLOG(100) << "Request remote addr: "
+            << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address);
+  void* remoteMsg;
+  this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
+  memset(remoteMsg, 0, 64);
+  VINEYARD_CHECK_OK(
+      this->rdma_client_->Recv(remoteMsg, sizeof(VineyardMsg), nullptr));
+  this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
+  VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
+
+  VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
+
+  VineyardMsg* vmsg = reinterpret_cast<VineyardMsg*>(remoteMsg);
+  if (vmsg->type == VINEYARD_MSG_REQUEST_MEM) {
+    remote_info.address = vmsg->remoteMemInfo.remote_address;
+    remote_info.rkey = vmsg->remoteMemInfo.key;
+    remote_info.size = vmsg->remoteMemInfo.len;
+    VLOG(100) << "Get remote address: "
+              << reinterpret_cast<void*>(remote_info.address)
+              << ", rkey: " << remote_info.rkey
+              << ", size: " << remote_info.size;
+  } else {
+    LOG(ERROR) << "Unknown message type: " << vmsg->type;
+  }
+  return Status::OK();
+}
+
+Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
+  void* buffer;
+  this->rdma_client_->GetTXFreeMsgBuffer(buffer);
+  VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
+  msg->type = VINEYARD_RELEASE_MEM;
+  msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
+  msg->remoteMemInfo.len = remote_info.size;
+  VLOG(100) << "Send remote addr: "
+            << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address)
+            << ", rkey: " << msg->remoteMemInfo.key;
+
+  this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
+  VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
+
+  return Status::OK();
+}
+
+Status RemoteClient::ConnectRDMAServer(const std::string& host,
+                                       const uint32_t port) {
+  if (this->rdma_connected_) {
+    return Status::OK();
+  }
+
+  RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, host, port));
+
+  VLOG(100) << "Try to connect to RDMA server " << host << ":" << port << "...";
+  RETURN_ON_ERROR(this->rdma_client_->Connect());
+  this->rdma_connected_ = true;
+  return Status::OK();
 }
 
 Status RemoteClient::Connect(const std::string& host, const uint32_t port,
@@ -60,6 +176,7 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
   if (this->connected_) {
     return Status::OK();
   }
+
   asio::ip::tcp::resolver resolver(context_);
   int retries = 0, max_connect_retries = 10;
   boost::system::error_code ec;
@@ -233,7 +350,8 @@ Status RemoteClient::migrateBuffers(
       "compression", true);  // enable compression for migration
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest(blobs, false, compress, message_out);
+  WriteGetRemoteBuffersRequest(blobs, false, compress, rdma_connected_,
+                               message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -270,19 +388,119 @@ Status RemoteClient::migrateBuffers(
   }
 
   auto self(shared_from_this());
-  ReceiveRemoteBuffers(
-      socket_, results, compress,
-      [self, callback, payloads, results](const Status& status) {
-        std::map<ObjectID, ObjectID> result_blobs;
-        if (status.ok()) {
-          for (size_t i = 0; i < payloads.size(); ++i) {
-            VINEYARD_DISCARD(
-                self->server_ptr_->GetBulkStore()->Seal(results[i]->object_id));
-            result_blobs.emplace(payloads[i].object_id, results[i]->object_id);
+  if (rdma_connected_) {
+    for (size_t i = 0; i < payloads.size(); i++) {
+      if (payloads[i].data_size == 0) {
+        continue;
+      }
+      size_t remain_blob_bytes = payloads[i].data_size;
+      uint8_t* local_blob_data = results[i]->pointer;
+      size_t max_register_size = payloads[i].data_size;
+
+      do {
+        size_t blob_data_offset = payloads[i].data_size - remain_blob_bytes;
+        void* server_pointer = payloads[i].pointer;
+
+        // Register mem
+        RegisterMemInfo local_info;
+        local_info.address =
+            reinterpret_cast<uint64_t>(local_blob_data + blob_data_offset);
+        local_info.size = std::min(remain_blob_bytes, max_register_size);
+        Status status;
+        while (true) {
+          status = rdma_client_->RegisterMemory(local_info);
+          if (status.ok()) {
+            break;
+          }
+          if (status.IsIOError()) {
+            // probe the max register size again
+            VLOG(100) << "Probe the max register size again.";
+            while (true) {
+              size_t size = rdma_client_->GetClientMaxRegisterSize();
+              if (size > 0) {
+                max_register_size = size;
+                break;
+              }
+              // Maybe the registered size is too large. There is no enough
+              // memory to register. Wait for next time.
+              usleep(1000);
+            }
+            local_info.size = std::min(remain_blob_bytes, max_register_size);
+          } else {
+            return status;
           }
         }
-        return callback(status, result_blobs);
-      });
+
+        // Exchange mem info
+        RegisterMemInfo remote_info;
+        while (true) {
+          remote_info.address = (uint64_t) server_pointer + blob_data_offset;
+          remote_info.size = local_info.size;
+          VLOG(100) << "Request remote address: "
+                    << reinterpret_cast<void*>(remote_info.address)
+                    << ", size: " << remote_info.size;
+          RETURN_ON_ERROR(RDMARequestMemInfo(remote_info));
+          if (remote_info.size > 0) {
+            break;
+          }
+          usleep(1000);
+        }
+        size_t receive_size = remote_info.size;
+
+        // Read data
+        size_t remain_bytes = receive_size;
+        do {
+          size_t read_bytes =
+              std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
+          size_t read_data_offset = receive_size - remain_bytes;
+          VLOG(100) << "blob data offset: " << blob_data_offset
+                    << ", read data offset: " << read_data_offset
+                    << ", read bytes: " << read_bytes;
+          VLOG(100) << "Read to address: "
+                    << reinterpret_cast<void*>(
+                           reinterpret_cast<uint64_t>(local_blob_data) +
+                           blob_data_offset + read_data_offset)
+                    << ", size: " << read_bytes << ", remote address: "
+                    << reinterpret_cast<void*>(
+                           reinterpret_cast<uint64_t>(server_pointer) +
+                           blob_data_offset + read_data_offset)
+                    << ", rkey: " << remote_info.rkey;
+          VINEYARD_CHECK_OK(rdma_client_->Read(
+              local_blob_data + blob_data_offset + read_data_offset, read_bytes,
+              reinterpret_cast<uint64_t>(server_pointer) + blob_data_offset +
+                  read_data_offset,
+              remote_info.rkey, local_info.mr_desc, nullptr));
+          VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
+          remain_bytes -= read_bytes;
+        } while (remain_bytes > 0);
+
+        remain_blob_bytes -= receive_size;
+        RETURN_ON_ERROR(rdma_client_->DeregisterMemory(local_info));
+        RETURN_ON_ERROR(RDMAReleaseMemInfo(remote_info));
+      } while (remain_blob_bytes > 0);
+    }
+    std::map<ObjectID, ObjectID> result_blobs;
+    for (size_t i = 0; i < payloads.size(); i++) {
+      self->server_ptr_->GetBulkStore()->Seal(results[i]->object_id);
+      result_blobs.emplace(payloads[i].object_id, results[i]->object_id);
+    }
+    return callback(Status::OK(), result_blobs);
+  } else {
+    ReceiveRemoteBuffers(
+        socket_, results, compress,
+        [self, callback, payloads, results](const Status& status) {
+          std::map<ObjectID, ObjectID> result_blobs;
+          if (status.ok()) {
+            for (size_t i = 0; i < payloads.size(); ++i) {
+              VINEYARD_DISCARD(self->server_ptr_->GetBulkStore()->Seal(
+                  results[i]->object_id));
+              result_blobs.emplace(payloads[i].object_id,
+                                   results[i]->object_id);
+            }
+          }
+          return callback(status, result_blobs);
+        });
+  }
   return Status::OK();
 }
 

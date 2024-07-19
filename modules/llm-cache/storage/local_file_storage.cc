@@ -210,7 +210,7 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
   auto now_nano = std::chrono::duration_cast<std::chrono::nanoseconds>(
                       now.time_since_epoch())
                       .count();
-  struct timespec times[2] = {0};
+  struct timespec times[2] = {};
   times[0].tv_sec = now_nano / SECOND_TO_NANOSECOND;
   times[0].tv_nsec = now_nano % SECOND_TO_NANOSECOND;
 
@@ -219,7 +219,8 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
   if (stat(path.c_str(), &file_stat) == -1) {
     return Status::IOError("Failed to get file stat: " + formatIOError(path));
   }
-  times[1] = file_stat.st_mtim;
+  times[1].tv_sec = file_stat.st_mtime;
+  times[1].tv_nsec = file_stat.st_mtimespec.tv_nsec;
 #else
   times[1].tv_sec = UTIME_OMIT;
   times[1].tv_nsec = UTIME_OMIT;

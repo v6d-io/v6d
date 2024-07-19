@@ -1055,6 +1055,8 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
 
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
+          std::string rdma_endpoint =
+              (*instance)["rdma_endpoint"].get_ref<std::string const&>();
 
           auto test_task = [self, object_id](const json& meta) -> bool {
             std::lock_guard<std::mutex> lock(
@@ -1070,8 +1072,8 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
             }
           };
 
-          auto eval_task = [self, callback, remote_endpoint, object_id,
-                            metadata](const json& meta) -> Status {
+          auto eval_task = [self, callback, remote_endpoint, rdma_endpoint,
+                            object_id, metadata](const json& meta) -> Status {
             std::lock_guard<std::mutex> lock(
                 self->migrations_origin_to_target_mutex_);
             auto it = self->migrations_origin_to_target_.find(object_id);
@@ -1081,11 +1083,13 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
             }
 
             boost::asio::post(self->GetIOContext(), [self, callback,
-                                                     remote_endpoint, object_id,
+                                                     remote_endpoint,
+                                                     rdma_endpoint, object_id,
                                                      metadata]() {
               auto remote = std::make_shared<RemoteClient>(self);
-              Status status =
-                  remote->Connect(remote_endpoint, self->session_id());
+
+              Status status = remote->Connect(
+                  remote_endpoint, self->session_id(), rdma_endpoint);
               if (!status.ok()) {
                 return callback(status, InvalidObjectID());
               }
@@ -1432,6 +1436,14 @@ const std::string VineyardServer::RPCEndpoint() {
   }
 }
 
+const std::string VineyardServer::RDMAEndpoint() {
+  if (this->rpc_server_ptr_) {
+    return rpc_server_ptr_->RDMAEndpoint();
+  } else {
+    return "";
+  }
+}
+
 void VineyardServer::Stop() {
   if (stopped_.exchange(true)) {
     return;
@@ -1454,6 +1466,8 @@ void VineyardServer::Stop() {
   this->stream_store_.reset();
   this->bulk_store_.reset();
   this->plasma_bulk_store_.reset();
+
+  RDMAClientCreator::Clear();
 }
 
 bool VineyardServer::Running() const { return !stopped_.load(); }

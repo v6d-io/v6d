@@ -666,6 +666,57 @@ add_custom_target(vineyard_codegen_java)
 include("cmake/GenerateVineyard.cmake")
 include("cmake/GenerateVineyardJava.cmake")
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    find_library(RDMACM_LIB rdmacm)
+    find_library(IBVERBS_LIB ibverbs)
+    find_library(NL3_LIB nl-3)
+    find_library(NL_GENL3_LIB nl-genl-3)
+    find_library(UUID_LIB uuid)
+    find_library(NUMA_LIB numa)
+    find_library(RT_LIB rt)
+
+    if(IBVERBS_LIB AND RDMACM_LIB AND NL3_LIB AND NL_GENL3_LIB AND UUID_LIB AND NUMA_LIB AND RT_LIB)
+        set(RDMA_LIBS ${RDMACM_LIB} ${IBVERBS_LIB} ${NL3_LIB} ${NL_GENL3_LIB} ${UUID_LIB} ${NUMA_LIB} ${RT_LIB})
+        set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
+        add_custom_command(
+            OUTPUT ${FABRIC_MAKEFILE}
+            COMMAND ./autogen.sh > /dev/null
+            COMMAND ./configure --disable-efa > /dev/null
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+        )
+        add_custom_target(
+            fabric_configure
+            DEPENDS ${FABRIC_MAKEFILE}
+        )
+        add_custom_target(
+            fabric ALL
+            COMMAND make CFLAGS+="-fPIC" -j$(nproc) > /dev/null
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.a ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a
+            DEPENDS fabric_configure
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+        )
+
+        set(LIBFABRIC "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a")
+        set(LIBFABRIC_VERSION_SCRIPT "${CMAKE_SOURCE_DIR}/src/common/rdma/libfabric.map")
+        install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib/libfabric
+                PATTERN "*.h"
+        )
+        include_directories(BEFORE SYSTEM
+                            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
+                            $<INSTALL_INTERFACE:include/vineyard/contrib>
+        )
+        list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
+
+        set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+                        ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
+    else()
+        message("${RDMACM_LIB} ${IBVERBS_LIB} ${NL3_LIB} ${NL_GENL3_LIB} ${UUID_LIB} ${NUMA_LIB} ${RT_LIB}")
+        message(FATAL_ERROR "Missing rdma dependencies, please install them and retry: rdmacm, ibverbs, libnl-3, libnl-genl-3, libuuid, libnuma, librt")
+    endif()
+endif()
+
 # boost is only required by some components
 if(BUILD_VINEYARD_SERVER OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_GRAPH)
     find_boost()
@@ -696,6 +747,7 @@ if(BUILD_VINEYARD_SERVER)
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
                                        "src/common/memory/gpu/*.cc"
+                                       "src/common/rdma/*.cc"
     )
     if(BUILD_VINEYARD_SERVER_REDIS)
         list(APPEND SERVER_SRC_FILES "thirdparty/redis-plus-plus-shim/recipes/redlock.cpp")
@@ -749,6 +801,12 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        target_link_libraries(vineyardd PRIVATE ${LIBFABRIC} ${RDMA_LIBS})
+        set_target_properties(vineyardd PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
+        add_dependencies(vineyardd fabric)
+    endif()
+
     install_vineyard_target(vineyardd)
     if(NOT BUILD_SHARED_LIBS)
         if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
@@ -797,6 +855,7 @@ if(BUILD_VINEYARD_CLIENT)
                                "src/common/memory/*.cc"
                                "src/common/util/*.cc"
                                "src/common/memory/gpu/*.cc"
+                               "src/common/rdma/*.cc"
     )
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
@@ -819,6 +878,12 @@ if(BUILD_VINEYARD_CLIENT)
     add_dependencies(vineyard_client vineyard_internal_registry)
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
+    endif()
+
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC} ${RDMA_LIBS})
+        set_target_properties(vineyard_client PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
+        add_dependencies(vineyard_client fabric)
     endif()
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
@@ -881,6 +946,7 @@ macro(setup_pybind11_module target relpath)
         target_add_link_options(${target} PRIVATE OPTIONS -Os)
     endif()
 
+    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
         set_target_properties(${target} PROPERTIES
                               BUILD_WITH_INSTALL_RPATH TRUE

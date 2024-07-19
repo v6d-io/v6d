@@ -295,7 +295,7 @@ class Client final : public BasicIPCClient,
   /**
    * @brief Disconnect this client.
    */
-  void Disconnect();
+  void Disconnect() override;
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .
@@ -1018,7 +1018,7 @@ class PlasmaClient final
   /**
    * @brief Disconnect this client.
    */
-  void Disconnect();
+  void Disconnect() override;
 
   /**
    * @brief Create a blob in vineyard server. When creating a blob, vineyard

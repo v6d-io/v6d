@@ -16,9 +16,14 @@ limitations under the License.
 #ifndef SRC_SERVER_ASYNC_RPC_SERVER_H_
 #define SRC_SERVER_ASYNC_RPC_SERVER_H_
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
+#include <unordered_map>
 
+#include "common/rdma/rdma_server.h"
+#include "common/rdma/util.h"
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/env.h"
 #include "server/async/socket_server.h"
@@ -44,6 +49,14 @@ class RPCServer : public SocketServer,
     return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
   }
 
+  std::string RDMAEndpoint() {
+    std::string rdma_endpoint = json_to_string(rpc_spec_["rdma_endpoint"]);
+    rdma_endpoint.erase(
+        std::remove(rdma_endpoint.begin(), rdma_endpoint.end(), '\"'),
+        rdma_endpoint.end());
+    return std::string(rdma_endpoint);
+  }
+
   Status Register(std::shared_ptr<SocketConnection> conn,
                   const SessionID session_id) override;
 
@@ -52,9 +65,38 @@ class RPCServer : public SocketServer,
 
   void doAccept() override;
 
+  void doRDMAAccept();
+
+  void doRDMARecv();
+
+  void doRDMASend();
+
+  Status InitRDMA();
+
+  void doVineyardRequestMemory(VineyardRecvContext* recv_context,
+                               VineyardMsg* recv_msg);
+
+  void doVineyardReleaseMemory(VineyardRecvContext* recv_context,
+                               VineyardMsg* recv_msg);
+
+  void doVineyardClose(VineyardRecvContext* recv_context);
+
+  void doPrepareRecv(uint64_t rdma_conn_id);
+
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;
+
+  // connection id to rdma server
+  std::unordered_map<uint64_t, std::map<void*, RegisterMemInfo>>
+      remote_mem_infos_;
+  std::shared_ptr<RDMAServer> rdma_server_;
+  mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
+
+  std::thread rdma_listen_thread_;
+  std::thread rdma_recv_thread_;
+  std::thread rdma_send_thread_;
+  bool rdma_stop_ = true;
 };
 
 }  // namespace vineyard
