@@ -29,6 +29,7 @@ limitations under the License.
 
 namespace vineyard {
 
+#if defined(__linux__)
 std::map<std::string, RDMARemoteNodeInfo> RDMAClientCreator::servers_;
 std::mutex RDMAClientCreator::servers_mtx_;
 
@@ -36,9 +37,9 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
                         RDMARemoteNodeInfo& info) {
   ptr = std::make_shared<RDMAClient>();
 
-  ptr->fi = info.fi;
-  ptr->fabric = info.fabric;
-  ptr->domain = info.domain;
+  ptr->fi = reinterpret_cast<fi_info*>(info.fi);
+  ptr->fabric = reinterpret_cast<fid_fabric*>(info.fabric);
+  ptr->domain = reinterpret_cast<fid_domain*>(info.domain);
 
   fi_eq_attr eq_attr = {0};
   eq_attr.wait_obj = FI_WAIT_UNSPEC;
@@ -179,7 +180,8 @@ Status RDMAClient::RegisterMemory(fid_mr** mr, void* address, size_t size,
 }
 
 Status RDMAClient::DeregisterMemory(RegisterMemInfo& memInfo) {
-  VINEYARD_CHECK_OK(IRDMA::CloseResource(memInfo.mr, "memory region"));
+  VINEYARD_CHECK_OK(IRDMA::CloseResource(reinterpret_cast<fid_mr*>(memInfo.mr),
+                                         "memory region"));
   mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
                  mr_array.end());
   return Status::OK();
@@ -273,13 +275,17 @@ Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
   }
 
   CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(),
-                          std::to_string(port).c_str(), 0, hints, &(info.fi)),
+                          std::to_string(port).c_str(), 0, hints,
+                          reinterpret_cast<fi_info**>(&(info.fi))),
               "fi_getinfo failed")
 
-  CHECK_ERROR(!fi_fabric(info.fi->fabric_attr, &info.fabric, NULL),
+  CHECK_ERROR(!fi_fabric(reinterpret_cast<fi_info*>(info.fi)->fabric_attr,
+                         reinterpret_cast<fid_fabric**>(&info.fabric), NULL),
               "fi_fabric failed.");
 
-  CHECK_ERROR(!fi_domain(info.fabric, info.fi, &info.domain, NULL),
+  CHECK_ERROR(!fi_domain(reinterpret_cast<fid_fabric*>(info.fabric),
+                         reinterpret_cast<fi_info*>(info.fi),
+                         reinterpret_cast<fid_domain**>(&info.domain), NULL),
               "fi_domain failed.");
   return Status::OK();
 }
@@ -329,14 +335,98 @@ Status RDMAClientCreator::Release(std::string rdma_endpoint) {
       // before closing domain and fabric, we need to close all the resources
       // bound to them, otherwise, the close operation will failed with
       // -FI_EBUSY
-      RETURN_ON_ERROR(IRDMA::CloseResource(info.domain, "domain"));
-      RETURN_ON_ERROR(IRDMA::CloseResource(info.fabric, "fabric"));
-      IRDMA::FreeInfo(info.fi);
+      RETURN_ON_ERROR(IRDMA::CloseResource(
+          reinterpret_cast<fid_domain*>(info.domain), "domain"));
+      RETURN_ON_ERROR(IRDMA::CloseResource(
+          reinterpret_cast<fid_fabric*>(info.fabric), "fabric"));
+      IRDMA::FreeInfo(reinterpret_cast<fi_info*>(info.fi));
       servers_.erase(rdma_endpoint);
     }
   }
 
   return Status::OK();
 }
+
+size_t RDMAClient::GetMaxTransferBytes() { return fi->ep_attr->max_msg_size; }
+
+Status RDMAClient::Stop() {
+  state = STOPED;
+  return Status::OK();
+}
+
+#else
+Status RDMAClient::Send(void* buf, size_t size, void* ctx) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::Recv(void* buf, size_t size, void* ctx) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::Read(void* buf, size_t size, uint64_t remote_address,
+                        uint64_t key, void* mr_desc, void* ctx) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::Write(void* buf, size_t size, uint64_t remote_address,
+                         uint64_t key, void* mr_desc, void* ctx) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::RegisterMemory(RegisterMemInfo& memInfo) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::DeregisterMemory(RegisterMemInfo& memInfo) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::Connect() {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::Close() { return Status::OK(); }
+
+Status RDMAClient::SendMemInfoToServer(void* buffer, uint64_t size) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::GetTXFreeMsgBuffer(void*& buffer) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::GetRXFreeMsgBuffer(void*& buffer) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::GetRXCompletion(int timeout, void** context) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClient::GetTXCompletion(int timeout, void** context) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+size_t RDMAClient::GetMaxTransferBytes() { return 0; }
+
+size_t RDMAClient::GetClientMaxRegisterSize(void* addr, size_t min_size,
+                                            size_t max_size) {
+  return 0;
+}
+
+Status RDMAClient::Stop() { return Status::OK(); }
+
+Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
+                                 std::string server_address, int port) {
+  return Status::Invalid("RDMA is not supportted on this platform.");
+}
+
+Status RDMAClientCreator::Release(std::string rdma_endpoint) {
+  return Status::OK();
+}
+
+Status RDMAClientCreator::Clear() { return Status::OK(); }
+
+#endif  // defined(__linux__)
 
 }  // namespace vineyard

@@ -22,16 +22,20 @@ limitations under the License.
 
 #include "common/rdma/util.h"
 #include "common/util/status.h"
+
+#if defined(__linux__)
 #include "libfabric/include/rdma/fabric.h"
 #include "libfabric/include/rdma/fi_domain.h"
 #include "libfabric/include/rdma/fi_endpoint.h"
 #include "libfabric/include/rdma/fi_eq.h"
 #include "libfabric/include/rdma/fi_rma.h"
+#endif  // defined(__linux__)
 
 namespace vineyard {
 
 class IRDMA {
  public:
+#if defined(__linux__)
   static Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, void* buf,
                      size_t size, void* mr_desc, void* ctx);
 
@@ -49,14 +53,12 @@ class IRDMA {
   static Status RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
                                size_t size, uint64_t& rkey, void*& mr_desc);
 
-  virtual Status Close() = 0;
-
   static int GetCompletion(fid_cq* cq, int timeout, void** context);
 
   static void FreeInfo(fi_info* info);
 
   template <typename FIDType>
-  static Status CloseResource(FIDType*& res, const char* resource_name) {
+  static Status CloseResource(FIDType* res, const char* resource_name) {
     if (res) {
       int ret = fi_close(&(res)->fid);
       if (ret != FI_SUCCESS) {
@@ -91,6 +93,7 @@ class IRDMA {
                                        size_t max_size, fid_domain* domain);
 
   static size_t max_register_size_;
+#endif  // defined(__linux__)
 };
 
 }  // namespace vineyard

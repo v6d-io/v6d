@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "common/rdma/rdma.h"
 #include "common/rdma/util.h"
+#if defined(__linux__)
 
 namespace vineyard {
 
@@ -178,3 +179,5 @@ void IRDMA::FreeInfo(fi_info* info) {
 }
 
 }  // namespace vineyard
+
+#endif  // defined(__linux__)

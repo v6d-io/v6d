@@ -22,7 +22,10 @@ limitations under the License.
 
 #include "common/rdma/rdma.h"
 #include "common/rdma/util.h"
+
+#if defined(__linux__)
 #include "libfabric/include/rdma/fabric.h"
+#endif  // defined(__linux__)
 
 namespace vineyard {
 
@@ -33,9 +36,6 @@ class RDMAServer : public IRDMA {
   ~RDMAServer() {}
 
   static Status Make(std::shared_ptr<RDMAServer>& ptr, int port);
-
-  static Status Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
-                     int port);
 
   Status Send(uint64_t clientID, void* buf, size_t size, void* ctx);
 
@@ -62,26 +62,11 @@ class RDMAServer : public IRDMA {
 
   Status RegisterMemory(RegisterMemInfo& memInfo);
 
-  Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
-                        void*& mr_desc);
-
   Status DeregisterMemory(RegisterMemInfo& memInfo);
 
-  Status GetEp(uint64_t ep_token, fid_ep*& ep) {
-    auto iter = ep_map_.find(ep_token);
-    if (iter == ep_map_.end()) {
-      return Status::Invalid("Failed to find buffer context");
-    }
-    ep = iter->second;
-    return Status::OK();
-  }
+  Status Close();
 
-  Status Close() override;
-
-  Status Stop() {
-    state = STOPED;
-    return Status::OK();
-  }
+  Status Stop();
 
   Status AddClient(uint64_t& rdma_conn_id, void* ep);
 
@@ -103,9 +88,25 @@ class RDMAServer : public IRDMA {
   Status FinishConnection(uint64_t& rdma_conn_id, VineyardEventEntry event);
 
  private:
+#if defined(__linux__)
+  static Status Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
+                     int port);
+
+  Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
+                        void*& mr_desc);
+
   Status RemoveClient(uint64_t ep_token);
 
   Status RemoveClient(fid_ep* ep);
+
+  Status GetEp(uint64_t ep_token, fid_ep*& ep) {
+    auto iter = ep_map_.find(ep_token);
+    if (iter == ep_map_.end()) {
+      return Status::Invalid("Failed to find buffer context");
+    }
+    ep = iter->second;
+    return Status::OK();
+  }
 
   int FindEmptySlot(uint64_t* bitmaps, int bitmap_num) {
     for (int i = 0; i < bitmap_num; i++) {
@@ -150,6 +151,7 @@ class RDMAServer : public IRDMA {
 
   std::map<fid_t, fid_ep*> wait_conn_ep_map_;
   std::mutex wait_conn_ep_map_mutex_;
+#endif  // defined(__linux__)
 };
 
 }  // namespace vineyard

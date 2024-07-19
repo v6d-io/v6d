@@ -44,19 +44,13 @@ class RDMAClient : public IRDMA {
 
   Status RegisterMemory(RegisterMemInfo& memInfo);
 
-  Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
-                        void*& mr_desc);
-
   Status DeregisterMemory(RegisterMemInfo& memInfo);
 
   Status Connect();
 
-  Status Close() override;
+  Status Close();
 
-  Status Stop() {
-    state = STOPED;
-    return Status::OK();
-  }
+  Status Stop();
 
   Status SendMemInfoToServer(void* buffer, uint64_t size);
 
@@ -68,14 +62,18 @@ class RDMAClient : public IRDMA {
 
   Status GetTXCompletion(int timeout, void** context);
 
-  size_t GetMaxTransferBytes() { return fi->ep_attr->max_msg_size; }
+  size_t GetMaxTransferBytes();
 
   size_t GetClientMaxRegisterSize(void* addr = nullptr, size_t min_size = 8192,
                                   size_t max_size = 64UL * 1024 * 1024 * 1024);
 
  private:
+#if defined(__linux__)
   static Status Make(std::shared_ptr<RDMAClient>& ptr,
                      RDMARemoteNodeInfo& info);
+
+  Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
+                        void*& mr_desc);
 
   fi_info* fi = NULL;
   fid_fabric* fabric = NULL;
@@ -94,15 +92,13 @@ class RDMAClient : public IRDMA {
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
 
   RDMA_STATE state = INIT;
+#endif  // defined(__linux__)
 
   friend class RDMAClientCreator;
 };
 
 class RDMAClientCreator {
  public:
-  static Status Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
-                       std::string server_address, int port);
-
   static Status Create(std::shared_ptr<RDMAClient>& ptr,
                        std::string server_address, int port);
 
@@ -111,7 +107,11 @@ class RDMAClientCreator {
   static Status Clear();
 
  private:
+#if defined(__linux__)
   RDMAClientCreator() = delete;
+
+  static Status Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
+                       std::string server_address, int port);
 
   static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
                                          fi_info* hints,
@@ -122,6 +122,7 @@ class RDMAClientCreator {
 
   static std::map<std::string, RDMARemoteNodeInfo> servers_;
   static std::mutex servers_mtx_;
+#endif  // defined(__linux__)
 };
 
 }  // namespace vineyard

@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "server/async/rpc_server.h"
 #include <algorithm>
 #include <memory>
 #include <mutex>
@@ -21,6 +20,7 @@ limitations under the License.
 #include "common/rdma/util.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"  // IWYU pragma: keep
+#include "server/async/rpc_server.h"
 #include "server/server/vineyard_server.h"
 
 namespace vineyard {

@@ -28,6 +28,7 @@ limitations under the License.
 
 namespace vineyard {
 
+#if defined(__linux__)
 Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, int port) {
   fi_info* hints = fi_allocinfo();
   if (!hints) {
@@ -166,7 +167,7 @@ Status RDMAServer::Close() {
 Status RDMAServer::PrepareConnection(VineyardEventEntry vineyard_entry) {
   // prepare new ep
   fid_ep* ep = NULL;
-  fi_info* client_fi = vineyard_entry.fi;
+  fi_info* client_fi = reinterpret_cast<fi_info*>(vineyard_entry.fi);
   CHECK_ERROR(!fi_endpoint(domain, client_fi, &ep, NULL),
               "fi_endpoint failed.");
 
@@ -190,11 +191,12 @@ Status RDMAServer::FinishConnection(uint64_t& rdma_conn_id,
   fid_ep* ep = nullptr;
   {
     std::lock_guard<std::mutex> lock(wait_conn_ep_map_mutex_);
-    if (wait_conn_ep_map_.find(event.fid) == wait_conn_ep_map_.end()) {
+    if (wait_conn_ep_map_.find(reinterpret_cast<fid_t>(event.fid)) ==
+        wait_conn_ep_map_.end()) {
       return Status::Invalid("Failed to find buffer context.");
     }
-    ep = wait_conn_ep_map_[event.fid];
-    wait_conn_ep_map_.erase(event.fid);
+    ep = wait_conn_ep_map_[reinterpret_cast<fid_t>(event.fid)];
+    wait_conn_ep_map_.erase(reinterpret_cast<fid_t>(event.fid));
   }
   AddClient(rdma_conn_id, ep);
   return Status::OK();
@@ -268,7 +270,8 @@ Status RDMAServer::RegisterMemory(fid_mr** mr, void* address, size_t size,
 }
 
 Status RDMAServer::DeregisterMemory(RegisterMemInfo& memInfo) {
-  VINEYARD_CHECK_OK(IRDMA::CloseResource(memInfo.mr, "memory region"));
+  VINEYARD_CHECK_OK(IRDMA::CloseResource(reinterpret_cast<fid_mr*>(memInfo.mr),
+                                         "memory region"));
   std::lock_guard<std::mutex> lock(mr_array_mutex_);
   mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
                  mr_array.end());
@@ -455,5 +458,109 @@ size_t RDMAServer::GetServerMaxRegisterSize(void* addr, size_t min_size,
 }
 
 bool RDMAServer::IsStopped() { return (state == STOPED); }
+
+Status RDMAServer::Stop() {
+  state = STOPED;
+  return Status::OK();
+}
+#else
+
+Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, int port) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Send(uint64_t clientID, void* buf, size_t size, void* ctx) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Recv(uint64_t clientID, void* buf, size_t size, void* ctx) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Send(void* ep, void* buf, size_t size, void* ctx) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Recv(void* ep, void* buf, size_t size, void* ctx) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Read(uint64_t clientID, void* buf, size_t size,
+                        uint64_t remote_address, uint64_t rkey, void* mr_desc,
+                        void* ctx) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Write(uint64_t clientID, void* buf, size_t size,
+                         uint64_t remote_address, uint64_t rkey, void* mr_desc,
+                         void* ctx) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::GetTXFreeMsgBuffer(void*& buffer) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::GetRXFreeMsgBuffer(void*& buffer) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::GetRXCompletion(int timeout, void** context) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::GetTXCompletion(int timeout, void** context) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::RegisterMemory(RegisterMemInfo& memInfo) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::DeregisterMemory(RegisterMemInfo& memInfo) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::Close() { return Status::OK(); }
+
+Status RDMAServer::Stop() { return Status::OK(); }
+
+Status RDMAServer::AddClient(uint64_t& rdma_conn_id, void* ep) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+bool RDMAServer::IsStopped() { return true; }
+
+Status RDMAServer::ReleaseRXBuffer(void* buffer) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::ReleaseTXBuffer(void* buffer) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+size_t RDMAServer::GetServerMaxRegisterSize(void* addr, size_t min_size,
+                                            size_t max_size) {
+  return 0;
+}
+
+Status RDMAServer::GetEvent(VineyardEventEntry& event) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::PrepareConnection(VineyardEventEntry event) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+Status RDMAServer::FinishConnection(uint64_t& rdma_conn_id,
+                                    VineyardEventEntry event) {
+  return Status::Invalid("RDMA is not supported on this platform.");
+}
+
+#endif  // defined(__linux__)
 
 }  // namespace vineyard

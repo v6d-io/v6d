@@ -20,7 +20,9 @@ limitations under the License.
 #include <string>
 
 #include "common/util/status.h"
+#if defined(__linux__)
 #include "libfabric/include/rdma/fabric.h"
+#endif  // defined(__linux__)
 
 namespace vineyard {
 
@@ -29,6 +31,7 @@ namespace vineyard {
     return Status::Invalid(message);    \
   }
 
+#if defined(__linux__)
 #define POST(post_fn, op_str, ...)                                 \
   do {                                                             \
     int ret;                                                       \
@@ -45,6 +48,7 @@ namespace vineyard {
       }                                                            \
     }                                                              \
   } while (0)
+#endif  // defined(__linux__)
 
 enum VINEYARD_MSG_OPT {
   VINEYARD_MSG_CONNECT,
@@ -71,8 +75,8 @@ struct VineyardMsg {
 
 struct VineyardEventEntry {
   uint32_t event_id;
-  fi_info* fi;
-  fid_t fid;
+  void* fi;
+  void* fid;
 };
 
 struct VineyardRecvContext {
@@ -95,13 +99,7 @@ struct RegisterMemInfo {
   void* mr_desc;
   // TODO:
   // Work around for rpc client. Remove this field in the future
-  fid_mr* mr;
-};
-
-struct CompareRegisterMemInfo {
-  bool operator()(const RegisterMemInfo& a, const RegisterMemInfo& b) const {
-    return a.address < b.address;
-  }
+  void* mr;
 };
 
 enum RDMA_STATE {
@@ -111,15 +109,22 @@ enum RDMA_STATE {
 };
 
 struct RDMARemoteNodeInfo {
-  fi_info* fi;
-  fid_fabric* fabric;
-  fid_domain* domain;
+  void* fi;
+  void* fabric;
+  void* domain;
   int refcnt = 0;
 };
 
+#if defined(__linux__)
 #define VINEYARD_FIVERSION FI_VERSION(1, 21)
 #define VINEYARD_CONNREQ FI_CONNREQ
 #define VINEYARD_CONNECTED FI_CONNECTED
+#define VINEYARD_TX_CQ_DATA FI_SEND
+#else
+#define VINEYARD_CONNREQ 1
+#define VINEYARD_CONNECTED 2
+#define VINEYARD_TX_CQ_DATA (1ULL << 11)
+#endif  // defined(__linux__)
 
 }  // namespace vineyard
 

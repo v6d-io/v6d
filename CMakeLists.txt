@@ -666,46 +666,48 @@ add_custom_target(vineyard_codegen_java)
 include("cmake/GenerateVineyard.cmake")
 include("cmake/GenerateVineyardJava.cmake")
 
-find_library(RDMACM_LIB rdmacm)
-find_library(IBVERBS_LIB ibverbs)
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    find_library(RDMACM_LIB rdmacm)
+    find_library(IBVERBS_LIB ibverbs)
 
-if(IBVERBS_LIB AND RDMACM_LIB)
-    set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
-    add_custom_command(
-        OUTPUT ${FABRIC_MAKEFILE}
-        COMMAND ./autogen.sh > /dev/null
-        COMMAND ./configure --disable-efa > /dev/null
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
-    )
-    add_custom_target(
-        fabric_configure
-        DEPENDS ${FABRIC_MAKEFILE}
-    )
-    add_custom_target(
-        fabric ALL
-        COMMAND make CFLAGS+="-fPIC" -j$(nproc) > /dev/null
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.a ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a
-        DEPENDS fabric_configure
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
-    )
+    if(IBVERBS_LIB AND RDMACM_LIB)
+        set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
+        add_custom_command(
+            OUTPUT ${FABRIC_MAKEFILE}
+            COMMAND ./autogen.sh > /dev/null
+            COMMAND ./configure --disable-efa > /dev/null
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+        )
+        add_custom_target(
+            fabric_configure
+            DEPENDS ${FABRIC_MAKEFILE}
+        )
+        add_custom_target(
+            fabric ALL
+            COMMAND make CFLAGS+="-fPIC" -j$(nproc) > /dev/null
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/thirdparty/libfabric/src/.libs/libfabric.a ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a
+            DEPENDS fabric_configure
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
+        )
 
-    set(LIBFABRIC "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a")
-    set(LIBFABRIC_VERSION_SCRIPT "${CMAKE_SOURCE_DIR}/src/common/rdma/libfabric.map")
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib/libfabric
-            PATTERN "*.h"
-    )
-    include_directories(BEFORE SYSTEM
-                        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
-                        $<INSTALL_INTERFACE:include/vineyard/contrib>
-    )
-    list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
+        set(LIBFABRIC "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a")
+        set(LIBFABRIC_VERSION_SCRIPT "${CMAKE_SOURCE_DIR}/src/common/rdma/libfabric.map")
+        install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include"
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib/libfabric
+                PATTERN "*.h"
+        )
+        include_directories(BEFORE SYSTEM
+                            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
+                            $<INSTALL_INTERFACE:include/vineyard/contrib>
+        )
+        list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
 
-    set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
-                    ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
-else()
-    message(FATAL_ERROR "Missing ibverbs and rdmacm library.")
+        set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+                        ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
+    else()
+        message(FATAL_ERROR "Missing ibverbs and rdmacm library.")
+    endif()
 endif()
 
 # boost is only required by some components
@@ -792,9 +794,11 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    target_link_libraries(vineyardd PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
-    set_target_properties(vineyardd PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
-    add_dependencies(vineyardd fabric)
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        target_link_libraries(vineyardd PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
+        set_target_properties(vineyardd PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
+        add_dependencies(vineyardd fabric)
+    endif()
 
     install_vineyard_target(vineyardd)
     if(NOT BUILD_SHARED_LIBS)
@@ -869,9 +873,11 @@ if(BUILD_VINEYARD_CLIENT)
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
 
-    target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
-    set_target_properties(vineyard_client PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
-    add_dependencies(vineyard_client fabric)
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        target_link_libraries(vineyard_client PRIVATE ${LIBFABRIC} ${RDMACM_LIB} ${IBVERBS_LIB})
+        set_target_properties(vineyard_client PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
+        add_dependencies(vineyard_client fabric)
+    endif()
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
