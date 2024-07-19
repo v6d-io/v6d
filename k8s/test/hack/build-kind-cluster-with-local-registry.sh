@@ -2,6 +2,7 @@
 set -o errexit
 
 kind_name=kind
+k8s_version=v1.19.3
 kubeconfig_path=/tmp/e2e-k8s.config
 
 if [ ! -z "$1" ] ; then
@@ -26,13 +27,13 @@ containerdConfigPatches:
     endpoint = ["http://${reg_name}:5000"]
 nodes:
 - role: control-plane
-  image: kindest/node:v1.25.11
+  image: kindest/node:v1.19.3
 - role: worker
-  image: kindest/node:v1.25.11
+  image: kindest/node:v1.19.3
 - role: worker
-  image: kindest/node:v1.25.11
+  image: kindest/node:v1.19.3
 - role: worker
-  image: kindest/node:v1.25.11
+  image: kindest/node:v1.19.3
 EOF
 
 # connect the registry to the cluster network if not already connected

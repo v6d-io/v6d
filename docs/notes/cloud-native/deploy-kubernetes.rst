@@ -3,7 +3,9 @@
 Deploy on Kubernetes
 ====================
 
-Vineyard is managed by the :ref:`vineyard-operator` on Kubernetes.
+Vineyard is managed by the :ref:`vineyard-operator` on Kubernetes. If you want to use
+the Vineyard Scheduler, please make sure the kubernetes cluster is within a proper version
+range (v1.19 - v1.24).
 
 Quick start
 -----------
