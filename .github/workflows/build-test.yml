@@ -124,6 +124,8 @@ jobs:
                               librdmacm-dev \
                               libibverbs-dev \
                               libnuma-dev \
+                              libnl-3-dev \
+                              libnl-genl-3-dev \
                               wget
 
           # install apache-arrow
