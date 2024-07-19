@@ -20,12 +20,14 @@ limitations under the License.
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/util.h"
 #include "common/util/status.h"
+#if defined(__linux__)
 #include "libfabric/include/rdma/fabric.h"
 #include "libfabric/include/rdma/fi_cm.h"
 #include "libfabric/include/rdma/fi_domain.h"
 #include "libfabric/include/rdma/fi_endpoint.h"
 #include "libfabric/include/rdma/fi_eq.h"
 #include "libfabric/include/rdma/fi_rma.h"
+#endif  // defined(__linux__)
 
 namespace vineyard {
 

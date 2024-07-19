@@ -226,17 +226,17 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
 
 Status RPCClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
-  this->rdma_client_->GetTXFreeMsgBuffer(buffer);
+  RETURN_ON_ERROR(this->rdma_client_->GetTXFreeMsgBuffer(buffer));
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
   msg->type = VINEYARD_MSG_REQUEST_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
   msg->remoteMemInfo.len = remote_info.size;
   void* remoteMsg;
-  this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
+  RETURN_ON_ERROR(this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg));
   memset(remoteMsg, 0, 64);
   VINEYARD_CHECK_OK(
       this->rdma_client_->Recv(remoteMsg, sizeof(VineyardMsg), nullptr));
-  this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
+  RETURN_ON_ERROR(this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr));
   VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
 
   VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
@@ -255,7 +255,7 @@ Status RPCClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
 
 Status RPCClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
-  this->rdma_client_->GetTXFreeMsgBuffer(buffer);
+  RETURN_ON_ERROR(this->rdma_client_->GetTXFreeMsgBuffer(buffer));
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
   msg->type = VINEYARD_RELEASE_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
@@ -523,7 +523,7 @@ Status RPCClient::CreateRemoteBlob(
   if (rdma_connected_) {
     size_t remain_blob_bytes = buffer->size();
     char* local_blob_data = buffer->data();
-    uint64_t max_register_size = buffer->size();
+    size_t max_register_size = buffer->size();
 
     do {
       size_t blob_data_offset = buffer->size() - remain_blob_bytes;
@@ -663,7 +663,7 @@ Status RPCClient::CreateRemoteBlobs(
     for (size_t i = 0; i < payloads.size(); ++i) {
       size_t remain_blob_bytes = buffers[i]->size();
       char* local_blob_data = buffers[i]->data();
-      uint64_t max_register_size = buffers[i]->size();
+      size_t max_register_size = buffers[i]->size();
 
       do {
         size_t blob_data_offset = buffers[i]->size() - remain_blob_bytes;
@@ -820,7 +820,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
   if (rdma_connected_) {
     size_t remain_blob_bytes = buffer->size();
     char* local_blob_data = buffer->mutable_data();
-    uint64_t max_register_size = buffer->size();
+    size_t max_register_size = buffer->size();
 
     do {
       size_t blob_data_offset = buffer->size() - remain_blob_bytes;
@@ -954,7 +954,7 @@ Status RPCClient::GetRemoteBlobs(
 
       size_t remain_blob_bytes = remote_blob->size();
       char* local_blob_data = remote_blob->mutable_data();
-      uint64_t max_register_size = remote_blob->size();
+      size_t max_register_size = remote_blob->size();
 
       do {
         size_t blob_data_offset = remote_blob->size() - remain_blob_bytes;
