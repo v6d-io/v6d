@@ -59,6 +59,7 @@ if 'NON_RANDOM_IPC_SOCKET' in os.environ:
 else:
     rdma_port = find_port()
 
+
 @contextlib.contextmanager
 def envvars(key, value=None, append=False):
     items = key
@@ -484,7 +485,16 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'kv_cache_hash_test')
         run_test(tests, 'kv_cache_local_file_test')
         run_test(tests, 'local_file_storage_gc_test')
-        run_test(tests, 'rdma_blob_perf_test', '127.0.0.1:%d' % rpc_socket_port, '127.0.0.1:%d' % rdma_port, 64, 64, 1)
+        run_test(
+            tests,
+            'rdma_blob_perf_test',
+            '127.0.0.1:%d' % rpc_socket_port,
+            '127.0.0.1:%d' % rdma_port,
+            64,
+            64,
+            1,
+        )
+
 
 def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
