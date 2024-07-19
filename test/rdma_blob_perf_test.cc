@@ -115,17 +115,19 @@ void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>>& local_buffers) {
 
 // Test 512K~512M blob
 int main(int argc, const char** argv) {
-  if (argc < 6) {
-    LOG(ERROR) << "usage: " << argv[0] << " <rpc_endpoint>"
+  if (argc < 7) {
+    LOG(ERROR) << "usage: " << argv[0] << " <ipc_socket>"
+               << " <rpc_endpoint>"
                << " <rdma_endpoint>"
                << " <min_size>"
                << " <max_size>"
                << " <parallel>";
     return -1;
   }
-  std::string rpc_endpoint = std::string(argv[1]);
-  std::string rdma_endpoint = std::string(argv[2]);
-  int parallel = std::stoi(argv[5]);
+  std::string ipc_socket = std::string(argv[1]);
+  std::string rpc_endpoint = std::string(argv[2]);
+  std::string rdma_endpoint = std::string(argv[3]);
+  int parallel = std::stoi(argv[6]);
   std::vector<std::shared_ptr<RPCClient>> clients;
   for (int i = 0; i < parallel; i++) {
     clients.push_back(std::make_shared<RPCClient>());
@@ -134,8 +136,8 @@ int main(int argc, const char** argv) {
 
   uint64_t min_size = 1024 * 1024 * 2;  // 512K
   uint64_t max_size = 1024 * 1024 * 2;  // 64M
-  min_size = std::stoull(argv[3]) * 1024 * 1024;
-  max_size = std::stoull(argv[4]) * 1024 * 1024;
+  min_size = std::stoull(argv[4]) * 1024 * 1024;
+  max_size = std::stoull(argv[5]) * 1024 * 1024;
   if (min_size == 0) {
     min_size = 1024 * 512;
   }

@@ -712,7 +712,8 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
                         ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
     else()
-        message(FATAL_ERROR "Missing ibverbs and rdmacm library.")
+        message("${RDMACM_LIB} ${IBVERBS_LIB} ${NL3_LIB} ${NL_GENL3_LIB} ${UUID_LIB} ${NUMA_LIB} ${RT_LIB}")
+        message(FATAL_ERROR "Missing rdma dependencies, please install them and retry: rdmacm, ibverbs, libnl-3, libnl-genl-3, libuuid, libnuma, librt")
     endif()
 endif()
 
