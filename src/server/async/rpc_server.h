@@ -41,8 +41,6 @@ class RPCServer : public SocketServer,
  public:
   explicit RPCServer(std::shared_ptr<VineyardServer> vs_ptr);
 
-  ~RPCServer() override;
-
   void Start() override;
 
   std::string Endpoint() {
@@ -59,6 +57,8 @@ class RPCServer : public SocketServer,
 
   Status Register(std::shared_ptr<SocketConnection> conn,
                   const SessionID session_id) override;
+
+  void Stop() override;
 
  private:
   asio::ip::tcp::endpoint getEndpoint(asio::io_context&);

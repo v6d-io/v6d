@@ -41,7 +41,8 @@ RPCServer::RPCServer(std::shared_ptr<VineyardServer> vs_ptr)
   acceptor_.listen();
 }
 
-RPCServer::~RPCServer() {
+void RPCServer::Stop() {
+  SocketServer::Stop();
   if (acceptor_.is_open()) {
     acceptor_.close();
   }
