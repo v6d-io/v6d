@@ -200,11 +200,6 @@ Status EtcdLauncher::LaunchEtcdServer(
     sleep(1);
   }
 
-  if (!etcd_cluster_existing && skip_launch_etcd) {
-    return Status::EtcdError("The etcd endpoint " + etcd_endpoint +
-                             " is not connectable");
-  }
-
   RETURN_ON_ERROR(initHostInfo());
 
   LOG(INFO) << "Starting the etcd server";
