@@ -41,7 +41,11 @@ class RPCServer : public SocketServer,
  public:
   explicit RPCServer(std::shared_ptr<VineyardServer> vs_ptr);
 
+  ~RPCServer() override;
+
   void Start() override;
+
+  void Stop() override;
 
   std::string Endpoint() {
     return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
@@ -57,8 +61,6 @@ class RPCServer : public SocketServer,
 
   Status Register(std::shared_ptr<SocketConnection> conn,
                   const SessionID session_id) override;
-
-  void Stop() override;
 
  private:
   asio::ip::tcp::endpoint getEndpoint(asio::io_context&);
@@ -86,6 +88,8 @@ class RPCServer : public SocketServer,
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;
+  std::mutex accept_mutex_;
+  bool is_accepting_ = false;
 
   // connection id to rdma server
   std::unordered_map<uint64_t, std::map<void*, RegisterMemInfo>>

@@ -41,12 +41,7 @@ RPCServer::RPCServer(std::shared_ptr<VineyardServer> vs_ptr)
   acceptor_.listen();
 }
 
-void RPCServer::Stop() {
-  SocketServer::Stop();
-  if (acceptor_.is_open()) {
-    acceptor_.close();
-  }
-
+RPCServer::~RPCServer() {
   if (rdma_stop_) {
     return;
   }
@@ -63,6 +58,23 @@ void RPCServer::Stop() {
   }
   VINEYARD_DISCARD(rdma_server_->Close());
   rdma_stop_ = true;
+}
+
+void RPCServer::Stop() {
+  SocketServer::Stop();
+  boost::system::error_code ec;
+  ec = acceptor_.cancel(ec);
+  if (ec) {
+    LOG(ERROR) << "Failed to close the RPC server: " << ec.message();
+  }
+  while (true) {
+    {
+      std::lock_guard<std::mutex> scope_lock(accept_mutex_);
+      if (!is_accepting_) {
+        break;
+      }
+    }
+  }
 }
 
 Status RPCServer::InitRDMA() {
@@ -124,6 +136,10 @@ void RPCServer::doAccept() {
   if (!acceptor_.is_open()) {
     return;
   }
+  {
+    std::lock_guard<std::mutex> scope_lock(accept_mutex_);
+    is_accepting_ = true;
+  }
   auto self(shared_from_this());
   acceptor_.async_accept(socket_, [self](boost::system::error_code ec) {
     if (!ec) {
@@ -144,7 +160,13 @@ void RPCServer::doAccept() {
     if (!ec || ec != boost::system::errc::operation_canceled) {
       if (!self->stopped_.load() || !self->closable_.load()) {
         self->doAccept();
+      } else {
+        std::lock_guard<std::mutex> scope_lock(self->accept_mutex_);
+        self->is_accepting_ = false;
       }
+    } else {
+      std::lock_guard<std::mutex> scope_lock(self->accept_mutex_);
+      self->is_accepting_ = false;
     }
   });
 }
