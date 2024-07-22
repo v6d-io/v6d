@@ -681,8 +681,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
         add_custom_command(
             OUTPUT ${FABRIC_MAKEFILE}
             COMMAND ./autogen.sh > /dev/null
-            COMMAND ./configure --disable-verbs
-                                --disable-usnic
+            COMMAND ./configure --disable-usnic
                                 --disable-psm3
                                 --disable-opx
                                 --disable-dmabuf_peer_mem
@@ -705,8 +704,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
         add_custom_command(
             OUTPUT ${FABRIC_MAKEFILE}
             COMMAND ./autogen.sh > /dev/null
-            COMMAND ./configure --disable-verbs
-                                --disable-usnic
+            COMMAND ./configure --disable-usnic
                                 --disable-psm3
                                 --disable-opx
                                 --disable-dmabuf_peer_mem
@@ -752,10 +750,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 
     set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
                     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
-    # else()
-    #     message("${RDMACM_LIB} ${IBVERBS_LIB} ${NL3_LIB} ${NL_GENL3_LIB} ${UUID_LIB} ${NUMA_LIB} ${RT_LIB}")
-    #     message(FATAL_ERROR "Missing rdma dependencies, please install them and retry: rdmacm, ibverbs, libnl-3, libnl-genl-3, libuuid, libnuma, librt")
-    # endif()
 endif()
 
 # boost is only required by some components
