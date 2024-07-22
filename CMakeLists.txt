@@ -669,10 +669,11 @@ include("cmake/GenerateVineyardJava.cmake")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     find_library(RDMACM_LIB rdmacm)
     find_library(IBVERBS_LIB ibverbs)
+    set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
 
     if(IBVERBS_LIB AND RDMACM_LIB)
         set(RDMA_LIBS ${RDMACM_LIB} ${IBVERBS_LIB})
-        set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
+        
         add_custom_command(
             OUTPUT ${FABRIC_MAKEFILE}
             COMMAND ./autogen.sh > /dev/null
