@@ -45,6 +45,8 @@ class RPCServer : public SocketServer,
 
   void Start() override;
 
+  void Stop() override;
+
   std::string Endpoint() {
     return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
   }
@@ -86,6 +88,8 @@ class RPCServer : public SocketServer,
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;
+  std::mutex accept_mutex_;
+  bool is_accepting_ = false;
 
   // connection id to rdma server
   std::unordered_map<uint64_t, std::map<void*, RegisterMemInfo>>

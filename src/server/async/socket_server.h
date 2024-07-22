@@ -236,7 +236,7 @@ class SocketServer {
   /**
    * Call "Stop" on all connections, then clear the connection pool.
    */
-  void Stop();
+  virtual void Stop();
 
   /**
    * Cancel the "async_accept" action on the acceptor to stop accepting
