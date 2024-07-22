@@ -669,10 +669,14 @@ include("cmake/GenerateVineyardJava.cmake")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     find_library(RDMACM_LIB rdmacm)
     find_library(IBVERBS_LIB ibverbs)
+    find_library(RT_LIB rt)
+    if (NOT RT_LIB)
+        message(FATAL_ERROR "Missing librt, please install it and retry")
+    endif()
     set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
 
     if(IBVERBS_LIB AND RDMACM_LIB)
-        set(RDMA_LIBS ${RDMACM_LIB} ${IBVERBS_LIB})
+        set(RDMA_LIBS ${RDMACM_LIB} ${IBVERBS_LIB} ${RT_LIB})
         
         add_custom_command(
             OUTPUT ${FABRIC_MAKEFILE}
@@ -697,6 +701,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
         )
     else()
+        set(RDMA_LIBS ${RT_LIB})
         add_custom_command(
             OUTPUT ${FABRIC_MAKEFILE}
             COMMAND ./autogen.sh > /dev/null
