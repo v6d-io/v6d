@@ -746,7 +746,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/libfabric/include>
                         $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
-    list(APPEND VINEYARD_INSTALL_LIBS ${LIBFABRIC})
 
     set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
                     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
