@@ -103,6 +103,29 @@ void TestGetBlob(std::shared_ptr<RPCClient>& client, std::vector<ObjectID>& ids,
             << "MB/s\n";
 }
 
+void TestGetBlobWithAllocatedBuffer(
+    std::shared_ptr<RPCClient>& client, std::vector<ObjectID>& ids, size_t size,
+    std::vector<std::shared_ptr<MutableBuffer>>& local_buffers) {
+  uint64_t iterator = total_mem / size;
+
+  local_buffers.reserve(iterator);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  VINEYARD_CHECK_OK(client->GetRemoteBlobs(ids, false, local_buffers));
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+  LOG(INFO) << "Iterator: " << iterator << ", Size: " << size
+            << ", Time: " << duration.count() << "us"
+            << " average time:"
+            << static_cast<double>(duration.count()) / iterator << "us";
+  LOG(INFO) << "Speed:"
+            << static_cast<double>(iterator * size) / 1024 / 1024 /
+                   (static_cast<double>(duration.count()) / 1000 / 1000)
+            << "MB/s\n";
+}
+
 void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>>& local_buffers) {
   for (size_t i = 0; i < local_buffers.size(); i++) {
     const uint8_t* data =
@@ -201,20 +224,73 @@ int main(int argc, const char** argv) {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    int iterator = total_mem / sizes[0];
+    int iterator = total_mem / sizes[index];
     LOG(INFO) << "Total time:" << duration.count() << "ms"
               << " average speed:"
-              << static_cast<double>(iterator * sizes[0] * parallel) / 1024 /
-                     1024 / (static_cast<double>(duration.count()) / 1000)
+              << static_cast<double>(iterator * sizes[index] * parallel) /
+                     1024 / 1024 /
+                     (static_cast<double>(duration.count()) / 1000)
               << "MB/s\n";
     local_buffers_lists.push_back(local_buffers_list);
     index++;
+  }
+
+  LOG(INFO) << "Test Get Blob With Allocated Buffer(RDMA read / TCP)";
+  LOG(INFO) << "----------------------------";
+  std::vector<std::vector<std::vector<uint8_t*>>> buffers_lists;
+  index = 0;
+  for (auto& blob_ids_list : blob_ids_lists) {
+    std::vector<std::vector<std::shared_ptr<MutableBuffer>>> local_buffers_list;
+    std::vector<std::thread> threads;
+    local_buffers_list.resize(parallel);
+    std::vector<std::vector<uint8_t*>> buffers_list;
+    for (int i = 0; i < parallel; i++) {
+      std::vector<uint8_t*> buffers;
+      local_buffers_list[i].resize(total_mem / sizes[index]);
+      for (size_t j = 0; j < total_mem / sizes[index]; j++) {
+        uint8_t* tmp_buffer = new uint8_t[sizes[index]];
+        memset(tmp_buffer, 0, sizes[index]);
+        local_buffers_list[i][j] =
+            std::make_shared<MutableBuffer>(tmp_buffer, sizes[index]);
+        buffers.push_back(tmp_buffer);
+      }
+      buffers_list.push_back(buffers);
+    }
+    buffers_lists.push_back(buffers_list);
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < parallel; i++) {
+      threads.push_back(std::thread(TestGetBlobWithAllocatedBuffer,
+                                    std::ref(clients[i]),
+                                    std::ref(blob_ids_list[i]), sizes[index],
+                                    std::ref(local_buffers_list[i])));
+    }
+    for (int i = 0; i < parallel; i++) {
+      threads[i].join();
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    int iterator = total_mem / sizes[0];
+    LOG(INFO) << "Total time:" << duration.count() << "ms"
+              << " average speed:"
+              << static_cast<double>(iterator * sizes[index] * parallel) /
+                     1024 / 1024 /
+                     (static_cast<double>(duration.count()) / 1000)
+              << "MB/s\n";
   }
 
   LOG(INFO) << "Clean all object";
   for (size_t i = 0; i < blob_ids_lists.size(); i++) {
     for (size_t j = 0; j < blob_ids_lists[i].size(); j++) {
       VINEYARD_CHECK_OK(clients[j]->DelData(blob_ids_lists[i][j]));
+    }
+  }
+
+  for (size_t i = 0; i < buffers_lists.size(); i++) {
+    for (size_t j = 0; j < buffers_lists[i].size(); j++) {
+      for (size_t k = 0; k < buffers_lists[i][j].size(); k++) {
+        delete[] buffers_lists[i][j][k];
+      }
     }
   }
 

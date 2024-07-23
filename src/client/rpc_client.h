@@ -374,6 +374,9 @@ class RPCClient final : public ClientBase {
   Status GetRemoteBlob(const ObjectID& id, const bool unsafe,
                        std::shared_ptr<RemoteBlob>& buffer);
 
+  Status GetRemoteBlob(const ObjectID& id, const bool unsafe,
+                       std::shared_ptr<MutableBuffer>& buffer);
+
   /**
    * @brief Get the remote blobs of the connected vineyard server, using the RPC
    * socket.
@@ -395,6 +398,9 @@ class RPCClient final : public ClientBase {
    */
   Status GetRemoteBlobs(std::vector<ObjectID> const& ids, const bool unsafe,
                         std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs);
+
+  Status GetRemoteBlobs(std::vector<ObjectID> const& ids, const bool unsafe,
+                        std::vector<std::shared_ptr<MutableBuffer>>& buffers);
 
   Status GetRemoteBlobs(
       std::set<ObjectID> const& ids, const bool unsafe,
