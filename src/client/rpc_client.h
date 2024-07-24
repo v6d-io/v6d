@@ -26,11 +26,11 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
 #include "client/ds/remote_blob.h"
-#include "common/util/status.h"
-#include "common/util/uuid.h"
-
+#include "common/memory/payload.h"
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/util.h"
+#include "common/util/status.h"
+#include "common/util/uuid.h"
 
 namespace vineyard {
 
@@ -374,6 +374,9 @@ class RPCClient final : public ClientBase {
   Status GetRemoteBlob(const ObjectID& id, const bool unsafe,
                        std::shared_ptr<RemoteBlob>& buffer);
 
+  Status GetRemoteBlob(const ObjectID& id, const bool unsafe,
+                       std::shared_ptr<MutableBuffer>& buffer);
+
   /**
    * @brief Get the remote blobs of the connected vineyard server, using the RPC
    * socket.
@@ -395,6 +398,9 @@ class RPCClient final : public ClientBase {
    */
   Status GetRemoteBlobs(std::vector<ObjectID> const& ids, const bool unsafe,
                         std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs);
+
+  Status GetRemoteBlobs(std::vector<ObjectID> const& ids, const bool unsafe,
+                        std::vector<std::shared_ptr<MutableBuffer>>& buffers);
 
   Status GetRemoteBlobs(
       std::set<ObjectID> const& ids, const bool unsafe,
@@ -439,6 +445,10 @@ class RPCClient final : public ClientBase {
   Status RDMARequestMemInfo(RegisterMemInfo& remote_info);
 
   Status RDMAReleaseMemInfo(RegisterMemInfo& remote_info);
+
+  Status TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
+                                    const Payload& payload,
+                                    RDMAClient::rdma_opt_t rdma_opt);
 
   InstanceID remote_instance_id_;
 
