@@ -32,6 +32,10 @@ namespace vineyard {
 
 class RDMAClient : public IRDMA {
  public:
+  using rdma_opt_t =
+      std::function<Status(void* buf, size_t size, uint64_t remote_address,
+                           uint64_t key, void* mr_desc, void* ctx)>;
+
   RDMAClient() = default;
 
   Status Send(void* buf, size_t size, void* ctx);

@@ -27,11 +27,10 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "client/ds/remote_blob.h"
 #include "common/memory/payload.h"
-#include "common/util/status.h"
-#include "common/util/uuid.h"
-
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/util.h"
+#include "common/util/status.h"
+#include "common/util/uuid.h"
 
 namespace vineyard {
 
@@ -448,7 +447,8 @@ class RPCClient final : public ClientBase {
   Status RDMAReleaseMemInfo(RegisterMemInfo& remote_info);
 
   Status TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
-                                    const Payload& payload);
+                                    const Payload& payload,
+                                    RDMAClient::rdma_opt_t rdma_opt);
 
   InstanceID remote_instance_id_;
 
