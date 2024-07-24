@@ -665,7 +665,7 @@ Status RPCClient::TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
   do {
     size_t blob_data_offset = buffer->size() - remain_blob_bytes;
     void* remote_blob_data = payload.pointer;
-    size_t receive_bytes = 0;
+    size_t transfer_bytes = 0;
 
     // Register mem
     RegisterMemInfo local_info;
@@ -711,14 +711,14 @@ Status RPCClient::TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
       // memory to register on server. Wait for next time.
       usleep(1000);
     }
-    receive_bytes = remote_info.size;
+    transfer_bytes = remote_info.size;
 
     // Write data
-    size_t remain_bytes = receive_bytes;
+    size_t remain_bytes = transfer_bytes;
     while (remain_bytes > 0) {
       size_t read_bytes =
           std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
-      size_t read_data_offset = receive_bytes - remain_bytes;
+      size_t read_data_offset = transfer_bytes - remain_bytes;
       RETURN_ON_ERROR(rdma_opt(
           local_blob_data + blob_data_offset + read_data_offset, read_bytes,
           reinterpret_cast<uint64_t>(remote_blob_data) + blob_data_offset +
@@ -728,7 +728,7 @@ Status RPCClient::TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
       remain_bytes -= read_bytes;
     }
 
-    remain_blob_bytes -= receive_bytes;
+    remain_blob_bytes -= transfer_bytes;
     RETURN_ON_ERROR(rdma_client_->DeregisterMemory(local_info));
     RETURN_ON_ERROR(RDMAReleaseMemInfo(remote_info));
   } while (remain_blob_bytes > 0);
