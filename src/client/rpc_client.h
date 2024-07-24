@@ -26,6 +26,7 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
 #include "client/ds/remote_blob.h"
+#include "common/memory/payload.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -445,6 +446,9 @@ class RPCClient final : public ClientBase {
   Status RDMARequestMemInfo(RegisterMemInfo& remote_info);
 
   Status RDMAReleaseMemInfo(RegisterMemInfo& remote_info);
+
+  Status TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
+                                    const Payload& payload);
 
   InstanceID remote_instance_id_;
 

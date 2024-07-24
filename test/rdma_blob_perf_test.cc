@@ -127,6 +127,7 @@ void TestGetBlobWithAllocatedBuffer(
 }
 
 void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>>& local_buffers) {
+  LOG(INFO) << "CheckBlobValue";
   for (size_t i = 0; i < local_buffers.size(); i++) {
     const uint8_t* data =
         reinterpret_cast<const uint8_t*>(local_buffers[i]->data());
@@ -134,6 +135,20 @@ void CheckBlobValue(std::vector<std::shared_ptr<RemoteBlob>>& local_buffers) {
       CHECK_EQ(data[j], j % 256);
     }
   }
+  LOG(INFO) << "CheckBlobValue done";
+}
+
+void CheckBlobValue(
+    std::vector<std::shared_ptr<MutableBuffer>>& local_buffers) {
+  LOG(INFO) << "CheckBlobValue";
+  for (size_t i = 0; i < local_buffers.size(); i++) {
+    const uint8_t* data =
+        reinterpret_cast<const uint8_t*>(local_buffers[i]->data());
+    for (int64_t j = 0; j < local_buffers[i]->size(); j++) {
+      CHECK_EQ(data[j], j % 256);
+    }
+  }
+  LOG(INFO) << "CheckBlobValue done";
 }
 
 // Test 512K~512M blob
@@ -235,10 +250,18 @@ int main(int argc, const char** argv) {
     index++;
   }
 
+  for (auto& local_buffers_list : local_buffers_lists) {
+    for (auto& local_buffers : local_buffers_list) {
+      CheckBlobValue(local_buffers);
+    }
+  }
+
   LOG(INFO) << "Test Get Blob With Allocated Buffer(RDMA read / TCP)";
   LOG(INFO) << "----------------------------";
   std::vector<std::vector<std::vector<uint8_t*>>> buffers_lists;
   index = 0;
+  std::vector<std::vector<std::vector<std::shared_ptr<MutableBuffer>>>>
+      local_buffers_lists_3;
   for (auto& blob_ids_list : blob_ids_lists) {
     std::vector<std::vector<std::shared_ptr<MutableBuffer>>> local_buffers_list;
     std::vector<std::thread> threads;
@@ -277,6 +300,13 @@ int main(int argc, const char** argv) {
                      1024 / 1024 /
                      (static_cast<double>(duration.count()) / 1000)
               << "MB/s\n";
+    local_buffers_lists_3.push_back(local_buffers_list);
+  }
+
+  for (auto& local_buffers_list : local_buffers_lists_3) {
+    for (auto& local_buffers : local_buffers_list) {
+      CheckBlobValue(local_buffers);
+    }
   }
 
   LOG(INFO) << "Clean all object";
