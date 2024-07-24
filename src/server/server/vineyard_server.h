@@ -237,9 +237,53 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   const std::string RDMAEndpoint();
 
+  void LockMigratingObjects(std::vector<ObjectID> const& ids) {
+    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+    for (auto const& id : ids) {
+      if (migrating_objects_.find(id) == migrating_objects_.end()) {
+        migrating_objects_[id] = 1;
+      } else {
+        ++migrating_objects_[id];
+      }
+    }
+  }
+
+  void UnlockMigratingObjects(std::vector<ObjectID> const& ids) {
+    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+    for (auto const& id : ids) {
+      if (migrating_objects_.find(id) != migrating_objects_.end()) {
+        if (--migrating_objects_[id] == 0) {
+          migrating_objects_.erase(id);
+        }
+      }
+    }
+  }
+
+  void FindMigratingObjects(std::vector<ObjectID> const& ids,
+                            std::vector<ObjectID>& migratings,
+                            std::vector<ObjectID>& non_migratings) {
+    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+    for (auto const& id : ids) {
+      if (migrating_objects_.find(id) != migrating_objects_.end()) {
+        migratings.push_back(id);
+      } else {
+        non_migratings.push_back(id);
+      }
+    }
+  }
+
   void Stop();
 
   bool Running() const;
+
+  void PrintMigratingList() {
+    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+    LOG(INFO) << "print migrating objects, size:" << migrating_objects_.size();
+    for (auto const& pair : migrating_objects_) {
+      LOG(INFO) << "Object " << pair.first
+                << " is migrating, refcnt: " << pair.second;
+    }
+  }
 
   ~VineyardServer();
 
@@ -288,6 +332,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   // Record the migration status of objects to avoid duplicated migration.
   std::unordered_map<ObjectID, ObjectID> migrations_origin_to_target_;
   std::unordered_map<ObjectID, ObjectID> migrations_target_to_origin_;
+
+  std::unordered_map<ObjectID, int> migrating_objects_;
+  std::mutex migrating_objects_mutex_;
 };
 
 }  // namespace vineyard

@@ -363,6 +363,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doAcquireLock(root);
   } else if (cmd == command_t::RELEASE_LOCK_REQUEST) {
     return doReleaseLock(root);
+  } else if (cmd == command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST) {
+    return doReleaseBlobsWithRDMA(root);
   } else {
     RESPONSE_ON_ERROR(Status::Invalid("Got unexpected command: " + cmd));
     return false;
@@ -784,13 +786,15 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress,
                    use_rdma);
+  server_ptr_->LockMigratingObjects(ids);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, compress, message_out);
 
   if (!use_rdma) {
-    this->doWrite(message_out, [self, objects, compress](const Status& status) {
+    this->doWrite(message_out, [self, objects, compress,
+                                ids](const Status& status) {
       SendRemoteBuffers(
           self->socket_, objects, 0, compress, [self](const Status& status) {
             if (!status.ok()) {
@@ -799,6 +803,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
             }
             return Status::OK();
           });
+      self->server_ptr_->UnlockMigratingObjects(ids);
       return Status::OK();
     });
   } else {
@@ -835,6 +840,7 @@ bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
   std::vector<ObjectID> ids;
   bool force, deep, memory_trim, fastpath;
   double startTime = GetCurrentTime();
+
   TRY_READ_REQUEST(ReadDelDataWithFeedbacksRequest, root, ids, force, deep,
                    memory_trim, fastpath);
   RESPONSE_ON_ERROR(server_ptr_->DelData(
@@ -1091,23 +1097,43 @@ bool SocketConnection::doDelData(const json& root) {
   double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, memory_trim,
                    fastpath);
-  RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, memory_trim, fastpath,
-      [self, startTime](const Status& status) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteDelDataReply(message_out);
-        } else {
-          VLOG(100) << "Error: " << status.ToString();
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "delete",
-                    (endTime - startTime) * 1000000);
-        LOG_COUNTER("data_requests_total", "delete");
-        return Status::OK();
-      }));
+  boost::asio::post(server_ptr_->GetIOContext(), [self, ids, force, deep,
+                                                  memory_trim, fastpath,
+                                                  startTime]() {
+    std::vector<ObjectID> migratings, non_migratings;
+    for (auto id : ids) {
+      LOG(INFO) << "Deleting object: " << id;
+    }
+    LOG(INFO) << "Before delete, migrating objects: ";
+    self->server_ptr_->PrintMigratingList();
+    self->server_ptr_->FindMigratingObjects(ids, migratings, non_migratings);
+    self->server_ptr_->DelData(
+        non_migratings, force, deep, memory_trim, fastpath,
+        [self, startTime, &migratings](const Status& status) {
+          std::string message_out;
+          LOG(INFO) << "After delete, migrating objects: ";
+          self->server_ptr_->PrintMigratingList();
+          if (status.ok()) {
+            if (migratings.empty()) {
+              WriteDelDataReply(message_out);
+            } else {
+              WriteErrorReply(
+                  Status::Invalid(
+                      "Some objects are migrating, can not be deleted."),
+                  message_out);
+            }
+          } else {
+            VLOG(100) << "Error: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          double endTime = GetCurrentTime();
+          LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                      (endTime - startTime) * 1000000);
+          LOG_COUNTER("data_requests_total", "delete");
+          return Status::OK();
+        });
+  });
   return false;
 }
 
@@ -1831,6 +1857,28 @@ bool SocketConnection::doReleaseLock(const json& root) {
         self->doWrite(message_out);
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
+
+  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
+    for (auto const& id : ids) {
+      LOG(INFO) << "Release blob: " << id;
+    }
+    LOG(INFO) << "Before unlock blobs:";
+    self->server_ptr_->PrintMigratingList();
+    self->server_ptr_->UnlockMigratingObjects(ids);
+    LOG(INFO) << "After unlock blobs:";
+    self->server_ptr_->PrintMigratingList();
+    std::string message_out;
+    WriteReleaseBlobsWithRDMAReply(message_out);
+    self->doWrite(message_out);
+  });
+
   return false;
 }
 

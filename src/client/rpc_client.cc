@@ -770,6 +770,12 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
         std::placeholders::_5, std::placeholders::_6);
     RETURN_ON_ERROR(
         TransferRemoteBlobWithRDMA(buffer->buffer_, payloads[0], opt_func));
+    std::unordered_set<ObjectID> ids{payloads[0].object_id};
+    WriteReleaseBlobsWithRDMARequest(ids, message_out);
+    RETURN_ON_ERROR(doWrite(message_out));
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadReleaseBlobsWithRDMAReply(message_in));
   } else {
     if (decompressor && payloads[0].data_size > 0) {
       RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
@@ -886,6 +892,12 @@ Status RPCClient::GetRemoteBlobs(
           TransferRemoteBlobWithRDMA(remote_blob->buffer_, payload, opt_func));
       id_payload_map[payload.object_id] = remote_blob;
     }
+
+    WriteReleaseBlobsWithRDMARequest(id_set, message_out);
+    RETURN_ON_ERROR(doWrite(message_out));
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadReleaseBlobsWithRDMAReply(message_in));
   } else {
     for (auto const& payload : payloads) {
       auto remote_blob = std::shared_ptr<RemoteBlob>(new RemoteBlob(
