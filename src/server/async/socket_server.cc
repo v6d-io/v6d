@@ -795,15 +795,16 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   if (!use_rdma) {
     this->doWrite(message_out, [self, objects, compress,
                                 ids](const Status& status) {
-      SendRemoteBuffers(
-          self->socket_, objects, 0, compress, [self](const Status& status) {
-            if (!status.ok()) {
-              VLOG(100) << "Failed to send buffers to remote client: "
-                        << status.ToString();
-            }
-            return Status::OK();
-          });
-      self->server_ptr_->UnlockMigratingObjects(ids);
+      SendRemoteBuffers(self->socket_, objects, 0, compress,
+                        [self, ids = std::move(ids)](const Status& status) {
+                          if (!status.ok()) {
+                            VLOG(100)
+                                << "Failed to send buffers to remote client: "
+                                << status.ToString();
+                          }
+                          self->server_ptr_->UnlockMigratingObjects(ids);
+                          return Status::OK();
+                        });
       return Status::OK();
     });
   } else {
@@ -1097,43 +1098,25 @@ bool SocketConnection::doDelData(const json& root) {
   double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, memory_trim,
                    fastpath);
-  boost::asio::post(server_ptr_->GetIOContext(), [self, ids, force, deep,
-                                                  memory_trim, fastpath,
-                                                  startTime]() {
-    std::vector<ObjectID> migratings, non_migratings;
-    for (auto id : ids) {
-      LOG(INFO) << "Deleting object: " << id;
-    }
-    LOG(INFO) << "Before delete, migrating objects: ";
-    self->server_ptr_->PrintMigratingList();
-    self->server_ptr_->FindMigratingObjects(ids, migratings, non_migratings);
-    self->server_ptr_->DelData(
-        non_migratings, force, deep, memory_trim, fastpath,
-        [self, startTime, &migratings](const Status& status) {
-          std::string message_out;
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, memory_trim, fastpath,
+      [self, startTime](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
           LOG(INFO) << "After delete, migrating objects: ";
           self->server_ptr_->PrintMigratingList();
-          if (status.ok()) {
-            if (migratings.empty()) {
-              WriteDelDataReply(message_out);
-            } else {
-              WriteErrorReply(
-                  Status::Invalid(
-                      "Some objects are migrating, can not be deleted."),
-                  message_out);
-            }
-          } else {
-            VLOG(100) << "Error: " << status.ToString();
-            WriteErrorReply(status, message_out);
-          }
-          self->doWrite(message_out);
-          double endTime = GetCurrentTime();
-          LOG_SUMMARY("data_request_duration_microseconds", "delete",
-                      (endTime - startTime) * 1000000);
-          LOG_COUNTER("data_requests_total", "delete");
-          return Status::OK();
-        });
-  });
+          WriteDelDataReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "delete");
+        return Status::OK();
+      }));
   return false;
 }
 

@@ -259,10 +259,10 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     }
   }
 
-  void FindMigratingObjects(std::vector<ObjectID> const& ids,
-                            std::vector<ObjectID>& migratings,
-                            std::vector<ObjectID>& non_migratings) {
-    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+  std::unique_lock<std::mutex> FindMigratingObjects(
+      std::vector<ObjectID> const& ids, std::vector<ObjectID>& migratings,
+      std::vector<ObjectID>& non_migratings) {
+    std::unique_lock<std::mutex> lock(migrating_objects_mutex_);
     for (auto const& id : ids) {
       if (migrating_objects_.find(id) != migrating_objects_.end()) {
         migratings.push_back(id);
@@ -270,6 +270,7 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
         non_migratings.push_back(id);
       }
     }
+    return lock;
   }
 
   void Stop();
@@ -282,6 +283,19 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     for (auto const& pair : migrating_objects_) {
       LOG(INFO) << "Object " << pair.first
                 << " is migrating, refcnt: " << pair.second;
+    }
+  }
+
+  void RemoveFromMigrationList(std::vector<ObjectID>& ids) {
+    std::lock_guard<std::mutex> lock_origin(migrations_target_to_origin_mutex_);
+    std::lock_guard<std::mutex> lock_target(migrations_origin_to_target_mutex_);
+    for (auto const id : ids) {
+      if (migrations_target_to_origin_.find(id) !=
+          migrations_target_to_origin_.end()) {
+        ObjectID remoteID = migrations_target_to_origin_[id];
+        migrations_origin_to_target_.erase(remoteID);
+        migrations_target_to_origin_.erase(id);
+      }
     }
   }
 

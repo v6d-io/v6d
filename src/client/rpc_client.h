@@ -20,6 +20,7 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "client/client_base.h"
@@ -449,6 +450,32 @@ class RPCClient final : public ClientBase {
   Status TransferRemoteBlobWithRDMA(std::shared_ptr<Buffer> buffer,
                                     const Payload& payload,
                                     RDMAClient::rdma_opt_t rdma_opt);
+  Status doReleaseBlobsWithRDMARequest(std::unordered_set<ObjectID> id_set);
+
+  class RDMABlobScopeGuard {
+   public:
+    RDMABlobScopeGuard(std::function<void(std::unordered_set<ObjectID>)> onExit,
+                       std::unordered_set<ObjectID> id_set)
+        : onExit_(onExit), id_set_(id_set) {}
+
+    RDMABlobScopeGuard() = default;
+
+    void set(std::function<void(std::unordered_set<ObjectID>)> onExit,
+             std::unordered_set<ObjectID> id_set) {
+      onExit_ = onExit;
+      id_set_ = id_set;
+    }
+
+    ~RDMABlobScopeGuard() {
+      if (onExit_) {
+        onExit_(id_set_);
+      }
+    }
+
+   private:
+    std::function<void(std::unordered_set<ObjectID>)> onExit_;
+    std::unordered_set<ObjectID> id_set_;
+  };
 
   InstanceID remote_instance_id_;
 

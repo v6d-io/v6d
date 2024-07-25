@@ -788,27 +788,17 @@ Status VineyardServer::DelData(
                   std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
           Status s;
+          std::vector<ObjectID> migratings, non_migratings;
+          std::unique_lock<std::mutex> lock = self->FindMigratingObjects(
+              ids_to_delete, migratings, non_migratings);
+          self->RemoveFromMigrationList(non_migratings);
 
-          {
-            std::lock_guard<std::mutex> lock_origin(
-                self->migrations_target_to_origin_mutex_);
-            std::lock_guard<std::mutex> lock_target(
-                self->migrations_origin_to_target_mutex_);
-            for (auto const id : ids) {
-              if (self->migrations_target_to_origin_.find(id) !=
-                  self->migrations_target_to_origin_.end()) {
-                ObjectID remoteID = self->migrations_target_to_origin_[id];
-                self->migrations_origin_to_target_.erase(remoteID);
-                self->migrations_target_to_origin_.erase(id);
-              }
-            }
-          }
           VCATCH_JSON_ERROR(
               meta, s,
-              meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
+              meta_tree::DelDataOps(meta, non_migratings, ops, sync_remote));
           if (status.ok() && !ops.empty() &&
               self->spec_["sync_crds"].get<bool>()) {
-            for (auto const& id : ids_to_delete) {
+            for (auto const& id : non_migratings) {
               if (IsBlob(id)) {
                 continue;
               }
