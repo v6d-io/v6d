@@ -774,7 +774,12 @@ Status VineyardServer::DelData(
                        "Fastpath deletion can only be applied to blobs");
     }
     context_.post([this, memory_trim, ids, callback] {
-      for (auto const id : ids) {
+      std::vector<ObjectID> migratings, non_migratings;
+      std::unique_lock<std::mutex> lock =
+          FindMigratingObjects(ids, migratings, non_migratings);
+      RemoveFromMigrationList(non_migratings);
+      AddPendingObjects(migratings);
+      for (auto const id : non_migratings) {
         VINEYARD_DISCARD(bulk_store_->OnDelete(id, memory_trim));
       }
       VINEYARD_DISCARD(callback(Status::OK(), ids));
@@ -791,7 +796,10 @@ Status VineyardServer::DelData(
           std::vector<ObjectID> migratings, non_migratings;
           std::unique_lock<std::mutex> lock = self->FindMigratingObjects(
               ids_to_delete, migratings, non_migratings);
+          VLOG(100) << "migrating object num:" << migratings.size()
+                    << ", non-migrating object num:" << non_migratings.size();
           self->RemoveFromMigrationList(non_migratings);
+          self->AddPendingObjects(migratings);
 
           VCATCH_JSON_ERROR(
               meta, s,

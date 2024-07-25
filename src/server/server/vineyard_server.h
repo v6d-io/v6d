@@ -24,6 +24,7 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -249,14 +250,17 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   }
 
   void UnlockMigratingObjects(std::vector<ObjectID> const& ids) {
-    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
-    for (auto const& id : ids) {
-      if (migrating_objects_.find(id) != migrating_objects_.end()) {
-        if (--migrating_objects_[id] == 0) {
-          migrating_objects_.erase(id);
+    {
+      std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+      for (auto const& id : ids) {
+        if (migrating_objects_.find(id) != migrating_objects_.end()) {
+          if (--migrating_objects_[id] == 0) {
+            migrating_objects_.erase(id);
+          }
         }
       }
     }
+    DeletePendingObjects();
   }
 
   std::unique_lock<std::mutex> FindMigratingObjects(
@@ -296,6 +300,30 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
         migrations_origin_to_target_.erase(remoteID);
         migrations_target_to_origin_.erase(id);
       }
+    }
+  }
+
+  void DeletePendingObjects() {
+    std::vector<ObjectID> ids;
+    {
+      std::lock_guard<std::mutex> lock(pendding_to_delete_objects_mutex_);
+      if (pendding_to_delete_objects_.empty()) {
+        return;
+      }
+      for (auto const& id : pendding_to_delete_objects_) {
+        ids.push_back(id);
+      }
+      pendding_to_delete_objects_.clear();
+    }
+    this->DelData(ids, false, false, false, false,
+                  [](const Status& status) { return Status::OK(); });
+  }
+
+  void AddPendingObjects(std::vector<ObjectID> const& ids) {
+    VLOG(100) << "Add object to pending delete list, size:" << ids.size();
+    std::lock_guard<std::mutex> lock(pendding_to_delete_objects_mutex_);
+    for (auto const& id : ids) {
+      pendding_to_delete_objects_.insert(id);
     }
   }
 
@@ -349,6 +377,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   std::unordered_map<ObjectID, int> migrating_objects_;
   std::mutex migrating_objects_mutex_;
+  // It must be blob.
+  std::unordered_set<ObjectID> pendding_to_delete_objects_;
+  std::mutex pendding_to_delete_objects_mutex_;
 };
 
 }  // namespace vineyard
