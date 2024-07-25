@@ -1103,8 +1103,6 @@ bool SocketConnection::doDelData(const json& root) {
       [self, startTime](const Status& status) {
         std::string message_out;
         if (status.ok()) {
-          LOG(INFO) << "After delete, migrating objects: ";
-          self->server_ptr_->PrintMigratingList();
           WriteDelDataReply(message_out);
         } else {
           VLOG(100) << "Error: " << status.ToString();
@@ -1849,14 +1847,7 @@ bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
   TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
 
   boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
-    for (auto const& id : ids) {
-      LOG(INFO) << "Release blob: " << id;
-    }
-    LOG(INFO) << "Before unlock blobs:";
-    self->server_ptr_->PrintMigratingList();
     self->server_ptr_->UnlockMigratingObjects(ids);
-    LOG(INFO) << "After unlock blobs:";
-    self->server_ptr_->PrintMigratingList();
     std::string message_out;
     WriteReleaseBlobsWithRDMAReply(message_out);
     self->doWrite(message_out);
