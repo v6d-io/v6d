@@ -238,24 +238,24 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   const std::string RDMAEndpoint();
 
-  void LockMigratingObjects(std::vector<ObjectID> const& ids) {
-    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+  void LockTransmissionObjects(std::vector<ObjectID> const& ids) {
+    std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
     for (auto const& id : ids) {
-      if (migrating_objects_.find(id) == migrating_objects_.end()) {
-        migrating_objects_[id] = 1;
+      if (transmission_objects_.find(id) == transmission_objects_.end()) {
+        transmission_objects_[id] = 1;
       } else {
-        ++migrating_objects_[id];
+        ++transmission_objects_[id];
       }
     }
   }
 
-  void UnlockMigratingObjects(std::vector<ObjectID> const& ids) {
+  void UnlockTransmissionObjects(std::vector<ObjectID> const& ids) {
     {
-      std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
+      std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
       for (auto const& id : ids) {
-        if (migrating_objects_.find(id) != migrating_objects_.end()) {
-          if (--migrating_objects_[id] == 0) {
-            migrating_objects_.erase(id);
+        if (transmission_objects_.find(id) != transmission_objects_.end()) {
+          if (--transmission_objects_[id] == 0) {
+            transmission_objects_.erase(id);
           }
         }
       }
@@ -263,15 +263,15 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     DeletePendingObjects();
   }
 
-  std::unique_lock<std::mutex> FindMigratingObjects(
-      std::vector<ObjectID> const& ids, std::vector<ObjectID>& migratings,
-      std::vector<ObjectID>& non_migratings) {
-    std::unique_lock<std::mutex> lock(migrating_objects_mutex_);
+  std::unique_lock<std::mutex> FindTransmissionObjects(
+      std::vector<ObjectID> const& ids, std::vector<ObjectID>& transmissions,
+      std::vector<ObjectID>& non_transmissions) {
+    std::unique_lock<std::mutex> lock(transmission_objects_mutex_);
     for (auto const& id : ids) {
-      if (migrating_objects_.find(id) != migrating_objects_.end()) {
-        migratings.push_back(id);
+      if (transmission_objects_.find(id) != transmission_objects_.end()) {
+        transmissions.push_back(id);
       } else {
-        non_migratings.push_back(id);
+        non_transmissions.push_back(id);
       }
     }
     return lock;
@@ -281,12 +281,13 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   bool Running() const;
 
-  void PrintMigratingList() {
-    std::lock_guard<std::mutex> lock(migrating_objects_mutex_);
-    LOG(INFO) << "print migrating objects, size:" << migrating_objects_.size();
-    for (auto const& pair : migrating_objects_) {
+  void PrintTransmissionList() {
+    std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
+    LOG(INFO) << "print transmission objects, size:"
+              << transmission_objects_.size();
+    for (auto const& pair : transmission_objects_) {
       LOG(INFO) << "Object " << pair.first
-                << " is migrating, refcnt: " << pair.second;
+                << " is in transmission, refcnt: " << pair.second;
     }
   }
 
@@ -320,7 +321,6 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   }
 
   void AddPendingObjects(std::vector<ObjectID> const& ids) {
-    VLOG(100) << "Add object to pending delete list, size:" << ids.size();
     std::lock_guard<std::mutex> lock(pendding_to_delete_objects_mutex_);
     for (auto const& id : ids) {
       pendding_to_delete_objects_.insert(id);
@@ -375,8 +375,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   std::unordered_map<ObjectID, ObjectID> migrations_origin_to_target_;
   std::unordered_map<ObjectID, ObjectID> migrations_target_to_origin_;
 
-  std::unordered_map<ObjectID, int> migrating_objects_;
-  std::mutex migrating_objects_mutex_;
+  std::unordered_map<ObjectID, int> transmission_objects_;
+  std::mutex transmission_objects_mutex_;
   // It must be blob.
   std::unordered_set<ObjectID> pendding_to_delete_objects_;
   std::mutex pendding_to_delete_objects_mutex_;

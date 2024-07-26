@@ -786,7 +786,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress,
                    use_rdma);
-  server_ptr_->LockMigratingObjects(ids);
+  server_ptr_->LockTransmissionObjects(ids);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
@@ -802,7 +802,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
                                 << "Failed to send buffers to remote client: "
                                 << status.ToString();
                           }
-                          self->server_ptr_->UnlockMigratingObjects(ids);
+                          self->server_ptr_->UnlockTransmissionObjects(ids);
                           return Status::OK();
                         });
       return Status::OK();
@@ -1847,7 +1847,7 @@ bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
   TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
 
   boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
-    self->server_ptr_->UnlockMigratingObjects(ids);
+    self->server_ptr_->UnlockTransmissionObjects(ids);
     std::string message_out;
     WriteReleaseBlobsWithRDMAReply(message_out);
     self->doWrite(message_out);

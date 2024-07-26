@@ -774,12 +774,13 @@ Status VineyardServer::DelData(
                        "Fastpath deletion can only be applied to blobs");
     }
     context_.post([this, memory_trim, ids, callback] {
-      std::vector<ObjectID> migratings, non_migratings;
+      std::vector<ObjectID> transmissions, non_transmissions;
       std::unique_lock<std::mutex> lock =
-          FindMigratingObjects(ids, migratings, non_migratings);
-      RemoveFromMigrationList(non_migratings);
-      AddPendingObjects(migratings);
-      for (auto const id : non_migratings) {
+          FindTransmissionObjects(ids, transmissions, non_transmissions);
+
+      RemoveFromMigrationList(non_transmissions);
+      AddPendingObjects(transmissions);
+      for (auto const id : non_transmissions) {
         VINEYARD_DISCARD(bulk_store_->OnDelete(id, memory_trim));
       }
       VINEYARD_DISCARD(callback(Status::OK(), ids));
@@ -793,20 +794,21 @@ Status VineyardServer::DelData(
                   std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
           Status s;
-          std::vector<ObjectID> migratings, non_migratings;
-          std::unique_lock<std::mutex> lock = self->FindMigratingObjects(
-              ids_to_delete, migratings, non_migratings);
-          VLOG(100) << "migrating object num:" << migratings.size()
-                    << ", non-migrating object num:" << non_migratings.size();
-          self->RemoveFromMigrationList(non_migratings);
-          self->AddPendingObjects(migratings);
+          std::vector<ObjectID> transmissions, non_transmissions;
+          std::unique_lock<std::mutex> lock = self->FindTransmissionObjects(
+              ids_to_delete, transmissions, non_transmissions);
+          VLOG(100) << "transmission object num:" << transmissions.size()
+                    << ", non-transmission object num:"
+                    << non_transmissions.size();
+          self->RemoveFromMigrationList(non_transmissions);
+          self->AddPendingObjects(transmissions);
 
           VCATCH_JSON_ERROR(
               meta, s,
-              meta_tree::DelDataOps(meta, non_migratings, ops, sync_remote));
+              meta_tree::DelDataOps(meta, non_transmissions, ops, sync_remote));
           if (status.ok() && !ops.empty() &&
               self->spec_["sync_crds"].get<bool>()) {
-            for (auto const& id : non_migratings) {
+            for (auto const& id : non_transmissions) {
               if (IsBlob(id)) {
                 continue;
               }
