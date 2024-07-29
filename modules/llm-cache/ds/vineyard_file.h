@@ -35,6 +35,13 @@ class VineyardFile : public vineyard::Registered<VineyardFile> {
 
   Status Read(void* buffer, size_t size, size_t offset);
 
+  static Status Make(std::shared_ptr<VineyardFile>& file, RPCClient& client,
+                     std::string path);
+
+  size_t Size() { return blob_->size(); }
+
+  uint64_t AccessTime() { return access_time_; }
+
  private:
   std::shared_ptr<RemoteBlob> blob_;
   std::string path_;
@@ -54,9 +61,11 @@ class VineyardFileBuilder {
 
   std::shared_ptr<Object> SealAndPersist(RPCClient& client);
 
-  Status Write(void* buffer, size_t size, size_t offset);
+  Status Write(const void* buffer, size_t size, size_t offset);
 
   explicit VineyardFileBuilder(std::string path) : path_(path) {}
+
+  size_t Size() { return writer_->size(); }
 
  private:
   std::shared_ptr<RemoteBlobWriter> writer_;

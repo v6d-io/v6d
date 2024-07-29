@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 #include <memory>
+#include <regex>
 #include <string>
 
 #include "client/client.h"
@@ -45,23 +46,47 @@ Status VineyardFile::Read(void* buffer, size_t size, size_t offset) {
   return Status::OK();
 }
 
+Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
+                          RPCClient& rpc_client, std::string path) {
+  std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
+  std::string lock_path;
+  bool result = false;
+  rpc_client.TryAcquireLock(origin_path, result, lock_path);
+  if (!result) {
+    return Status::Invalid("Lock file failed!");
+  }
+  ObjectID file_id;
+  if (!rpc_client.GetName(origin_path, file_id, false).ok()) {
+    do {
+      rpc_client.TryReleaseLock(lock_path, result);
+    } while (!result);
+    return Status::IOError("File " + path + " is not exist.");
+  }
+  file = std::dynamic_pointer_cast<VineyardFile>(rpc_client.GetObject(file_id));
+  do {
+    rpc_client.TryReleaseLock(lock_path, result);
+  } while (!result);
+  return Status::OK();
+}
+
 Status VineyardFileBuilder::Make(std::shared_ptr<VineyardFileBuilder>& builder,
                                  RPCClient& client, std::string path,
                                  size_t size) {
   std::string actural_path;
   bool result;
-  RETURN_ON_ERROR(client.TryAcquireLock(path, result, actural_path));
+  std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
+  RETURN_ON_ERROR(client.TryAcquireLock(origin_path, result, actural_path));
   if (!result) {
     return Status::Invalid("File already exists");
   }
   ObjectID id;
-  if (client.GetName(path, id).ok()) {
+  if (client.GetName(origin_path, id).ok()) {
     do {
       client.TryReleaseLock(actural_path, result);
     } while (!result);
     return Status::Invalid("File already exists");
   }
-  builder = std::make_shared<VineyardFileBuilder>(path);
+  builder = std::make_shared<VineyardFileBuilder>(origin_path);
   builder->writer_ = std::make_shared<RemoteBlobWriter>(size);
   builder->lock_path_ = actural_path;
   return Status::OK();
@@ -86,6 +111,8 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(RPCClient& client) {
           .count());
   VINEYARD_CHECK_OK(
       client.CreateMetaData(vineyardFile->meta_, vineyardFile->id_));
+  client.Persist(vineyardFile->id_);
+  Status status = client.PutName(vineyardFile->id_, path_);
   bool result = false;
   do {
     VINEYARD_CHECK_OK(client.TryReleaseLock(lock_path_, result));
@@ -93,7 +120,8 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(RPCClient& client) {
   return vineyardFile;
 }
 
-Status VineyardFileBuilder::Write(void* buffer, size_t size, size_t offset) {
+Status VineyardFileBuilder::Write(const void* buffer, size_t size,
+                                  size_t offset) {
   if (writer_ == nullptr) {
     return Status::Invalid("VineyardFileBuilder has not been initialized");
   }

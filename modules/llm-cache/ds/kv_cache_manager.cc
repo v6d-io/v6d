@@ -26,6 +26,7 @@ limitations under the License.
 #include "llm-cache/ds/kv_cache_manager.h"
 #include "llm-cache/storage/blob_storage.h"
 #include "llm-cache/storage/local_file_storage.h"
+#include "llm-cache/storage/vineyard_file_storage.h"
 
 namespace vineyard {
 
@@ -79,6 +80,33 @@ Status KVCacheManager::Make(std::shared_ptr<KVCacheManager>& manager,
         config.tensorByte, config.cacheCapacity, config.layer, config.chunkSize,
         config.hashChunkSize, config.root, config.gcInterval, config.ttl,
         config.enbaleGlobalGC, config.globalGCInterval, config.globalTTL);
+  } else {
+    return Status::Invalid("Unsupported filesystem type");
+  }
+  manager = std::make_shared<KVCacheManager>(file_storage);
+  RETURN_ON_ERROR(file_storage->Init());
+  manager->config = std::make_shared<FileCacheConfig>(config);
+  return Status::OK();
+}
+
+Status KVCacheManager::Make(RPCClient& client,
+                            std::shared_ptr<KVCacheManager>& manager,
+                            FileCacheConfig& config) {
+  if (config.chunkSize <= 0 || config.hashChunkSize <= 0) {
+    return Status::Invalid("Invalid batch size or split number.");
+  }
+  if (config.tensorByte <= 0 || config.cacheCapacity <= 0 ||
+      config.layer <= 0) {
+    return Status::Invalid("Invalid tensor byte, cache capacity or layer.");
+  }
+
+  std::shared_ptr<FileStorage> file_storage;
+  if (config.filesystemType == FilesystemType::VINEYARD) {
+    file_storage = std::make_shared<VineyardFileStorage>(
+        client, config.tensorByte, config.cacheCapacity, config.layer,
+        config.chunkSize, config.hashChunkSize, config.root, config.gcInterval,
+        config.ttl, config.enbaleGlobalGC, config.globalGCInterval,
+        config.globalTTL);
   } else {
     return Status::Invalid("Unsupported filesystem type");
   }

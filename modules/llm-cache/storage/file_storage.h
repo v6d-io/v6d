@@ -40,6 +40,7 @@ struct FileDescriptor {};
 
 enum FilesystemType {
   LOCAL,
+  VINEYARD,
 };
 
 enum FileOperationType {
@@ -90,7 +91,7 @@ class FileStorage : public IStorage,
 
   virtual Status TouchFile(const std::string& path) = 0;
 
-  virtual std::string GetTmpFileDir() = 0;
+  virtual std::string GetTmpFileDir(std::string surfix) = 0;
 
   Status DefaultGCFunc();
 
@@ -103,6 +104,8 @@ class FileStorage : public IStorage,
   static void DefaultGCThread(std::shared_ptr<FileStorage> fileStorage);
 
   static void GlobalGCThread(std::shared_ptr<FileStorage> fileStorage);
+
+  virtual void CloseGCThread();
 
   // for test
   void PrintFileAccessTime(std::string path);

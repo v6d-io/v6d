@@ -110,9 +110,8 @@ Status FileStorage::Update(
              &createFileSet, &createFileSetMutex](int i) -> Status {
     int tokenLength = (i + 1) * chunkSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
-    std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
+    std::string tmpPathStr = GetTmpFileDir("-" + std::to_string(i));
     tempFilePaths[i] = tmpPathStr;
-    ghc::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
     ghc::filesystem::path path(pathStr);
 
@@ -134,8 +133,10 @@ Status FileStorage::Update(
       return Status::OK();
     }
 
-    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
-    auto status = Open(tmpPathStr, fd, FileOperationType::WRITE);
+    RETURN_ON_ERROR(Mkdir(ghc::filesystem::path(tmpPathStr + pathList[i])
+                              .parent_path()
+                              .string()));
+    auto status = Open(tmpPathStr + pathList[i], fd, FileOperationType::WRITE);
     if (!status.ok()) {
       LOG(WARNING) << "Failed to create temporary cache entry: "
                    << status.ToString();
@@ -157,11 +158,11 @@ Status FileStorage::Update(
 
     VINEYARD_DISCARD(Flush(fd));
     VINEYARD_DISCARD(Close(fd));
-    status = MoveFileAtomic(tmpPathStr, pathStr);
+    status = MoveFileAtomic(tmpPathStr + pathList[i], pathStr);
     if (!status.ok()) {
       // Move failed. There exists a file with the same name.
       LOG(WARNING) << "Failed to move cache entry: " << status.ToString();
-      VINEYARD_SUPPRESS(Delete(tmpPathStr));
+      VINEYARD_SUPPRESS(Delete(tmpPathStr + pathList[i]));
       return Status::Wrap(status, "Failed to move cache entry");
     }
     std::lock_guard<std::mutex> lock(createFileSetMutex);
@@ -300,9 +301,8 @@ Status FileStorage::Update(
              &createFileSetMutex](size_t i) -> Status {
     int tokenLength = (i + 1) * chunkSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
-    std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
+    std::string tmpPathStr = GetTmpFileDir("-" + std::to_string(i));
     tempFilePaths[i] = tmpPathStr;
-    ghc::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
     ghc::filesystem::path path(pathStr);
 
@@ -327,8 +327,10 @@ Status FileStorage::Update(
       return Status::ObjectNotExists("The prefix is not in the file cache");
     }
 
-    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
-    auto status = Open(tmpPathStr, fd, FileOperationType::WRITE);
+    RETURN_ON_ERROR(Mkdir(ghc::filesystem::path(tmpPathStr + pathList[i])
+                              .parent_path()
+                              .string()));
+    auto status = Open(tmpPathStr + pathList[i], fd, FileOperationType::WRITE);
     if (!status.ok()) {
       return Status::Wrap(status, "Failed to create temporary cache entry");
     }
@@ -352,9 +354,9 @@ Status FileStorage::Update(
 
     VINEYARD_DISCARD(Flush(fd));
     VINEYARD_DISCARD(Close(fd));
-    if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
+    if (!MoveFileAtomic(tmpPathStr + pathList[i], pathStr).ok()) {
       // Move failed. There exists a file with the same name.
-      VINEYARD_SUPPRESS(Delete(tmpPathStr));
+      VINEYARD_SUPPRESS(Delete(tmpPathStr + pathList[i]));
       return Status::Wrap(status, "Failed to move cache entry");
     }
     std::lock_guard<std::mutex> lock(createFileSetMutex);
@@ -811,7 +813,7 @@ void FileStorage::GlobalGCThread(std::shared_ptr<FileStorage> fileStorage) {
   }
 }
 
-void FileStorage::CloseCache() {
+void FileStorage::CloseGCThread() {
   std::lock_guard<std::mutex> gcLock(gcMutex);
   if (!exitFlag) {
     exitFlag = true;
@@ -820,5 +822,7 @@ void FileStorage::CloseCache() {
     gcThread.join();
   }
 }
+
+void FileStorage::CloseCache() { CloseGCThread(); }
 
 }  // namespace vineyard
