@@ -170,7 +170,7 @@ class EtcdMetaService : public IMetaService {
       callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
           callback) override;
 
-  void retryDaeminWatch(
+  void retryDaemonWatch(
       const std::string& prefix,
       callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
           callback);

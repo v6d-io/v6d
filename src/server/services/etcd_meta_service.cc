@@ -367,6 +367,9 @@ void EtcdMetaService::startDaemonWatch(
           this->handled_rev_, this->registered_callbacks_mutex_));
     }
 
+    if (!EtcdLauncher::probeEtcdServer(etcd_, prefix_)) {
+      return retryDaemonWatch(prefix, callback);
+    }
     if (this->watcher_ && this->watcher_->Cancelled()) {
       return;
     }
@@ -384,16 +387,16 @@ void EtcdMetaService::startDaemonWatch(
       if (cancelled) {
         return;
       }
-      this->retryDaeminWatch(prefix, callback);
+      this->retryDaemonWatch(prefix, callback);
     });
   } catch (std::runtime_error& e) {
     LOG(ERROR) << "Failed to create daemon etcd watcher: " << e.what();
     this->watcher_.reset();
-    this->retryDaeminWatch(prefix, callback);
+    this->retryDaemonWatch(prefix, callback);
   }
 }
 
-void EtcdMetaService::retryDaeminWatch(
+void EtcdMetaService::retryDaemonWatch(
     const std::string& prefix,
     callback_t<const std::vector<op_t>&, unsigned, callback_t<unsigned>>
         callback) {
