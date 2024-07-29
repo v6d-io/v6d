@@ -122,9 +122,10 @@ def start_fuse():
 
 
 @contextlib.contextmanager
-def start_etcd():
+def start_etcd(client_port: None):
     with contextlib.ExitStack() as stack:
-        client_port = find_port()
+        if client_port is None:
+            client_port = find_port()
         peer_port = find_port()
         if platform.system() == 'Linux':
             data_dir_base = '/dev/shm'
@@ -181,7 +182,7 @@ def start_metadata_engine(meta):
     with contextlib.ExitStack() as stack:
         meta_engine = None
         if meta == 'etcd':
-            meta_engine = start_etcd()
+            meta_engine = start_etcd(None)
         if meta == 'redis':
             meta_engine = start_redis()
         if meta_engine is not None:
@@ -610,6 +611,56 @@ def run_vineyardd_failure_tests(meta, allocator, endpoints, test_args):
             % (time.time() - start_time),
             flush=True,
         )
+
+
+def run_etcd_failover_tests(meta, allocator, endpoints):
+    """Here we start 1 vineyard instance, and test the etcd failover scenario."""
+    etcd_client_port = find_port()
+    endpoints = 'http://127.0.0.1:%d' % etcd_client_port
+    metadata_settings = make_metadata_settings(
+        meta, endpoints, 'vineyard_test_%s' % time.time()
+    )
+    print("etcd client port: %d" % etcd_client_port)
+    with start_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ) as (_, rpc_socket_port):
+        # kill the etcd process
+        etcd_process_pid = (
+            subprocess.check_output(
+                "ps -axu | grep 'initial-cluster-state' | grep etcd |"
+                + "grep 'http://0.0.0.0:"
+                + str(etcd_client_port)
+                + "' | grep -v grep | awk '{print $2}'",
+                shell=True,
+            )
+            .decode()
+            .strip()
+        )
+
+        if etcd_process_pid:
+            print(f"Killing etcd process with PID {etcd_process_pid}")
+            os.system(f"kill -9 {etcd_process_pid}")
+        else:
+            print("No etcd process found to kill")
+
+        time.sleep(120)
+        with start_etcd(etcd_client_port):
+            subprocess.check_call(
+                [
+                    'pytest',
+                    '-s',
+                    '-vvv',
+                    '--exitfirst',
+                    '--durations=0',
+                    'python/vineyard/deploy/tests/test_vineyardd_failure.py',
+                    '-k',
+                    'test_put_meta_before_failure',
+                    '--vineyard-endpoint=127.0.0.1:%s' % rpc_socket_port,
+                ],
+                cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+            )
 
 
 def run_graph_extend_test(tests):
@@ -1167,6 +1218,8 @@ def execute_tests(args):
         run_vineyardd_failure_tests(
             args.meta, args.allocator, endpoints, python_test_args
         )
+
+        run_etcd_failover_tests(args.meta, args.allocator, endpoints)
 
     if args.with_io:
         run_io_adaptor_tests(args.meta, args.allocator, endpoints, python_test_args)
