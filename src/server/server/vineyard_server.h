@@ -24,6 +24,7 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -237,9 +238,94 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   const std::string RDMAEndpoint();
 
+  void LockTransmissionObjects(std::vector<ObjectID> const& ids) {
+    std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
+    for (auto const& id : ids) {
+      if (transmission_objects_.find(id) == transmission_objects_.end()) {
+        transmission_objects_[id] = 1;
+      } else {
+        ++transmission_objects_[id];
+      }
+    }
+  }
+
+  void UnlockTransmissionObjects(std::vector<ObjectID> const& ids) {
+    {
+      std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
+      for (auto const& id : ids) {
+        if (transmission_objects_.find(id) != transmission_objects_.end()) {
+          if (--transmission_objects_[id] == 0) {
+            transmission_objects_.erase(id);
+          }
+        }
+      }
+    }
+    DeletePendingObjects();
+  }
+
+  std::unique_lock<std::mutex> FindTransmissionObjects(
+      std::vector<ObjectID> const& ids, std::vector<ObjectID>& transmissions,
+      std::vector<ObjectID>& non_transmissions) {
+    std::unique_lock<std::mutex> lock(transmission_objects_mutex_);
+    for (auto const& id : ids) {
+      if (transmission_objects_.find(id) != transmission_objects_.end()) {
+        transmissions.push_back(id);
+      } else {
+        non_transmissions.push_back(id);
+      }
+    }
+    return lock;
+  }
+
   void Stop();
 
   bool Running() const;
+
+  void PrintTransmissionList() {
+    std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
+    LOG(INFO) << "print transmission objects, size:"
+              << transmission_objects_.size();
+    for (auto const& pair : transmission_objects_) {
+      LOG(INFO) << "Object " << pair.first
+                << " is in transmission, refcnt: " << pair.second;
+    }
+  }
+
+  void RemoveFromMigrationList(std::vector<ObjectID>& ids) {
+    std::lock_guard<std::mutex> lock_origin(migrations_target_to_origin_mutex_);
+    std::lock_guard<std::mutex> lock_target(migrations_origin_to_target_mutex_);
+    for (auto const id : ids) {
+      if (migrations_target_to_origin_.find(id) !=
+          migrations_target_to_origin_.end()) {
+        ObjectID remoteID = migrations_target_to_origin_[id];
+        migrations_origin_to_target_.erase(remoteID);
+        migrations_target_to_origin_.erase(id);
+      }
+    }
+  }
+
+  void DeletePendingObjects() {
+    std::vector<ObjectID> ids;
+    {
+      std::lock_guard<std::mutex> lock(pendding_to_delete_objects_mutex_);
+      if (pendding_to_delete_objects_.empty()) {
+        return;
+      }
+      for (auto const& id : pendding_to_delete_objects_) {
+        ids.push_back(id);
+      }
+      pendding_to_delete_objects_.clear();
+    }
+    this->DelData(ids, false, false, false, false,
+                  [](const Status& status) { return Status::OK(); });
+  }
+
+  void AddPendingObjects(std::vector<ObjectID> const& ids) {
+    std::lock_guard<std::mutex> lock(pendding_to_delete_objects_mutex_);
+    for (auto const& id : ids) {
+      pendding_to_delete_objects_.insert(id);
+    }
+  }
 
   ~VineyardServer();
 
@@ -288,6 +374,12 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   // Record the migration status of objects to avoid duplicated migration.
   std::unordered_map<ObjectID, ObjectID> migrations_origin_to_target_;
   std::unordered_map<ObjectID, ObjectID> migrations_target_to_origin_;
+
+  std::unordered_map<ObjectID, int> transmission_objects_;
+  std::mutex transmission_objects_mutex_;
+  // It must be blob.
+  std::unordered_set<ObjectID> pendding_to_delete_objects_;
+  std::mutex pendding_to_delete_objects_mutex_;
 };
 
 }  // namespace vineyard

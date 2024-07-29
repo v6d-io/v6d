@@ -106,6 +106,8 @@ struct command_t {
   static const std::string CLEAR_REPLY;
   static const std::string MEMORY_TRIM_REQUEST;
   static const std::string MEMORY_TRIM_REPLY;
+  static const std::string RELEASE_BLOBS_WITH_RDMA_REQUEST;
+  static const std::string RELEASE_BLOBS_WITH_RDMA_REPLY;
 
   // Stream APIs
   static const std::string CREATE_STREAM_REQUEST;
@@ -580,6 +582,16 @@ Status ReadMemoryTrimRequest(const json& root);
 void WriteMemoryTrimReply(const bool trimmed, std::string& msg);
 
 Status ReadMemoryTrimReply(const json& root, bool& trimmed);
+
+void WriteReleaseBlobsWithRDMARequest(const std::unordered_set<ObjectID>& ids,
+                                      std::string& msg);
+
+Status ReadReleaseBlobsWithRDMARequest(const json& root,
+                                       std::vector<ObjectID>& ids);
+
+void WriteReleaseBlobsWithRDMAReply(std::string& msg);
+
+Status ReadReleaseBlobsWithRDMAReply(const json& root);
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 

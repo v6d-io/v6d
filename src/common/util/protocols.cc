@@ -131,6 +131,10 @@ const std::string command_t::CLEAR_REQUEST = "clear_request";
 const std::string command_t::CLEAR_REPLY = "clear_reply";
 const std::string command_t::MEMORY_TRIM_REQUEST = "memory_trim_request";
 const std::string command_t::MEMORY_TRIM_REPLY = "memory_trim_reply";
+const std::string command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST =
+    "release_blobs_with_rdma_request";
+const std::string command_t::RELEASE_BLOBS_WITH_RDMA_REPLY =
+    "release_blobs_with_rdma_reply";
 
 // Stream APIs
 const std::string command_t::CREATE_STREAM_REQUEST = "create_stream_request";
@@ -1472,6 +1476,41 @@ void WriteMemoryTrimReply(const bool trimmed, std::string& msg) {
 Status ReadMemoryTrimReply(const json& root, bool& trimmed) {
   CHECK_IPC_ERROR(root, command_t::MEMORY_TRIM_REPLY);
   trimmed = root.value("trimmed", false);
+  return Status::OK();
+}
+
+void WriteReleaseBlobsWithRDMARequest(const std::unordered_set<ObjectID>& ids,
+                                      std::string& msg) {
+  json root;
+  root["type"] = command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST;
+  int idx = 0;
+  for (auto const& id : ids) {
+    root[std::to_string(idx++)] = id;
+  }
+
+  root["num"] = ids.size();
+  encode_msg(root, msg);
+}
+
+Status ReadReleaseBlobsWithRDMARequest(const json& root,
+                                       std::vector<ObjectID>& ids) {
+  CHECK_IPC_ERROR(root, command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST);
+  size_t num = root["num"].get<size_t>();
+  for (size_t i = 0; i < num; ++i) {
+    ids.push_back(root[std::to_string(i)].get<ObjectID>());
+  }
+  return Status::OK();
+}
+
+void WriteReleaseBlobsWithRDMAReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::RELEASE_BLOBS_WITH_RDMA_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadReleaseBlobsWithRDMAReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::RELEASE_BLOBS_WITH_RDMA_REPLY);
   return Status::OK();
 }
 

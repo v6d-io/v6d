@@ -363,6 +363,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doAcquireLock(root);
   } else if (cmd == command_t::RELEASE_LOCK_REQUEST) {
     return doReleaseLock(root);
+  } else if (cmd == command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST) {
+    return doReleaseBlobsWithRDMA(root);
   } else {
     RESPONSE_ON_ERROR(Status::Invalid("Got unexpected command: " + cmd));
     return false;
@@ -784,21 +786,25 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress,
                    use_rdma);
+  server_ptr_->LockTransmissionObjects(ids);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, compress, message_out);
 
   if (!use_rdma) {
-    this->doWrite(message_out, [self, objects, compress](const Status& status) {
-      SendRemoteBuffers(
-          self->socket_, objects, 0, compress, [self](const Status& status) {
-            if (!status.ok()) {
-              VLOG(100) << "Failed to send buffers to remote client: "
-                        << status.ToString();
-            }
-            return Status::OK();
-          });
+    this->doWrite(message_out, [self, objects, compress,
+                                ids](const Status& status) {
+      SendRemoteBuffers(self->socket_, objects, 0, compress,
+                        [self, ids = std::move(ids)](const Status& status) {
+                          if (!status.ok()) {
+                            VLOG(100)
+                                << "Failed to send buffers to remote client: "
+                                << status.ToString();
+                          }
+                          self->server_ptr_->UnlockTransmissionObjects(ids);
+                          return Status::OK();
+                        });
       return Status::OK();
     });
   } else {
@@ -835,6 +841,7 @@ bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
   std::vector<ObjectID> ids;
   bool force, deep, memory_trim, fastpath;
   double startTime = GetCurrentTime();
+
   TRY_READ_REQUEST(ReadDelDataWithFeedbacksRequest, root, ids, force, deep,
                    memory_trim, fastpath);
   RESPONSE_ON_ERROR(server_ptr_->DelData(
@@ -1831,6 +1838,21 @@ bool SocketConnection::doReleaseLock(const json& root) {
         self->doWrite(message_out);
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
+
+  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
+    self->server_ptr_->UnlockTransmissionObjects(ids);
+    std::string message_out;
+    WriteReleaseBlobsWithRDMAReply(message_out);
+    self->doWrite(message_out);
+  });
+
   return false;
 }
 
