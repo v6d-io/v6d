@@ -1016,6 +1016,7 @@ Status RPCClient::doReleaseBlobsWithRDMARequest(
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadReleaseBlobsWithRDMAReply(message_in));
+  return Status::OK();
 }
 
 Status RPCClient::TryAcquireLock(std::string key, bool& result,
