@@ -35,7 +35,9 @@ void VineyardFile::Construct(const ObjectMeta& meta) {
   this->access_time_ = meta_.GetKeyValue<uint64_t>("access_time");
   ObjectID blob_id = meta_.GetMember("buffer")->id();
   RPCClient* rpc_client = reinterpret_cast<RPCClient*>(meta.GetClient());
-  VINEYARD_CHECK_OK(rpc_client->GetRemoteBlob(blob_id, blob_));
+  if (rpc_client->GetRemoteBlob(blob_id, blob_).ok()) {
+    return;
+  }
 }
 
 Status VineyardFile::Read(void* buffer, size_t size, size_t offset) {
@@ -49,23 +51,18 @@ Status VineyardFile::Read(void* buffer, size_t size, size_t offset) {
 Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
                           RPCClient& rpc_client, std::string path) {
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
-  std::string lock_path;
-  bool result = false;
-  rpc_client.TryAcquireLock(origin_path, result, lock_path);
-  if (!result) {
-    return Status::Invalid("Lock file failed!");
-  }
+  VineyardFileLock lock(rpc_client, path);
+  RETURN_ON_ERROR(lock.TryLock());
   ObjectID file_id;
   if (!rpc_client.GetName(origin_path, file_id, false).ok()) {
-    do {
-      rpc_client.TryReleaseLock(lock_path, result);
-    } while (!result);
     return Status::IOError("File " + path + " is not exist.");
   }
-  file = std::dynamic_pointer_cast<VineyardFile>(rpc_client.GetObject(file_id));
-  do {
-    rpc_client.TryReleaseLock(lock_path, result);
-  } while (!result);
+  std::shared_ptr<Object> object;
+  RETURN_ON_ERROR(rpc_client.GetObject(file_id, object));
+  file = std::dynamic_pointer_cast<VineyardFile>(object);
+  if (file->blob_ == nullptr) {
+    return Status::IOError("File " + path + " is not exist.");
+  }
   return Status::OK();
 }
 
@@ -73,22 +70,15 @@ Status VineyardFileBuilder::Make(std::shared_ptr<VineyardFileBuilder>& builder,
                                  RPCClient& client, std::string path,
                                  size_t size) {
   std::string actural_path;
-  bool result;
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
-  RETURN_ON_ERROR(client.TryAcquireLock(origin_path, result, actural_path));
-  if (!result) {
-    return Status::Invalid("File already exists");
-  }
+  builder = std::make_shared<VineyardFileBuilder>(origin_path);
+  builder->lock = std::make_unique<VineyardFileLock>(client, path);
+  RETURN_ON_ERROR(builder->lock->TryLock());
   ObjectID id;
   if (client.GetName(origin_path, id).ok()) {
-    do {
-      client.TryReleaseLock(actural_path, result);
-    } while (!result);
     return Status::Invalid("File already exists");
   }
-  builder = std::make_shared<VineyardFileBuilder>(origin_path);
   builder->writer_ = std::make_shared<RemoteBlobWriter>(size);
-  builder->lock_path_ = actural_path;
   return Status::OK();
 }
 
@@ -113,10 +103,8 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(RPCClient& client) {
       client.CreateMetaData(vineyardFile->meta_, vineyardFile->id_));
   client.Persist(vineyardFile->id_);
   Status status = client.PutName(vineyardFile->id_, path_);
-  bool result = false;
-  do {
-    VINEYARD_CHECK_OK(client.TryReleaseLock(lock_path_, result));
-  } while (!result);
+
+  lock.reset();
   return vineyardFile;
 }
 

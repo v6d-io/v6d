@@ -67,14 +67,17 @@ class VineyardFileStorage : public FileStorage {
   ~VineyardFileStorage() = default;
 
   Status Init() override {
-    // this->gcThread =
-    //     std::thread(FileStorage::DefaultGCThread, shared_from_this());
-    // this->globalGCThread =
-    //     std::thread(FileStorage::GlobalGCThread, shared_from_this());
+    this->gcThread =
+        std::thread(FileStorage::DefaultGCThread, shared_from_this());
+    this->globalGCThread =
+        std::thread(FileStorage::GlobalGCThread, shared_from_this());
     return Status::OK();
   }
 
-  void CloseGCThread() override { LOG(INFO) << "Call CloseGCThread"; }
+  void CloseGCThread() override {
+    LOG(INFO) << "Call CloseGCThread";
+    FileStorage::CloseGCThread();
+  }
 
   std::shared_ptr<FileDescriptor> CreateFileDescriptor() override;
 

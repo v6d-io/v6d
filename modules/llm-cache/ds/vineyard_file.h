@@ -17,13 +17,51 @@ limitations under the License.
 #define MODULES_LLM_CACHE_DS_VINEYARD_FILE_H_
 
 #include <memory>
+#include <regex>
 #include <string>
 
 #include "client/ds/remote_blob.h"
+#include "client/rpc_client.h"
 
 namespace vineyard {
 
 class VineyardFileBuilder;
+
+class VineyardFileLock {
+ public:
+  explicit VineyardFileLock(RPCClient& client, std::string path)
+      : path_(path), client_(client) {}
+
+  ~VineyardFileLock() { Unlock(); }
+
+  Status TryLock() {
+    bool result = false;
+    std::string origin_path =
+        std::regex_replace(path_, std::regex("/+"), "\\/");
+    client_.TryAcquireLock(origin_path, result, lock_path_);
+    if (!result) {
+      return Status::Invalid("Failed to acquire lock for file: " + path_);
+    }
+    return Status::OK();
+  }
+
+ private:
+  Status Unlock() {
+    if (!lock_path_.empty()) {
+      // unlock
+      bool result = false;
+      do {
+        client_.TryReleaseLock(lock_path_, result);
+      } while (!result);
+    }
+    return Status::OK();
+  }
+
+ private:
+  std::string path_;
+  std::string lock_path_;
+  RPCClient& client_;
+};
 
 class VineyardFile : public vineyard::Registered<VineyardFile> {
  public:
@@ -70,7 +108,7 @@ class VineyardFileBuilder {
  private:
   std::shared_ptr<RemoteBlobWriter> writer_;
   std::string path_;
-  std::string lock_path_;
+  std::unique_ptr<VineyardFileLock> lock;
 };
 
 }  // namespace vineyard

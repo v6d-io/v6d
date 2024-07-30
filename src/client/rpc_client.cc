@@ -756,16 +756,16 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
                                  false, message_out);
   }
   RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+  RETURN_ON_ASSERT(payloads.size() == 1, "Expects only one payload");
   if (rdma_connected_) {
     std::unordered_set<ObjectID> ids{payloads[0].object_id};
     std::function<void(std::unordered_set<ObjectID>)> func = std::bind(
         &RPCClient::doReleaseBlobsWithRDMARequest, this, std::placeholders::_1);
     rdmaBlobScopeGuard.set(func, ids);
   }
-  json message_in;
-  RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
-  RETURN_ON_ASSERT(payloads.size() == 1, "Expects only one payload");
 
   buffer = std::shared_ptr<RemoteBlob>(new RemoteBlob(
       payloads[0].object_id, remote_instance_id_, payloads[0].data_size));
@@ -873,11 +873,6 @@ Status RPCClient::GetRemoteBlobs(
                                  message_out);
   }
   RETURN_ON_ERROR(doWrite(message_out));
-  if (rdma_connected_) {
-    std::function<void(std::unordered_set<ObjectID>)> func = std::bind(
-        &RPCClient::doReleaseBlobsWithRDMARequest, this, std::placeholders::_1);
-    rdmaBlobScopeGuard.set(func, id_set);
-  }
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
@@ -885,6 +880,11 @@ Status RPCClient::GetRemoteBlobs(
                    "The result size doesn't match with the requested sizes: " +
                        std::to_string(payloads.size()) + " vs. " +
                        std::to_string(id_set.size()));
+  if (rdma_connected_) {
+    std::function<void(std::unordered_set<ObjectID>)> func = std::bind(
+        &RPCClient::doReleaseBlobsWithRDMARequest, this, std::placeholders::_1);
+    rdmaBlobScopeGuard.set(func, id_set);
+  }
 
   std::unordered_map<ObjectID, std::shared_ptr<RemoteBlob>> id_payload_map;
   if (rdma_connected_) {

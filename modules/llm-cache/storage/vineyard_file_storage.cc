@@ -138,14 +138,13 @@ Status VineyardFileStorage::Delete(std::string path) {
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
   std::string lock_path;
   bool result = false;
-  rpc_client_.TryAcquireLock(path, result, lock_path);
-  if (!result) {
-    return Status::Invalid("Lock file failed!");
-  }
+  VineyardFileLock lock(rpc_client_, origin_path);
+  RETURN_ON_ERROR(lock.TryLock());
   ObjectID file_id;
   Status status = Status::OK();
   if (rpc_client_.GetName(origin_path, file_id, false).ok()) {
-    status = rpc_client_.DelData(std::vector<ObjectID>{file_id});
+    status = rpc_client_.DelData(std::vector<ObjectID>{file_id}, true, true);
+    status = rpc_client_.DropName(origin_path);
   }
   do {
     rpc_client_.TryReleaseLock(lock_path, result);
@@ -178,22 +177,26 @@ Status VineyardFileStorage::GetFileAccessTime(
 }
 
 Status VineyardFileStorage::TouchFile(const std::string& path) {
-  // ObjectID file_id;
-  // ObjectMeta meta;
-  // std::string origin_path = std::regex_replace(path, std::regex("/+"),
-  // "\\/"); RETURN_ON_ERROR(rpc_client_.GetName(origin_path, file_id, false));
-  // RETURN_ON_ERROR(rpc_client_.GetMetaData(file_id, meta, false));
-  // meta.AddKeyValue(
-  //     "access_time",
-  //     std::chrono::duration_cast<std::chrono::nanoseconds>(
-  //         std::chrono::high_resolution_clock::now().time_since_epoch())
-  //         .count());
-  // ObjectID new_object_id;
-  // RETURN_ON_ERROR(rpc_client_.CreateMetaData(meta, new_object_id));
-  // RETURN_ON_ERROR(rpc_client_.Persist(new_object_id));
-  // RETURN_ON_ERROR(
-  //     rpc_client_.DelData(std::vector<ObjectID>{file_id}, false, false));
-  // RETURN_ON_ERROR(rpc_client_.PutName(new_object_id, origin_path));
+  ObjectID file_id;
+  ObjectMeta meta;
+  std::string lock_path;
+  std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
+  VineyardFileLock lock(rpc_client_, origin_path);
+  RETURN_ON_ERROR(lock.TryLock());
+  RETURN_ON_ERROR(rpc_client_.GetName(origin_path, file_id, false));
+  RETURN_ON_ERROR(rpc_client_.GetMetaData(file_id, meta, false));
+  meta.AddKeyValue(
+      "access_time",
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count());
+  ObjectID new_object_id;
+  RETURN_ON_ERROR(rpc_client_.CreateMetaData(meta, new_object_id));
+  RETURN_ON_ERROR(rpc_client_.Persist(new_object_id));
+  RETURN_ON_ERROR(
+      rpc_client_.DelData(std::vector<ObjectID>{file_id}, false, false));
+  RETURN_ON_ERROR(rpc_client_.DropName(origin_path));
+  RETURN_ON_ERROR(rpc_client_.PutName(new_object_id, origin_path));
   return Status::OK();
 }
 
