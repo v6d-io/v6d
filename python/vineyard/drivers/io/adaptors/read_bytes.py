@@ -94,7 +94,7 @@ def read_byte_blocks(
         size = len(buffer)
         if size <= 0:
             break
-        begin += size
+        begin += chunk_size
         if size > 0:
             chunk = writer.next(size)
             vineyard.memory_copy(chunk, buffer)
