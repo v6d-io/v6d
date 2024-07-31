@@ -77,6 +77,7 @@ class IRDMA {
     for (auto& res : vec) {
       RETURN_ON_ERROR(CloseResource(res, resource_name));
     }
+    vec.clear();
     return Status::OK();
   }
 
@@ -86,6 +87,7 @@ class IRDMA {
     for (auto iter = mapping.begin(); iter != mapping.end(); ++iter) {
       RETURN_ON_ERROR(CloseResource(iter->second, resource_name));
     }
+    mapping.clear();
     return Status::OK();
   }
 

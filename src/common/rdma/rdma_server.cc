@@ -145,6 +145,12 @@ Status RDMAServer::Close() {
     RETURN_ON_ERROR(CloseResourcesInMap(ep_map_, "endpoint created by server"));
   }
 
+  {
+    std::lock_guard<std::mutex> lock(wait_conn_ep_map_mutex_);
+    RETURN_ON_ERROR(
+        CloseResourcesInMap(wait_conn_ep_map_, "endpoint created by server"));
+  }
+
   RETURN_ON_ERROR(CloseResource(txcq, "transmit comeple queue"));
   RETURN_ON_ERROR(CloseResource(rxcq, "receive comeple queue"));
   RETURN_ON_ERROR(CloseResource(pep, "passive endpoint"));
@@ -240,7 +246,10 @@ Status RDMAServer::AddClient(uint64_t& ep_token, void* ep) {
 
 Status RDMAServer::RemoveClient(uint64_t ep_token) {
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
-  ep_map_.erase(ep_token);
+  if (ep_map_.find(ep_token) != ep_map_.end()) {
+    CloseResource(ep_map_[ep_token], "client endpoint");
+    ep_map_.erase(ep_token);
+  }
   return Status::OK();
 }
 
@@ -249,6 +258,7 @@ Status RDMAServer::RemoveClient(fid_ep* ep) {
   for (auto iter = ep_map_.begin(); iter != ep_map_.end(); iter++) {
     if (iter->second == ep) {
       ep_map_.erase(iter);
+      CloseResource(ep, "client endpoint");
       return Status::OK();
     }
   }
@@ -272,11 +282,13 @@ Status RDMAServer::RegisterMemory(fid_mr** mr, void* address, size_t size,
 }
 
 Status RDMAServer::DeregisterMemory(RegisterMemInfo& memInfo) {
+  {
+    std::lock_guard<std::mutex> lock(mr_array_mutex_);
+    mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
+                  mr_array.end());
+  }
   VINEYARD_CHECK_OK(IRDMA::CloseResource(reinterpret_cast<fid_mr*>(memInfo.mr),
                                          "memory region"));
-  std::lock_guard<std::mutex> lock(mr_array_mutex_);
-  mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
-                 mr_array.end());
   return Status::OK();
 }
 
