@@ -16,12 +16,12 @@ limitations under the License.
 #ifndef MODULES_GRAPH_UTILS_ERROR_H_
 #define MODULES_GRAPH_UTILS_ERROR_H_
 
+#include <iomanip>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iomanip>
-#include <sstream>
 
 #if defined(__has_include) && __has_include(<version>)
 #include <version>
@@ -113,11 +113,13 @@ struct GSError {
 
   explicit GSError(ErrorCode code) : GSError(code, "") {}
 
-  GSError(ErrorCode code, std::string msg)
-      : GSError(code, msg, "") {}
+  GSError(ErrorCode code, std::string msg) : GSError(code, msg, "") {}
 
   GSError(ErrorCode code, std::string msg, std::string bt)
-      : error_code(code), error_msg(std::move(msg)), backtrace(std::move(bt)), ec(formatEnumValue(code)) {}
+      : error_code(code),
+        error_msg(std::move(msg)),
+        backtrace(std::move(bt)),
+        ec(formatEnumValue(code)) {}
 
   explicit operator bool() const { return error_code != ErrorCode::kOk; }
 
