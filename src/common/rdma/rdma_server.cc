@@ -285,7 +285,7 @@ Status RDMAServer::DeregisterMemory(RegisterMemInfo& memInfo) {
   {
     std::lock_guard<std::mutex> lock(mr_array_mutex_);
     mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
-                  mr_array.end());
+                   mr_array.end());
   }
   VINEYARD_CHECK_OK(IRDMA::CloseResource(reinterpret_cast<fid_mr*>(memInfo.mr),
                                          "memory region"));
