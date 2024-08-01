@@ -59,11 +59,10 @@ def read_byte_blocks(
     fp,
     proc_num,
     proc_index,
-    index,
-    header_row,
     offset,
     chunk_size,
     read_block_delimiter,
+    offset_adjustment,
     writer,
 ):
     try:
@@ -74,9 +73,7 @@ def read_byte_blocks(
     begin = part_size * proc_index + offset
     end = total_size if proc_index == proc_num - 1 else begin + part_size
 
-    # See Note [Semantic of read_block with delimiter].
-    if index == 0 and proc_index == 0:
-        begin -= int(header_row)
+    begin += offset_adjustment
 
     first_chunk = True
     while begin < end:
@@ -184,12 +181,17 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
         for index, file_path in enumerate(files):
             with fs.open(file_path, mode="rb") as fp:
                 offset = 0
+                offset_adjustment = 0
                 # Only process header line when processing first file
                 # And open the writer when processing first file
                 if header_row or (first_header_row and index == 0):
                     header_line = read_block(fp, 0, 1, read_block_delimiter)
                     params["header_line"] = header_line.decode("unicode_escape")
                     offset = len(header_line)
+                    if proc_index == 0:
+                        # shift 1 byte left to make sure
+                        # the first line after header could be read
+                        offset_adjustment = -1
                     # strip the UTF-8 BOM
                     if header_line[0:3] == b'\xef\xbb\xbf':
                         header_line = header_line[3:]
@@ -203,11 +205,10 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
                     fp,
                     proc_num,
                     proc_index,
-                    index,
-                    header_row,
                     offset,
                     chunk_size,
                     read_block_delimiter,
+                    offset_adjustment,
                     writer,
                 )
 
