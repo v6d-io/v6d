@@ -131,9 +131,9 @@ class EtcdMetaService : public IMetaService {
 
   void TryReleaseLock(std::string key, callback_t<bool>) override;
 
-  Status RemoveMember(std::string member_id);
+  Status RemoveMember(const uint64_t& member_id);
 
-  std::string GetMemberID() { return etcd_launcher_->GetMemberID(); }
+  const uint64_t GetMemberID() { return etcd_launcher_->GetMemberID(); }
 
   Status UpdateEndpoint();
 
