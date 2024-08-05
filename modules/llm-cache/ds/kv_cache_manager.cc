@@ -89,7 +89,7 @@ Status KVCacheManager::Make(std::shared_ptr<KVCacheManager>& manager,
   return Status::OK();
 }
 
-Status KVCacheManager::Make(RPCClient& client,
+Status KVCacheManager::Make(RPCClient& rpc_client, Client& ipc_client,
                             std::shared_ptr<KVCacheManager>& manager,
                             FileCacheConfig& config) {
   if (config.chunkSize <= 0 || config.hashChunkSize <= 0) {
@@ -103,10 +103,10 @@ Status KVCacheManager::Make(RPCClient& client,
   std::shared_ptr<FileStorage> file_storage;
   if (config.filesystemType == FilesystemType::VINEYARD) {
     file_storage = std::make_shared<VineyardFileStorage>(
-        client, config.tensorByte, config.cacheCapacity, config.layer,
-        config.chunkSize, config.hashChunkSize, config.root, config.gcInterval,
-        config.ttl, config.enbaleGlobalGC, config.globalGCInterval,
-        config.globalTTL);
+        rpc_client, ipc_client, config.tensorByte, config.cacheCapacity,
+        config.layer, config.chunkSize, config.hashChunkSize, config.root,
+        config.gcInterval, config.ttl, config.enbaleGlobalGC,
+        config.globalGCInterval, config.globalTTL);
   } else {
     return Status::Invalid("Unsupported filesystem type");
   }

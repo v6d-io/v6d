@@ -16,10 +16,15 @@ limitations under the License.
 #ifndef MODULES_LLM_CACHE_DS_VINEYARD_FILE_H_
 #define MODULES_LLM_CACHE_DS_VINEYARD_FILE_H_
 
+#include <map>
 #include <memory>
 #include <regex>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
+#include "client/client.h"
+#include "client/ds/blob.h"
 #include "client/ds/remote_blob.h"
 #include "client/rpc_client.h"
 
@@ -29,16 +34,67 @@ class VineyardFileBuilder;
 
 class VineyardFileLock {
  public:
-  explicit VineyardFileLock(RPCClient& client, std::string path)
-      : path_(path), client_(client) {}
+  explicit VineyardFileLock(RPCClient& rpc_client, Client& ipc_client,
+                            std::string path)
+      : path_(path), rpc_client_(rpc_client), ipc_client_(ipc_client) {}
 
   ~VineyardFileLock() { Unlock(); }
 
   Status TryLock() {
+    if (ipc_client_.Connected()) {
+      return TryLockWithIPCClient();
+    } else {
+      return TryLockWithRPCClient();
+    }
+  }
+
+ private:
+  Status Unlock() {
+    if (ipc_client_.Connected()) {
+      return UnlockWithIPCClient();
+    } else {
+      return UnlockWithRPCClient();
+    }
+  }
+
+  Status UnlockWithRPCClient() {
+    if (!lock_path_.empty()) {
+      // unlock
+      bool result = false;
+      do {
+        rpc_client_.TryReleaseLock(lock_path_, result);
+      } while (!result);
+    }
+    return Status::OK();
+  }
+
+  Status UnlockWithIPCClient() {
+    if (!lock_path_.empty()) {
+      // unlock
+      bool result = false;
+      do {
+        ipc_client_.TryReleaseLock(lock_path_, result);
+      } while (!result);
+    }
+    return Status::OK();
+  }
+
+  Status TryLockWithRPCClient() {
     bool result = false;
     std::string origin_path =
         std::regex_replace(path_, std::regex("/+"), "\\/");
-    client_.TryAcquireLock(origin_path, result, lock_path_);
+    rpc_client_.TryAcquireLock(origin_path, result, lock_path_);
+    if (!result) {
+      return Status::Invalid("Failed to acquire lock for file: " + path_);
+    }
+    return Status::OK();
+  }
+
+  Status TryLockWithIPCClient() {
+    bool result = false;
+    std::string origin_path =
+        std::regex_replace(path_, std::regex("/+"), "\\/");
+    ipc_client_.TryAcquireLock(origin_path, result, lock_path_);
     if (!result) {
       return Status::Invalid("Failed to acquire lock for file: " + path_);
     }
@@ -46,25 +102,16 @@ class VineyardFileLock {
   }
 
  private:
-  Status Unlock() {
-    if (!lock_path_.empty()) {
-      // unlock
-      bool result = false;
-      do {
-        client_.TryReleaseLock(lock_path_, result);
-      } while (!result);
-    }
-    return Status::OK();
-  }
-
- private:
   std::string path_;
   std::string lock_path_;
-  RPCClient& client_;
+  RPCClient& rpc_client_;
+  Client& ipc_client_;
 };
 
 class VineyardFile : public vineyard::Registered<VineyardFile> {
  public:
+  VineyardFile() = default;
+
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::unique_ptr<Object>(new VineyardFile());
   }
@@ -73,15 +120,24 @@ class VineyardFile : public vineyard::Registered<VineyardFile> {
 
   Status Read(void* buffer, size_t size, size_t offset);
 
-  static Status Make(std::shared_ptr<VineyardFile>& file, RPCClient& client,
-                     std::string path);
+  static Status Make(std::shared_ptr<VineyardFile>& file, RPCClient& rpc_client,
+                     Client& ipc_client, std::string path);
 
-  size_t Size() { return blob_->size(); }
+  static Status BatchedMake(std::vector<std::shared_ptr<VineyardFile>>& files,
+                            RPCClient& rpc_client, Client& ipc_client,
+                            const std::vector<std::string>& path);
+
+  size_t Size() { return buffer_->size(); }
 
   uint64_t AccessTime() { return access_time_; }
 
  private:
-  std::shared_ptr<RemoteBlob> blob_;
+  static Status BatchedGetObjedcts(
+      Client& client, RPCClient& rpc_client,
+      std::map<InstanceID, std::vector<ObjectMeta>>& instance_to_metas,
+      std::unordered_map<ObjectID, std::shared_ptr<VineyardFile>>& id_to_files);
+
+  std::shared_ptr<Buffer> buffer_;
   std::string path_;
   uint64_t access_time_;
 
@@ -91,22 +147,36 @@ class VineyardFile : public vineyard::Registered<VineyardFile> {
 class VineyardFileBuilder {
  public:
   static Status Make(std::shared_ptr<VineyardFileBuilder>& builder,
-                     RPCClient& client, std::string path, size_t size);
+                     RPCClient& rpc_client, Client& ipc_client,
+                     std::string path, size_t size);
 
   ~VineyardFileBuilder() {}
 
-  Status Build(RPCClient& client) { return Status::OK(); }
+  Status Build(RPCClient& rpc_client, Client& ipc_client) {
+    return Status::OK();
+  }
 
-  std::shared_ptr<Object> SealAndPersist(RPCClient& client);
+  std::shared_ptr<Object> SealAndPersist(RPCClient& rpc_client,
+                                         Client& ipc_client);
 
   Status Write(const void* buffer, size_t size, size_t offset);
 
   explicit VineyardFileBuilder(std::string path) : path_(path) {}
 
-  size_t Size() { return writer_->size(); }
+  static std::vector<std::shared_ptr<Object>> BatchedSealAndPersist(
+      RPCClient& rpc_client, Client& ipc_client,
+      std::vector<std::shared_ptr<VineyardFileBuilder>>& builders);
+
+  size_t Size() {
+    if (writer_) {
+      return writer_->size();
+    }
+    return remote_writer_->size();
+  }
 
  private:
-  std::shared_ptr<RemoteBlobWriter> writer_;
+  std::shared_ptr<RemoteBlobWriter> remote_writer_;
+  std::unique_ptr<BlobWriter> writer_;
   std::string path_;
   std::unique_ptr<VineyardFileLock> lock;
 };

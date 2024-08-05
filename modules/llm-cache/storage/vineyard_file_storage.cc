@@ -39,12 +39,47 @@ Status VineyardFileStorage::Open(std::string path,
   lfd->cur_pos = 0;
 
   if (fileOperationType & FileOperationType::READ) {
-    RETURN_ON_ERROR(VineyardFile::Make(lfd->vineyard_file, rpc_client_, path));
+    RETURN_ON_ERROR(
+        VineyardFile::Make(lfd->vineyard_file, rpc_client_, ipc_client_, path));
   } else {
-    RETURN_ON_ERROR(VineyardFileBuilder::Make(lfd->builder, rpc_client_, path,
-                                              max_file_size_));
+    RETURN_ON_ERROR(VineyardFileBuilder::Make(
+        lfd->builder, rpc_client_, ipc_client_, path, max_file_size_));
   }
   lfd->opt_type = fileOperationType;
+  return Status::OK();
+}
+
+Status VineyardFileStorage::BatchedOpen(
+    const std::vector<std::string>& pathList,
+    std::vector<std::shared_ptr<FileDescriptor>>& fdList,
+    FileOperationType fileOperationType) {
+  if (fileOperationType & FileOperationType::READ) {
+    std::vector<std::shared_ptr<VineyardFile>> vineyardFileList;
+    RETURN_ON_ERROR(VineyardFile::BatchedMake(vineyardFileList, rpc_client_,
+                                              ipc_client_, pathList));
+    for (size_t i = 0; i < pathList.size(); i++) {
+      std::shared_ptr<VineyardFileDescriptor> lfd =
+          std::make_shared<VineyardFileDescriptor>();
+      lfd->path = pathList[i];
+      lfd->cur_pos = 0;
+      lfd->vineyard_file = vineyardFileList[i];
+      lfd->opt_type = fileOperationType;
+      fdList.push_back(lfd);
+    }
+  } else {
+    for (size_t i = 0; i < pathList.size(); i++) {
+      std::shared_ptr<VineyardFileBuilder> builder;
+      RETURN_ON_ERROR(VineyardFileBuilder::Make(
+          builder, rpc_client_, ipc_client_, pathList[i], max_file_size_));
+      std::shared_ptr<VineyardFileDescriptor> lfd =
+          std::make_shared<VineyardFileDescriptor>();
+      lfd->path = pathList[i];
+      lfd->cur_pos = 0;
+      lfd->builder = builder;
+      lfd->opt_type = fileOperationType;
+      fdList.push_back(lfd);
+    }
+  }
   return Status::OK();
 }
 
@@ -108,7 +143,26 @@ Status VineyardFileStorage::Close(std::shared_ptr<FileDescriptor>& fd) {
   std::shared_ptr<VineyardFileDescriptor> lfd =
       std::static_pointer_cast<VineyardFileDescriptor>(fd);
   if (lfd->opt_type == FileOperationType::WRITE) {
-    lfd->builder->SealAndPersist(rpc_client_);
+    lfd->builder->SealAndPersist(rpc_client_, ipc_client_);
+  }
+  return Status::OK();
+}
+
+Status VineyardFileStorage::BatchedClose(
+    std::vector<std::shared_ptr<FileDescriptor>>& fdList) {
+  if (fdList.empty()) {
+    return Status::OK();
+  }
+  if (std::static_pointer_cast<VineyardFileDescriptor>(fdList[0])->opt_type ==
+      FileOperationType::WRITE) {
+    std::vector<std::shared_ptr<VineyardFileBuilder>> builderList;
+    for (auto& fd : fdList) {
+      std::shared_ptr<VineyardFileDescriptor> lfd =
+          std::static_pointer_cast<VineyardFileDescriptor>(fd);
+      builderList.push_back(lfd->builder);
+      VineyardFileBuilder::BatchedSealAndPersist(rpc_client_, ipc_client_,
+                                                 builderList);
+    }
   }
   return Status::OK();
 }
@@ -138,7 +192,7 @@ Status VineyardFileStorage::Delete(std::string path) {
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
   std::string lock_path;
   bool result = false;
-  VineyardFileLock lock(rpc_client_, origin_path);
+  VineyardFileLock lock(rpc_client_, ipc_client_, origin_path);
   RETURN_ON_ERROR(lock.TryLock());
   ObjectID file_id;
   Status status = Status::OK();
@@ -181,7 +235,7 @@ Status VineyardFileStorage::TouchFile(const std::string& path) {
   ObjectMeta meta;
   std::string lock_path;
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
-  VineyardFileLock lock(rpc_client_, origin_path);
+  VineyardFileLock lock(rpc_client_, ipc_client_, origin_path);
   RETURN_ON_ERROR(lock.TryLock());
   RETURN_ON_ERROR(rpc_client_.GetName(origin_path, file_id, false));
   RETURN_ON_ERROR(rpc_client_.GetMetaData(file_id, meta, false));

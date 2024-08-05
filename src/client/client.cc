@@ -440,6 +440,12 @@ std::vector<std::shared_ptr<Object>> Client::GetObjects(
     }
     return objects;
   }
+  return GetObjects(metas);
+}
+
+std::vector<std::shared_ptr<Object>> Client::GetObjects(
+    const std::vector<ObjectMeta>& metas) {
+  std::vector<std::shared_ptr<Object>> objects(metas.size());
   for (size_t index = 0; index < metas.size(); ++index) {
     if (metas[index].MetaData().empty()) {
       objects[index] = nullptr;

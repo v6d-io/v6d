@@ -41,7 +41,7 @@ class KVCacheManager {
   static Status Make(std::shared_ptr<KVCacheManager>& manager,
                      FileCacheConfig& config);
 
-  static Status Make(RPCClient& client,
+  static Status Make(RPCClient& rpc_client, Client& ipc_client,
                      std::shared_ptr<KVCacheManager>& manager,
                      FileCacheConfig& config);
 

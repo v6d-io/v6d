@@ -23,6 +23,7 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
+#include "client/client.h"
 #include "client/rpc_client.h"
 #include "llm-cache/ds/vineyard_file.h"
 #include "llm-cache/storage/file_storage.h"
@@ -40,12 +41,12 @@ struct VineyardFileDescriptor : public FileDescriptor {
 
 class VineyardFileStorage : public FileStorage {
  public:
-  VineyardFileStorage(RPCClient& client, int tensorNBytes, int cacheCapacity,
-                      int layer, int chunkSize, int hashChunkSize,
-                      std::string rootPath, int64_t gcInterval, int64_t ttl,
-                      bool enableGlobalGC, int64_t globalGCInterval,
-                      int64_t globalTTL)
-      : rpc_client_(client) {
+  VineyardFileStorage(RPCClient& rpc_client, Client& ipc_client,
+                      int tensorNBytes, int cacheCapacity, int layer,
+                      int chunkSize, int hashChunkSize, std::string rootPath,
+                      int64_t gcInterval, int64_t ttl, bool enableGlobalGC,
+                      int64_t globalGCInterval, int64_t globalTTL)
+      : rpc_client_(rpc_client), ipc_client_(ipc_client) {
     this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
     this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
     this->tensorNBytes = tensorNBytes;
@@ -84,6 +85,10 @@ class VineyardFileStorage : public FileStorage {
   Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
               FileOperationType fileOperationType) override;
 
+  Status BatchedOpen(const std::vector<std::string>& pathList,
+                     std::vector<std::shared_ptr<FileDescriptor>>& fdList,
+                     FileOperationType fileOperationType) override;
+
   Status Seek(std::shared_ptr<FileDescriptor>& fd, size_t offset) override;
 
   Status Read(std::shared_ptr<FileDescriptor>& fd, void* data,
@@ -108,6 +113,9 @@ class VineyardFileStorage : public FileStorage {
 
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
 
+  Status BatchedClose(
+      std::vector<std::shared_ptr<FileDescriptor>>& fdList) override;
+
   Status Delete(std::string path) override;
 
   Status GetFileList(std::string dirPath,
@@ -125,6 +133,7 @@ class VineyardFileStorage : public FileStorage {
 
  private:
   RPCClient& rpc_client_;
+  Client& ipc_client_;
   size_t max_file_size_;
 };
 

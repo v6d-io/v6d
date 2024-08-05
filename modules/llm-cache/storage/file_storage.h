@@ -59,6 +59,14 @@ class FileStorage : public IStorage,
   virtual Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
                       FileOperationType fileOperationType) = 0;
 
+  virtual Status BatchedOpen(
+      const std::vector<std::string>& pathList,
+      std::vector<std::shared_ptr<FileDescriptor>>& fdList,
+      FileOperationType fileOperationType) {
+    std::runtime_error("Not implemented");
+    return Status::OK();
+  }
+
   virtual Status Seek(std::shared_ptr<FileDescriptor>& fd, size_t offset) = 0;
 
   virtual Status Read(std::shared_ptr<FileDescriptor>& fd, void* data,
@@ -80,6 +88,12 @@ class FileStorage : public IStorage,
   virtual Status Flush(std::shared_ptr<FileDescriptor>& fd) = 0;
 
   virtual Status Close(std::shared_ptr<FileDescriptor>& fd) = 0;
+
+  virtual Status BatchedClose(
+      std::vector<std::shared_ptr<FileDescriptor>>& fdList) {
+    std::runtime_error("Not implemented");
+    return Status::OK();
+  }
 
   virtual Status Delete(std::string path) = 0;
 

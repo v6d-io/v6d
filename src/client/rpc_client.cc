@@ -360,6 +360,33 @@ Status RPCClient::GetObject(const ObjectID id, std::shared_ptr<Object>& object,
   return Status::OK();
 }
 
+Status RPCClient::BatchedGetObjects(
+    const std::vector<ObjectMeta> metas,
+    std::vector<std::shared_ptr<Object>>& objects) {
+  std::map<ObjectID, std::shared_ptr<RemoteBlob>> remote_blobs;
+  std::set<ObjectID> batchedObjectIDSet;
+  for (auto const& meta : metas) {
+    batchedObjectIDSet.insert(meta.buffer_set_->AllBufferIds().begin(),
+                              meta.buffer_set_->AllBufferIds().end());
+  }
+  RETURN_ON_ERROR(GetRemoteBlobs(batchedObjectIDSet, remote_blobs));
+  for (auto const& meta : metas) {
+    for (auto const& objctID : meta.buffer_set_->AllBufferIds()) {
+      RETURN_ON_ERROR(meta.buffer_set_->EmplaceBuffer(
+          objctID, remote_blobs[objctID]->Buffer()));
+    }
+    meta.ForceLocal();
+
+    std::shared_ptr<Object> object = ObjectFactory::Create(meta.GetTypeName());
+    if (object == nullptr) {
+      object = std::unique_ptr<Object>(new Object());
+    }
+    object->Construct(meta);
+    objects.push_back(object);
+  }
+  return Status::OK();
+}
+
 std::vector<std::shared_ptr<Object>> RPCClient::GetObjects(
     const std::vector<ObjectID>& ids, const bool sync_remote) {
   std::vector<std::shared_ptr<Object>> objects(ids.size());
