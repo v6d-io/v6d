@@ -32,82 +32,6 @@ namespace vineyard {
 
 class VineyardFileBuilder;
 
-class VineyardFileLock {
- public:
-  explicit VineyardFileLock(RPCClient& rpc_client, Client& ipc_client,
-                            std::string path)
-      : path_(path), rpc_client_(rpc_client), ipc_client_(ipc_client) {}
-
-  ~VineyardFileLock() { Unlock(); }
-
-  Status TryLock() {
-    if (ipc_client_.Connected()) {
-      return TryLockWithIPCClient();
-    } else {
-      return TryLockWithRPCClient();
-    }
-  }
-
- private:
-  Status Unlock() {
-    if (ipc_client_.Connected()) {
-      return UnlockWithIPCClient();
-    } else {
-      return UnlockWithRPCClient();
-    }
-  }
-
-  Status UnlockWithRPCClient() {
-    if (!lock_path_.empty()) {
-      // unlock
-      bool result = false;
-      do {
-        rpc_client_.TryReleaseLock(lock_path_, result);
-      } while (!result);
-    }
-    return Status::OK();
-  }
-
-  Status UnlockWithIPCClient() {
-    if (!lock_path_.empty()) {
-      // unlock
-      bool result = false;
-      do {
-        ipc_client_.TryReleaseLock(lock_path_, result);
-      } while (!result);
-    }
-    return Status::OK();
-  }
-
-  Status TryLockWithRPCClient() {
-    bool result = false;
-    std::string origin_path =
-        std::regex_replace(path_, std::regex("/+"), "\\/");
-    rpc_client_.TryAcquireLock(origin_path, result, lock_path_);
-    if (!result) {
-      return Status::Invalid("Failed to acquire lock for file: " + path_);
-    }
-    return Status::OK();
-  }
-
-  Status TryLockWithIPCClient() {
-    bool result = false;
-    std::string origin_path =
-        std::regex_replace(path_, std::regex("/+"), "\\/");
-    ipc_client_.TryAcquireLock(origin_path, result, lock_path_);
-    if (!result) {
-      return Status::Invalid("Failed to acquire lock for file: " + path_);
-    }
-    return Status::OK();
-  }
-
- private:
-  std::string path_;
-  std::string lock_path_;
-  RPCClient& rpc_client_;
-  Client& ipc_client_;
-};
-
 class VineyardFile : public vineyard::Registered<VineyardFile> {
  public:
   VineyardFile() = default;
@@ -178,7 +102,6 @@ class VineyardFileBuilder {
   std::shared_ptr<RemoteBlobWriter> remote_writer_;
   std::unique_ptr<BlobWriter> writer_;
   std::string path_;
-  std::unique_ptr<VineyardFileLock> lock;
 };
 
 }  // namespace vineyard

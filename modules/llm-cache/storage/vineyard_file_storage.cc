@@ -57,7 +57,7 @@ Status VineyardFileStorage::BatchedOpen(
     std::vector<std::shared_ptr<VineyardFile>> vineyardFileList;
     RETURN_ON_ERROR(VineyardFile::BatchedMake(vineyardFileList, rpc_client_,
                                               ipc_client_, pathList));
-    for (size_t i = 0; i < pathList.size(); i++) {
+    for (size_t i = 0; i < vineyardFileList.size(); i++) {
       std::shared_ptr<VineyardFileDescriptor> lfd =
           std::make_shared<VineyardFileDescriptor>();
       lfd->path = pathList[i];
@@ -191,18 +191,12 @@ bool VineyardFileStorage::IsFileExist(const std::string& path) {
 Status VineyardFileStorage::Delete(std::string path) {
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
   std::string lock_path;
-  bool result = false;
-  VineyardFileLock lock(rpc_client_, ipc_client_, origin_path);
-  RETURN_ON_ERROR(lock.TryLock());
   ObjectID file_id;
   Status status = Status::OK();
   if (rpc_client_.GetName(origin_path, file_id, false).ok()) {
     status = rpc_client_.DelData(std::vector<ObjectID>{file_id}, true, true);
     status = rpc_client_.DropName(origin_path);
   }
-  do {
-    rpc_client_.TryReleaseLock(lock_path, result);
-  } while (!result);
   return status;
 }
 
@@ -235,8 +229,6 @@ Status VineyardFileStorage::TouchFile(const std::string& path) {
   ObjectMeta meta;
   std::string lock_path;
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
-  VineyardFileLock lock(rpc_client_, ipc_client_, origin_path);
-  RETURN_ON_ERROR(lock.TryLock());
   RETURN_ON_ERROR(rpc_client_.GetName(origin_path, file_id, false));
   RETURN_ON_ERROR(rpc_client_.GetMetaData(file_id, meta, false));
   meta.AddKeyValue(

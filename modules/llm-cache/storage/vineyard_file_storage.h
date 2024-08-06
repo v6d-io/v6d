@@ -25,6 +25,7 @@ limitations under the License.
 
 #include "client/client.h"
 #include "client/rpc_client.h"
+#include "common/util/logging.h"
 #include "llm-cache/ds/vineyard_file.h"
 #include "llm-cache/storage/file_storage.h"
 

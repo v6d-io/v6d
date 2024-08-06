@@ -60,8 +60,6 @@ Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
                           RPCClient& rpc_client, Client& ipc_client,
                           std::string path) {
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
-  VineyardFileLock lock(rpc_client, ipc_client, path);
-  RETURN_ON_ERROR(lock.TryLock());
   ObjectID file_id;
   ObjectMeta meta;
   ObjectMeta object_meta;
@@ -158,17 +156,9 @@ Status VineyardFile::BatchedMake(
     Client& ipc_client, const std::vector<std::string>& paths) {
   std::vector<std::string> origin_paths;
   std::vector<ObjectID> file_ids;
-  std::vector<std::shared_ptr<VineyardFileLock>> locks;
 
   for (auto const& path : paths) {
-    std::shared_ptr<VineyardFileLock> lock =
-        std::make_shared<VineyardFileLock>(rpc_client, ipc_client, path);
-    if (lock->TryLock().ok()) {
-      origin_paths.push_back(std::regex_replace(path, std::regex("/+"), "\\/"));
-      locks.push_back(lock);
-    } else {
-      break;
-    }
+    origin_paths.push_back(std::regex_replace(path, std::regex("/+"), "\\/"));
   }
 
   std::vector<ObjectMeta> file_metas;
@@ -219,9 +209,6 @@ Status VineyardFileBuilder::Make(std::shared_ptr<VineyardFileBuilder>& builder,
   std::string actural_path;
   std::string origin_path = std::regex_replace(path, std::regex("/+"), "\\/");
   builder = std::make_shared<VineyardFileBuilder>(origin_path);
-  builder->lock =
-      std::make_unique<VineyardFileLock>(rpc_client, ipc_client, path);
-  RETURN_ON_ERROR(builder->lock->TryLock());
   ObjectID id;
   if (ipc_client.Connected()) {
     if (ipc_client.GetName(origin_path, id).ok()) {
@@ -273,7 +260,6 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(
     Status status = rpc_client.PutName(vineyardFile->id_, path_);
   }
 
-  lock.reset();
   return vineyardFile;
 }
 
@@ -314,11 +300,6 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
         rpc_client.CreateMetaData(vineyard_file->meta_, vineyard_file->id_));
     rpc_client.Persist(vineyard_file->id_);
     Status status = rpc_client.PutName(vineyard_file->id_, builders[i]->path_);
-
-    builders[i]->lock.reset();
-  }
-  for (size_t i = blob_metas.size(); i < builders.size(); i++) {
-    builders[i]->lock.reset();
   }
 
   return vineyard_file_objects;
