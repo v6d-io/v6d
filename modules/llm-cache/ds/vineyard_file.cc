@@ -117,7 +117,7 @@ Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
   return Status::OK();
 }
 
-Status VineyardFile::BatchedGetObjedcts(
+Status VineyardFile::BatchedGetObjects(
     Client& client, RPCClient& rpc_client,
     std::map<InstanceID, std::vector<ObjectMeta>>& instance_to_metas,
     std::unordered_map<ObjectID, std::shared_ptr<VineyardFile>>& id_to_files) {
@@ -201,8 +201,8 @@ Status VineyardFile::BatchedMake(
     instance_to_metas[meta.GetInstanceId()].push_back(meta);
   }
   std::unordered_map<ObjectID, std::shared_ptr<VineyardFile>> id_to_files;
-  RETURN_ON_ERROR(BatchedGetObjedcts(ipc_client, rpc_client, instance_to_metas,
-                                     id_to_files));
+  RETURN_ON_ERROR(BatchedGetObjects(ipc_client, rpc_client, instance_to_metas,
+                                    id_to_files));
   for (auto const& meta : file_metas) {
     if (id_to_files.find(meta.GetId()) != id_to_files.end()) {
       files.push_back(id_to_files[meta.GetId()]);
@@ -315,6 +315,9 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
     rpc_client.Persist(vineyard_file->id_);
     Status status = rpc_client.PutName(vineyard_file->id_, builders[i]->path_);
 
+    builders[i]->lock.reset();
+  }
+  for (size_t i = blob_metas.size(); i < builders.size(); i++) {
     builders[i]->lock.reset();
   }
 

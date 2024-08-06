@@ -132,7 +132,7 @@ class VineyardFile : public vineyard::Registered<VineyardFile> {
   uint64_t AccessTime() { return access_time_; }
 
  private:
-  static Status BatchedGetObjedcts(
+  static Status BatchedGetObjects(
       Client& client, RPCClient& rpc_client,
       std::map<InstanceID, std::vector<ObjectMeta>>& instance_to_metas,
       std::unordered_map<ObjectID, std::shared_ptr<VineyardFile>>& id_to_files);

@@ -160,9 +160,9 @@ Status VineyardFileStorage::BatchedClose(
       std::shared_ptr<VineyardFileDescriptor> lfd =
           std::static_pointer_cast<VineyardFileDescriptor>(fd);
       builderList.push_back(lfd->builder);
-      VineyardFileBuilder::BatchedSealAndPersist(rpc_client_, ipc_client_,
-                                                 builderList);
     }
+    VineyardFileBuilder::BatchedSealAndPersist(rpc_client_, ipc_client_,
+                                               builderList);
   }
   return Status::OK();
 }
