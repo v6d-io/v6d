@@ -278,6 +278,17 @@ Status KVCacheManager::Update(
   return storage->Update(tokenList, nextToken, kvState);
 }
 
+Status KVCacheManager::BatchedUpdate(
+    const std::vector<int>& tokenList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& updated) {
+  if (kvCacheList.size() != tokenList.size()) {
+    return Status::Invalid("Token list size not match kv state list size");
+  }
+
+  return storage->BatchedUpdate(tokenList, kvCacheList, updated);
+}
+
 /**
  * @brief Query the kv state with the given token list in the kv state cache
  * manager.
@@ -426,6 +437,13 @@ Status KVCacheManager::Query(
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& matched) {
   return storage->Query(prefix, tokenList, kvCacheList, matched);
+}
+
+Status KVCacheManager::BatchedQuery(
+    const std::vector<int>& tokenList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& matched) {
+  return storage->BatchedQuery(tokenList, kvCacheList, matched);
 }
 
 Status KVCacheManager::ClearGlobalCache(Client& client,

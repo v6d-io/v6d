@@ -58,6 +58,11 @@ class KVCacheManager {
       const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated);
 
+  Status BatchedUpdate(
+      const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& updated);
+
   Status Query(const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched);
@@ -69,6 +74,11 @@ class KVCacheManager {
                const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched);
+
+  Status BatchedQuery(
+      const std::vector<int>& tokenList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& matched);
 
   void Close();
 
