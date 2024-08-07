@@ -393,7 +393,6 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
 
     def batched_query(
         self,
-        prefix: List[int],
         tokens: List[int],
         kv_cache_list: List[List[Tuple[KVTensor, KVTensor]]],
     ) -> int:

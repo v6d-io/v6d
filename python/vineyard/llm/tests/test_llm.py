@@ -187,8 +187,8 @@ def test_kv_cache_update_and_query_on_vineyard_fs(
 
     tokens = [1, 2, 3, 4]
     original_kv_tensors = []
-    for i in range(0, len(tokens), file_cache_config.chunk_size):
-        kv_tensors_to_update = []
+    kv_tensors_to_update = []
+    for _ in range(0, len(tokens), file_cache_config.chunk_size):
         k_tensor = np.random.rand(2, 2).astype(np.float32)
         v_tensor = np.random.rand(2, 2).astype(np.float32)
         for _ in range(file_cache_config.chunk_size):
@@ -204,12 +204,9 @@ def test_kv_cache_update_and_query_on_vineyard_fs(
                     for _ in range(cache.layer)
                 ]
             )
-        updated = cache.update(
-            tokens[:i],
-            tokens[i : i + file_cache_config.chunk_size],
-            kv_tensors_to_update,
-        )
-        assert updated == file_cache_config.chunk_size
+
+    updated = cache.batched_update(tokens, kv_tensors_to_update)
+    assert updated == len(tokens)
 
     kv_tensors_from_cache = []
     kv_tensors = []
@@ -226,7 +223,7 @@ def test_kv_cache_update_and_query_on_vineyard_fs(
                 for _ in range(cache.layer)
             ]
         )
-    matched = cache.query(None, tokens, kv_tensors)
+    matched = cache.batched_query(tokens, kv_tensors)
     assert matched == len(tokens)
 
     assert len(kv_tensors) == len(kv_tensors_from_cache)
