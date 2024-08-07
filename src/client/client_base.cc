@@ -559,7 +559,7 @@ Status ClientBase::doWrite(const std::string& message_out) {
 }
 
 Status ClientBase::doRead(std::string& message_in) {
-  auto status = recv_message(vineyard_conn_, message_in);
+  auto status = recv_message(vineyard_conn_, message_in, timeout_seconds_);
   if (!status.ok()) {
     connected_ = false;
   }

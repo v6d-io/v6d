@@ -201,14 +201,14 @@ Status send_message(int fd, const std::string& msg) {
 }
 
 #if defined(__APPLE__)
-Status recv_bytes(int fd, void* data, size_t length) {
+Status recv_bytes(int fd, void* data, size_t length, int timeout_seconds) {
   ssize_t nbytes = 0;
   size_t bytes_left = length;
   size_t offset = 0;
   char* ptr = static_cast<char*>(data);
 
   struct timeval timeout;
-  timeout.tv_sec = 300;
+  timeout.tv_sec = timeout_seconds;
   timeout.tv_usec = 0;
 
   fd_set readfds;
@@ -220,7 +220,7 @@ Status recv_bytes(int fd, void* data, size_t length) {
       if (errno == EINTR) {
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
-        timeout.tv_sec = 300;
+        timeout.tv_sec = timeout_seconds;
         timeout.tv_usec = 0;
         continue;
       } else {
@@ -250,7 +250,7 @@ Status recv_bytes(int fd, void* data, size_t length) {
   return Status::OK();
 }
 #else
-Status recv_bytes(int fd, void* data, size_t length) {
+Status recv_bytes(int fd, void* data, size_t length, int timeout_seconds) {
   ssize_t nbytes = 0;
   size_t bytes_left = length;
   size_t offset = 0;
@@ -273,8 +273,7 @@ Status recv_bytes(int fd, void* data, size_t length) {
 
   struct epoll_event events[1];
   while (bytes_left > 0) {
-    int ret =
-        epoll_wait(epoll_fd, events, 1, 300 * 1000);  // 300 seconds timeout
+    int ret = epoll_wait(epoll_fd, events, 1, timeout_seconds * 1000);
     if (ret < 0) {
       if (errno == EINTR) {
         continue;
@@ -310,12 +309,12 @@ Status recv_bytes(int fd, void* data, size_t length) {
 }
 #endif
 
-Status recv_message(int fd, std::string& msg) {
+Status recv_message(int fd, std::string& msg, int timeout_seconds) {
   size_t length;
-  RETURN_ON_ERROR(recv_bytes(fd, &length, sizeof(size_t)));
+  RETURN_ON_ERROR(recv_bytes(fd, &length, sizeof(size_t), timeout_seconds));
   msg.resize(length + 1);
   msg[length] = '\0';
-  RETURN_ON_ERROR(recv_bytes(fd, &msg[0], length));
+  RETURN_ON_ERROR(recv_bytes(fd, &msg[0], length, timeout_seconds));
   return Status::OK();
 }
 
