@@ -441,7 +441,8 @@ Status compress_and_send(std::shared_ptr<Compressor> const& compressor, int fd,
 }
 
 Status recv_and_decompress(std::shared_ptr<Decompressor> const& decompressor,
-                           int fd, char* buffer, const size_t buffer_size) {
+                           int fd, char* buffer, const size_t buffer_size,
+                           int const timeout_seconds) {
   size_t decompressed_offset = 0;
   void* incoming_buffer = nullptr;
   size_t incoming_buffer_size = 0;
@@ -449,9 +450,9 @@ Status recv_and_decompress(std::shared_ptr<Decompressor> const& decompressor,
     RETURN_ON_ERROR(
         decompressor->Buffer(incoming_buffer, incoming_buffer_size));
     size_t nbytes = 0;
-    RETURN_ON_ERROR(recv_bytes(fd, &nbytes, sizeof(size_t)));
+    RETURN_ON_ERROR(recv_bytes(fd, &nbytes, sizeof(size_t), timeout_seconds));
     assert(nbytes <= incoming_buffer_size);
-    RETURN_ON_ERROR(recv_bytes(fd, incoming_buffer, nbytes));
+    RETURN_ON_ERROR(recv_bytes(fd, incoming_buffer, nbytes, timeout_seconds));
     RETURN_ON_ERROR(decompressor->Decompress(nbytes));
     size_t chunk_size = 0;
     while (decompressor
@@ -779,12 +780,12 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
         TransferRemoteBlobWithRDMA(buffer->buffer_, payloads[0], opt_func));
   } else {
     if (decompressor && payloads[0].data_size > 0) {
-      RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
-                                                  buffer->mutable_data(),
-                                                  payloads[0].data_size));
+      RETURN_ON_ERROR(detail::recv_and_decompress(
+          decompressor, vineyard_conn_, buffer->mutable_data(),
+          payloads[0].data_size, timeout_seconds_));
     } else if (payloads[0].data_size > 0) {
       RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
-                                 payloads[0].data_size));
+                                 payloads[0].data_size, timeout_seconds_));
     }
   }
   return Status::OK();
@@ -830,10 +831,10 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
       RETURN_ON_ERROR(detail::recv_and_decompress(
           decompressor, vineyard_conn_,
           reinterpret_cast<char*>(buffer->mutable_data()),
-          payloads[0].data_size));
+          payloads[0].data_size, timeout_seconds_));
     } else if (payloads[0].data_size > 0) {
       RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
-                                 payloads[0].data_size));
+                                 payloads[0].data_size, timeout_seconds_));
     }
   }
   return Status::OK();
@@ -907,10 +908,10 @@ Status RPCClient::GetRemoteBlobs(
       if (decompressor && payload.data_size > 0) {
         RETURN_ON_ERROR(detail::recv_and_decompress(
             decompressor, vineyard_conn_, remote_blob->mutable_data(),
-            payload.data_size));
+            payload.data_size, timeout_seconds_));
       } else {
         RETURN_ON_ERROR(recv_bytes(vineyard_conn_, remote_blob->mutable_data(),
-                                   payload.data_size));
+                                   payload.data_size, timeout_seconds_));
       }
       id_payload_map[payload.object_id] = remote_blob;
     }
@@ -985,10 +986,10 @@ Status RPCClient::GetRemoteBlobs(
         RETURN_ON_ERROR(detail::recv_and_decompress(
             decompressor, vineyard_conn_,
             reinterpret_cast<char*>(remote_blob->mutable_data()),
-            payload.data_size));
+            payload.data_size, timeout_seconds_));
       } else {
         RETURN_ON_ERROR(recv_bytes(vineyard_conn_, remote_blob->mutable_data(),
-                                   payload.data_size));
+                                   payload.data_size, timeout_seconds_));
       }
     }
   }

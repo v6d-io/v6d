@@ -652,6 +652,10 @@ class ClientBase {
     }
   }
 
+  void set_timeout_seconds(int seconds) { timeout_seconds_ = seconds; }
+
+  int get_timeout_seconds() const { return timeout_seconds_; }
+
  protected:
   Status doWrite(const std::string& message_out);
 
@@ -673,6 +677,9 @@ class ClientBase {
 
   // Options
   bool compression_enabled_ = false;
+
+  // The timeout seconds for the client to wait for the server to respond.
+  int timeout_seconds_ = 300;
 };
 
 struct InstanceStatus {

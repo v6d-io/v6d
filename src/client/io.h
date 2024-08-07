@@ -36,9 +36,9 @@ Status send_bytes(int fd, const void* data, size_t length);
 
 Status send_message(int fd, const std::string& msg);
 
-Status recv_bytes(int fd, void* data, size_t length);
+Status recv_bytes(int fd, void* data, size_t length, int timeout_seconds);
 
-Status recv_message(int fd, std::string& msg);
+Status recv_message(int fd, std::string& msg, int timeout_seconds);
 
 Status check_fd(int fd);
 

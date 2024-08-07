@@ -605,6 +605,8 @@ void bind_client(py::module& mod) {
            })
       .def_property("compression", &ClientBase::compression_enabled,
                     &ClientBase::set_compression_enabled)
+      .def_property("timeout_seconds", &ClientBase::get_timeout_seconds,
+                    &ClientBase::set_timeout_seconds)
       .def_property_readonly("ipc_socket", &ClientBase::IPCSocket,
                              doc::ClientBase_ipc_socket)
       .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint,

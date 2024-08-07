@@ -323,6 +323,21 @@ class Client:
         self._spread = value
 
     @property
+    def timeout_seconds(self) -> int:
+        """
+        The timeout seconds for underlying client.
+        Default is 300 seconds.
+        """
+        return self.default_client().timeout_seconds
+
+    @timeout_seconds.setter
+    def timeout_seconds(self, value: int):
+        if self._ipc_client:
+            self._ipc_client.timeout_seconds = value
+        if self._rpc_client:
+            self._rpc_client.timeout_seconds = value
+
+    @property
     def ipc_client(self) -> IPCClient:
         assert self._ipc_client is not None, "IPC client is not available."
         return self._ipc_client
