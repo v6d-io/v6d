@@ -459,7 +459,9 @@ Status FileStorage::BatchedUpdate(
 
   int lower_bound = 0;
   if (read_fd_list.size() > 0) {
-    parallel::ThreadGroup tg(std::min(read_fd_list.size(), (size_t) 1));
+    parallel::ThreadGroup tg(
+        std::min(read_fd_list.size(),
+                 static_cast<size_t>(std::thread::hardware_concurrency())));
     std::vector<parallel::ThreadGroup::tid_t> tids(read_fd_list.size());
     for (size_t i = 0; i < read_fd_list.size(); ++i) {
       tids[i] = tg.AddTask(read_fn, i);
@@ -509,7 +511,9 @@ Status FileStorage::BatchedUpdate(
   };
 
   if (write_fd_list.size() > 0) {
-    parallel::ThreadGroup tg_write(std::min(write_fd_list.size(), (size_t) 1));
+    parallel::ThreadGroup tg_write(
+        std::min(write_fd_list.size(),
+                 static_cast<size_t>(std::thread::hardware_concurrency())));
     std::vector<parallel::ThreadGroup::tid_t> tids_write(write_fd_list.size());
     for (size_t i = 0; i < write_fd_list.size(); ++i) {
       tids_write[i] = tg_write.AddTask(fn, i);
@@ -826,7 +830,9 @@ Status FileStorage::BatchedQuery(
     return Status::OK();
   };
 
-  parallel::ThreadGroup tg(std::min(read_fd_list.size(), (size_t) 1));
+  parallel::ThreadGroup tg(
+      std::min(read_fd_list.size(),
+               static_cast<size_t>(std::thread::hardware_concurrency())));
   std::vector<parallel::ThreadGroup::tid_t> tids(read_fd_list.size());
   for (size_t i = 0; i < read_fd_list.size(); ++i) {
     tids[i] = tg.AddTask(read_fn, i, i * chunkSize);

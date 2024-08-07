@@ -13,11 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <regex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "client/client.h"
@@ -27,6 +29,7 @@ limitations under the License.
 #include "client/rpc_client.h"
 #include "common/util/logging.h"
 #include "llm-cache/ds/vineyard_file.h"
+#include "llm-cache/thread_group.h"
 
 namespace vineyard {
 
@@ -66,7 +69,6 @@ Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
     if (!ipc_client.GetName(origin_path, file_id, false).ok()) {
       return Status::IOError("File " + path + " is not exist.");
     }
-    // RETURN_ON_ERROR(ipc_client.GetObject(file_id, object));
     ipc_client.GetMetaData(file_id, meta, true);
     if (meta.GetInstanceId() == ipc_client.instance_id()) {
       object = ipc_client.GetObject(file_id);
@@ -119,7 +121,8 @@ Status VineyardFile::BatchedGetObjects(
     std::unordered_map<ObjectID, std::shared_ptr<VineyardFile>>& id_to_files) {
   std::map<InstanceID, json> cluster_info;
   rpc_client.ClusterInfo(cluster_info);
-  for (auto& instance_to_meta : instance_to_metas) {
+  auto fn = [&](std::pair<const InstanceID, std::vector<ObjectMeta>>&
+                    instance_to_meta) -> Status {
     std::vector<std::shared_ptr<Object>> file_objects;
     if (client.Connected() && instance_to_meta.first == client.instance_id()) {
       std::vector<ObjectID> ids(instance_to_meta.second.size());
@@ -168,7 +171,24 @@ Status VineyardFile::BatchedGetObjects(
       id_to_files[instance_to_meta.second[i].GetId()] =
           std::dynamic_pointer_cast<VineyardFile>(file_objects[i]);
     }
+    return Status::OK();
+  };
+
+  parallel::ThreadGroup tg(
+      std::min(instance_to_metas.size(),
+               static_cast<size_t>(std::thread::hardware_concurrency())));
+  std::vector<parallel::ThreadGroup::tid_t> tids(instance_to_metas.size());
+  int index = 0;
+  for (auto& instance_to_meta : instance_to_metas) {
+    tids[index] = tg.AddTask(fn, instance_to_meta);
+    index++;
   }
+
+  std::vector<Status> taskResults(instance_to_metas.size(), Status::OK());
+  for (size_t i = 0; i < instance_to_metas.size(); ++i) {
+    taskResults[i] = tg.TaskResult(tids[i]);
+  }
+
   return Status::OK();
 }
 
@@ -309,12 +329,8 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
         std::make_shared<VineyardFile>();
     if (ipc_client.Connected()) {
       ipc_client.Persist(blob_metas[i].GetId());
-      // vineyard_file->meta_.SetBuffer(blob_metas[i].GetId(),
-      // builders[i]->writer_->Buffer());
     } else {
       rpc_client.Persist(blob_metas[i].GetId());
-      // vineyard_file->meta_.SetBuffer(blob_metas[i].GetId(),
-      // builders[i]->remote_writer_->Buffer());
     }
     vineyard_file->meta_.AddMember("buffer", blob_metas[i]);
     vineyard_file->meta_.AddKeyValue("path", builders[i]->path_);
