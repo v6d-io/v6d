@@ -363,17 +363,18 @@ Status RPCClient::GetObject(const ObjectID id, std::shared_ptr<Object>& object,
 Status RPCClient::BatchedGetObjects(
     const std::vector<ObjectMeta> metas,
     std::vector<std::shared_ptr<Object>>& objects) {
-  std::map<ObjectID, std::shared_ptr<RemoteBlob>> remote_blobs;
-  std::set<ObjectID> batchedObjectIDSet;
+  std::vector<std::shared_ptr<RemoteBlob>> remote_blobs;
+  std::vector<ObjectID> batchedObjectIDVec;
   for (auto const& meta : metas) {
-    batchedObjectIDSet.insert(meta.buffer_set_->AllBufferIds().begin(),
+    batchedObjectIDVec.insert(batchedObjectIDVec.end(),
+                              meta.buffer_set_->AllBufferIds().begin(),
                               meta.buffer_set_->AllBufferIds().end());
   }
-  RETURN_ON_ERROR(GetRemoteBlobs(batchedObjectIDSet, remote_blobs));
+  RETURN_ON_ERROR(GetRemoteBlobs(batchedObjectIDVec, false, remote_blobs));
   for (auto const& meta : metas) {
-    for (auto const& objctID : meta.buffer_set_->AllBufferIds()) {
+    for (size_t i = 0; i < meta.buffer_set_->AllBufferIds().size(); i++) {
       RETURN_ON_ERROR(meta.buffer_set_->EmplaceBuffer(
-          objctID, remote_blobs[objctID]->Buffer()));
+          remote_blobs[i]->id(), remote_blobs[i]->Buffer()));
     }
     meta.ForceLocal();
 

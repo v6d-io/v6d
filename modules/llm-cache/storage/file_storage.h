@@ -145,6 +145,11 @@ class FileStorage : public IStorage,
       const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) override;
 
+  Status BatchedUpdate(
+      const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& updated) override;
+
   Status Query(const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched) override;
@@ -156,6 +161,10 @@ class FileStorage : public IStorage,
                const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched) override;
+  Status BatchedQuery(
+      const std::vector<int>& tokenList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& matched) override;
 
   void CloseCache() override;
 

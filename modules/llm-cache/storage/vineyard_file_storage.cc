@@ -100,7 +100,6 @@ Status VineyardFileStorage::Read(std::shared_ptr<FileDescriptor>& fd,
                                  void* data, size_t size) {
   std::shared_ptr<VineyardFileDescriptor> lfd =
       std::static_pointer_cast<VineyardFileDescriptor>(fd);
-  // TBD
   if (lfd->opt_type == FileOperationType::READ) {
     RETURN_ON_ERROR(lfd->vineyard_file->Read(data, size, lfd->cur_pos));
     lfd->cur_pos += size;
@@ -115,7 +114,6 @@ Status VineyardFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
                                   const void* data, size_t size) {
   std::shared_ptr<VineyardFileDescriptor> lfd =
       std::static_pointer_cast<VineyardFileDescriptor>(fd);
-  // TBD
   if (lfd->opt_type == FileOperationType::WRITE) {
     RETURN_ON_ERROR(lfd->builder->Write(data, size, lfd->cur_pos));
     lfd->cur_pos += size;

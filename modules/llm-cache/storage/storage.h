@@ -43,6 +43,18 @@ class IStorage {
       const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) = 0;
 
+  /*
+   * BatchedUpdate is used to update multiple kvCacheList in one batch. It will
+   * batch open all files or batch close all files to reduce the overhead of
+   * network IO.
+   */
+  virtual Status BatchedUpdate(
+      const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& updated) {
+    return Status::NotImplemented();
+  }
+
   virtual Status Query(
       const std::vector<int>& tokenList,
       std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
@@ -55,6 +67,13 @@ class IStorage {
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
       std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& matched) = 0;
+
+  virtual Status BatchedQuery(
+      const std::vector<int>& tokenList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& matched) {
+    return Status::NotImplemented();
+  }
 
   virtual void CloseCache() = 0;
 

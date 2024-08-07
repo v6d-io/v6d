@@ -415,6 +415,129 @@ Status FileStorage::Update(
   return Status::NotImplemented();
 }
 
+Status FileStorage::BatchedUpdate(
+    const std::vector<int>& tokenList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& updated) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
+  if (tokenList.size() % chunkSize != 0) {
+    return Status::Invalid("Tokens size " + std::to_string(tokenList.size()) +
+                           " should be multiple of batch size " +
+                           std::to_string(chunkSize) + "!");
+  }
+
+  std::vector<std::string> pathList;
+  std::set<std::string> createFileSet;
+  std::mutex createFileSetMutex;
+  RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, chunkSize,
+                                               hashChunkSize, pathList));
+  if (pathList.size() == 0) {
+    return Status::OK();
+  }
+
+  std::vector<std::shared_ptr<FileDescriptor>> read_fd_list;
+  RETURN_ON_ERROR(BatchedOpen(pathList, read_fd_list, FileOperationType::READ));
+
+  auto read_fn = [this, &read_fd_list, &tokenList](int i) -> Status {
+    int tokenLength = (i + 1) * chunkSize;
+    RETURN_ON_ERROR(Read(read_fd_list[i], &tokenLength, sizeof(int)));
+    std::vector<int> tokens;
+    tokens.resize(tokenLength);
+    RETURN_ON_ERROR(
+        Read(read_fd_list[i], tokens.data(), tokenLength * sizeof(int)));
+    if (!CompareTokenList(tokenList, tokens, tokenLength)) {
+      // Token list not match
+      VINEYARD_DISCARD(Close(read_fd_list[i]));
+      return Status::ObjectExists("File exists for another token sequence");
+    }
+    // Skip this kv state
+    VINEYARD_DISCARD(Close(read_fd_list[i]));
+    return Status::OK();
+  };
+
+  int lower_bound = 0;
+  if (read_fd_list.size() > 0) {
+    parallel::ThreadGroup tg(std::min(read_fd_list.size(), (size_t) 1));
+    std::vector<parallel::ThreadGroup::tid_t> tids(read_fd_list.size());
+    for (size_t i = 0; i < read_fd_list.size(); ++i) {
+      tids[i] = tg.AddTask(read_fn, i);
+    }
+    std::vector<Status> taskResults(read_fd_list.size(), Status::OK());
+    for (size_t i = 0; i < read_fd_list.size(); ++i) {
+      taskResults[i] = tg.TaskResult(tids[i]);
+    }
+
+    for (size_t i = 0; i < taskResults.size(); i++) {
+      if (taskResults[i].ok()) {
+        lower_bound += 1;
+      } else {
+        // File exists for another token sequence
+        break;
+      }
+    }
+  }
+
+  BatchedClose(read_fd_list);
+
+  std::vector<std::shared_ptr<FileDescriptor>> write_fd_list;
+  std::vector<std::string> left_path(pathList.begin() + lower_bound,
+                                     pathList.end());
+  RETURN_ON_ERROR(
+      BatchedOpen(left_path, write_fd_list, FileOperationType::WRITE));
+  auto fn = [this, &write_fd_list, &tokenList, &kvCacheList,
+             lower_bound](int i) -> Status {
+    int tokenLength = (i + 1 + lower_bound) * chunkSize;
+
+    RETURN_ON_ERROR(Write(write_fd_list[i], &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(
+        Write(write_fd_list[i], tokenList.data(), tokenLength * sizeof(int)));
+    for (int currentTokenIndex = (i + lower_bound) * chunkSize;
+         currentTokenIndex < (i + lower_bound + 1) * chunkSize;
+         currentTokenIndex++) {
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        const LLMKV& k = kvCacheList[currentTokenIndex][currentLayer].first;
+        const LLMKV& v = kvCacheList[currentTokenIndex][currentLayer].second;
+        RETURN_ON_ERROR(Write(write_fd_list[i], k.data, k.length));
+        RETURN_ON_ERROR(Write(write_fd_list[i], v.data, k.length));
+      }
+    }
+
+    VINEYARD_DISCARD(Flush(write_fd_list[i]));
+    return Status::OK();
+  };
+
+  if (write_fd_list.size() > 0) {
+    parallel::ThreadGroup tg_write(std::min(write_fd_list.size(), (size_t) 1));
+    std::vector<parallel::ThreadGroup::tid_t> tids_write(write_fd_list.size());
+    for (size_t i = 0; i < write_fd_list.size(); ++i) {
+      tids_write[i] = tg_write.AddTask(fn, i);
+    }
+    std::vector<Status> taskResults_write(write_fd_list.size(), Status::OK());
+    for (size_t i = 0; i < write_fd_list.size(); ++i) {
+      taskResults_write[i] = tg_write.TaskResult(tids_write[i]);
+    }
+
+    size_t upper_bound = 0;
+    for (size_t i = 0; i < write_fd_list.size(); i++) {
+      if (taskResults_write[i].ok()) {
+        upper_bound += 1;
+      } else {
+        break;
+      }
+    }
+
+    for (size_t i = upper_bound; i < write_fd_list.size(); i++) {
+      VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i + lower_bound]));
+    }
+    updated = upper_bound * chunkSize;
+
+    RETURN_ON_ERROR(BatchedClose(write_fd_list));
+  }
+  return Status::OK();
+}
+
 /**
  * @brief Query the kv state with the given token list in the file storage.
  *
@@ -646,6 +769,76 @@ Status FileStorage::Query(
   matched = 0;
   for (size_t i = numPrefixChunks; i < paths.size(); i++) {
     if (taskResults[i - numPrefixChunks].ok()) {
+      matched += chunkSize;
+    } else {
+      break;
+    }
+  }
+  return Status::OK();
+}
+
+Status FileStorage::BatchedQuery(
+    const std::vector<int>& tokenList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& matched) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
+
+  std::vector<std::string> paths;
+  RETURN_ON_ERROR(
+      hasher->computePathForTokens(tokenList, chunkSize, hashChunkSize, paths));
+
+  std::vector<std::shared_ptr<FileDescriptor>> read_fd_list;
+  RETURN_ON_ERROR(BatchedOpen(paths, read_fd_list, FileOperationType::READ));
+  auto read_fn = [this, &read_fd_list, &tokenList, &kvCacheList](
+                     size_t i, size_t matched_start) -> Status {
+    int tokenLength = 0;
+    RETURN_ON_ERROR(Read(read_fd_list[i], &tokenLength, sizeof(int)));
+    std::vector<int> blockTokenList(tokenLength, 0);
+    RETURN_ON_ERROR(Read(read_fd_list[i], blockTokenList.data(),
+                         tokenLength * sizeof(int)));
+
+    if (!CompareTokenList(tokenList, blockTokenList, tokenLength)) {
+      VINEYARD_DISCARD(Close(read_fd_list[i]));
+      return Status::ObjectNotExists("Token mismatch");
+    }
+
+    for (int j = 0; j < chunkSize; j++) {
+      if (matched_start + j >= tokenList.size() ||
+          matched_start + j >= kvCacheList.size()) {
+        break;
+      }
+      auto& kvState = kvCacheList[matched_start + j];
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        RETURN_ON_ASSERT(static_cast<int>(kvState.size()) == layer,
+                         "The size of kvState is not equal to layer");
+        LLMKV& k = kvState[currentLayer].first;
+        LLMKV& v = kvState[currentLayer].second;
+        RETURN_ON_ASSERT(
+            k.length == tensorNBytes && v.length == tensorNBytes,
+            "The size of kv tensor doesn't match with the tensorNBytes");
+        RETURN_ON_ERROR(Read(read_fd_list[i], k.data, k.length));
+        RETURN_ON_ERROR(Read(read_fd_list[i], v.data, v.length));
+      }
+    }
+    VINEYARD_DISCARD(Close(read_fd_list[i]));
+    return Status::OK();
+  };
+
+  parallel::ThreadGroup tg(std::min(read_fd_list.size(), (size_t) 1));
+  std::vector<parallel::ThreadGroup::tid_t> tids(read_fd_list.size());
+  for (size_t i = 0; i < read_fd_list.size(); ++i) {
+    tids[i] = tg.AddTask(read_fn, i, i * chunkSize);
+  }
+  std::vector<Status> taskResults(read_fd_list.size(), Status::OK());
+  for (size_t i = 0; i < read_fd_list.size(); ++i) {
+    taskResults[i] = tg.TaskResult(tids[i]);
+  }
+
+  matched = 0;
+  for (size_t i = 0; i < read_fd_list.size(); i++) {
+    if (taskResults[i].ok()) {
       matched += chunkSize;
     } else {
       break;
