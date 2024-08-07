@@ -113,6 +113,9 @@ class FileCacheConfig:
         enable_global_gc: bool = False,
         global_gc_interval: int = 3 * 60 * 60,
         global_ttl: int = 3 * 60 * 60,
+        socket: str = "",
+        rpc_endpoint: str = "",
+        rdma_endpoint: str = "",
     ):
         """Create a file cache config.
 
@@ -153,6 +156,16 @@ class FileCacheConfig:
         self.global_gc_interval = global_gc_interval
         self.global_ttl = global_ttl
 
+        import vineyard
+
+        if filesystem_type == FilesystemType.VINEYARD:
+            self.ipc_client = vineyard.connect(socket).ipc_client
+            rpc_host = rpc_endpoint.split(":")[0]
+            rpc_port = rpc_endpoint.split(":")[1]
+            self.rpc_client = vineyard.connect(
+                host=rpc_host, port=rpc_port, rdma_endpoint=rdma_endpoint
+            ).rpc_client
+
     def __repr__(self):
         return (
             f'FileCacheConfig('
@@ -164,7 +177,7 @@ class FileCacheConfig:
             f'ttl={self.ttl}, '
             f'enable_global_gc={self.enable_global_gc}, '
             f'global_gc_interval={self.global_gc_interval}, '
-            f'global_ttl={self.global_ttl})'
+            f'global_ttl={self.global_ttl}), '
         )
 
 
@@ -311,6 +324,13 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
         else:
             return self.kv_cache_manager.update(tokens, kv_cache_list)
 
+    def batched_update(
+        self,
+        tokens: List[int],
+        kv_cache_list: List[List[Tuple[KVTensor, KVTensor]]],
+    ) -> int:
+        return self.kv_cache_manager.batched_update(tokens, kv_cache_list)
+
     def query(
         self,
         prefix: List[int],
@@ -370,6 +390,14 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
             return self.kv_cache_manager.query(prefix, tokens, kv_cache_list)
         else:
             return self.kv_cache_manager.query(tokens, kv_cache_list)
+
+    def batched_query(
+        self,
+        prefix: List[int],
+        tokens: List[int],
+        kv_cache_list: List[List[Tuple[KVTensor, KVTensor]]],
+    ) -> int:
+        return self.kv_cache_manager.batched_query(tokens, kv_cache_list)
 
     def __del__(self):
         if self.kv_cache_manager:
