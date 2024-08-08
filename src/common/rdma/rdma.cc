@@ -155,6 +155,10 @@ int IRDMA::GetCompletion(fid_cq* cq, int timeout, void** context) {
     if (ret > 0) {
       break;
     } else if (ret < 0 && ret != -FI_EAGAIN) {
+      if (ret == -FI_EAVAIL) {
+        fi_cq_readerr(cq, &err, 0);
+        ret = -err.err;
+      }
       break;
     } else if (timeout > 0) {
       clock_gettime(CLOCK_REALTIME, &end);

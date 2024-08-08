@@ -387,6 +387,7 @@ void RPCServer::doRDMARecv() {
       if (recv_msg->type == VINEYARD_MSG_CLOSE) {
         doVineyardClose(recv_context);
         delete recv_context;
+        continue;
       }
 
       VineyardRecvContext* recv_context_tmp = new VineyardRecvContext();
