@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # build vineyard-python-dev
-FROM ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20240329 as wheel
+FROM ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20240803 as wheel
 
 ENV python=cp310-cp310
 
@@ -47,8 +47,11 @@ COPY python/vineyard.cc /work/v6d/python/vineyard.cc
 COPY python/vineyard/llm /work/v6d/python/vineyard/llm
 
 RUN cd /work/v6d && \
-    mkdir build && \
-    cd build && \
+    rm -rf /work/v6d/build && \
+    cd /work/v6d/thirdparty/libfabric && \
+    rm -f /work/v6d/thirdparty/libfabric/Makefile && \
+    mkdir -p /work/v6d/build && \
+    cd /work/v6d/build && \
     export PATH=$PATH:/opt/python/$python/bin && \
     pip3 install -U pip setuptools wheel && \
     cmake .. -DBUILD_SHARED_LIBS=OFF \

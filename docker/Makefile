@@ -18,7 +18,7 @@ ALPINE_TAG					:= $(ALPINE_MANIFEST_TAG)_$(PLATFORM)
 
 WHEEL_BUILDER_REGISTRY		:= $(REGISTRY)
 WHEEL_BUILDER_IMAGE			:= vineyard-manylinux2014
-WHEEL_BUILDER_MANIFEST_TAG 	:= 20240329
+WHEEL_BUILDER_MANIFEST_TAG 	:= 20240803
 WHEEL_BUILDER_TAG 			:= $(WHEEL_BUILDER_MANIFEST_TAG)_$(PLATFORM)
 
 WHEEL_PYTHON				:= cp311-cp311
@@ -116,10 +116,12 @@ build-dev:
 
 # build python-dev image
 build-python-dev:
-	docker build ../ \
+	docker buildx build ../ \
 		--progress=$(BUILD_PROGRESS) \
 		-f ./Dockerfile.vineyard-python-dev \
-		-t $(PYTHON_DEV_REGISTRY)/$(PYTHON_DEV_IMAGE):$(PYTHON_DEV_TAG)
+		-t $(PYTHON_DEV_REGISTRY)/$(PYTHON_DEV_IMAGE):$(PYTHON_DEV_TAG) \
+		--load \
+		--platform linux/$(ARCH)
 .PHONY: build-python-dev
 
 # build vineyard-fluid-fuse image

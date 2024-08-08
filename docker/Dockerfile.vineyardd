@@ -53,7 +53,11 @@ RUN cd /tmp && \
     cd /tmp && \
     rm -rf libunwind-1.7.2.tar.gz libunwind-1.7.2/
 
-RUN cd /work/v6d && \
+RUN export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH && \
+    cd /work/v6d && \
+    rm -rf /work/v6d/build && \
+    cd /work/v6d/thirdparty/libfabric && \
+    rm -f /work/v6d/thirdparty/libfabric/Makefile && \
     mkdir -p /work/v6d/build && \
     cd /work/v6d/build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
