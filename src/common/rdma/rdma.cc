@@ -155,13 +155,14 @@ int IRDMA::GetCompletion(fid_cq* cq, int timeout, void** context) {
     if (ret > 0) {
       break;
     } else if (ret < 0 && ret != -FI_EAGAIN) {
-      return ret;
+      break;
     } else if (timeout > 0) {
       clock_gettime(CLOCK_REALTIME, &end);
       if ((end.tv_sec - start.tv_sec) * 1000 +
               (end.tv_nsec - start.tv_nsec) / 1000000 >
           timeout) {
-        return -FI_ETIMEDOUT;
+        ret = -FI_ETIMEDOUT;
+        break;
       }
     }
   }
@@ -169,7 +170,7 @@ int IRDMA::GetCompletion(fid_cq* cq, int timeout, void** context) {
     *context = err.op_context;
   }
 
-  return 0;
+  return ret < 0 ? ret : 0;
 }
 
 void IRDMA::FreeInfo(fi_info* info) {

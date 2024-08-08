@@ -429,7 +429,18 @@ Status RDMAServer::GetRXCompletion(int timeout, void** context) {
         continue;
       }
     } else if (ret < 0) {
-      return Status::Invalid("GetRXCompletion failed");
+      if (ret == -FI_EAVAIL) {
+        fi_cq_err_entry err;
+        fi_cq_readerr(rxcq, &err, 0);
+        if (err.err == FI_ECANCELED) {
+          // client crashed
+          return Status::ConnectionError("Client crashed.");
+        } else {
+          return Status::Invalid(fi_strerror(err.err));
+        }
+      }
+      return Status::Invalid("GetRXCompletion failed, ret:" +
+                             std::to_string(ret));
     } else {
       return Status::OK();
     }
