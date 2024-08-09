@@ -1055,8 +1055,12 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
 
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
-          std::string rdma_endpoint =
-              (*instance)["rdma_endpoint"].get_ref<std::string const&>();
+          std::string rdma_endpoint = "";
+          if ((*instance).contains("rdma_endpoint") &&
+              !(*instance)["rdma_endpoint"].is_null()) {
+            std::string rdma_endpoint =
+                (*instance)["rdma_endpoint"].get_ref<std::string const&>();
+          }
 
           auto test_task = [self, object_id](const json& meta) -> bool {
             std::lock_guard<std::mutex> lock(
