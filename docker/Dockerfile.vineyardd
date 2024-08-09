@@ -29,7 +29,6 @@ RUN export arch="$PLATFORM" && \
     curl -LO https://github.com/etcd-io/etcd/releases/download/v3.5.9/etcd-v3.5.9-linux-$arch.tar.gz && \
     tar zxf etcd-v3.5.9-linux-$arch.tar.gz && \
     mv /tmp/etcd-v3.5.9-linux-$arch/etcd /usr/bin/etcd && \
-    mv /tmp/etcd-v3.5.9-linux-$arch/etcdctl /usr/bin/etcdctl && \
     curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/$arch/kubectl && \
     chmod +x kubectl && \
     mv /tmp/kubectl /usr/bin/kubectl
@@ -86,7 +85,6 @@ SHELL ["/bin/bash", "-c"]
 COPY --from=builder /usr/bin/bash-linux /bin/bash
 COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
 COPY --from=builder /usr/bin/etcd /usr/bin/etcd
-COPY --from=builder /usr/bin/etcdctl /usr/bin/etcdctl
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd
 RUN ln -s /busybox/env /usr/bin/env

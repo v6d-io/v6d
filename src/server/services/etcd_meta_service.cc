@@ -435,8 +435,8 @@ Status EtcdMetaService::preStart(const bool create_new_instance) {
   return etcd_launcher_->LaunchEtcdServer(etcd_, meta_sync_lock_);
 }
 
-Status EtcdMetaService::RemoveMember(const std::string member_id) {
-  auto status = etcd_launcher_->RemoveMember(member_id);
+Status EtcdMetaService::RemoveMember(const uint64_t& member_id) {
+  auto status = etcd_launcher_->RemoveMember(etcd_, member_id);
   if (!status.ok()) {
     LOG(ERROR) << "Failed to remove member " << member_id
                << " from etcd: " << status.ToString();
@@ -449,7 +449,7 @@ Status EtcdMetaService::UpdateEndpoint() {
   if (etcd_launcher_ == nullptr) {
     return Status::Invalid("etcd launcher is not initialized");
   }
-  return etcd_launcher_->UpdateEndpoint();
+  return etcd_launcher_->UpdateEndpoint(etcd_);
 }
 
 }  // namespace vineyard
