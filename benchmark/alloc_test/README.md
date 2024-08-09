@@ -9,7 +9,7 @@ Referred from <https://github.com/daanx/mimalloc-bench/blob/master/bench/alloc-t
 Configure with the following arguments when building vineyard:
 
 ```bash
-cmake .. -DBUILD_VINEYARD_MALLOC=ON -DBUILD_VINEYARD_BENCHMARK=ON
+cmake .. -DBUILD_VINEYARD_MALLOC=ON -DBUILD_VINEYARD_BENCHMARKS=ON
 ```
 
 Then make the following targets:

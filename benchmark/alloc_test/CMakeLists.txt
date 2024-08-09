@@ -1,4 +1,4 @@
-set(BENCH_ALLOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/bench_allocator.cpp)
+set(BENCH_ALLOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/bench_allocator.cc)
 
 macro(add_benchmark target)
     if(BUILD_VINEYARD_BENCHMARKS_ALL)
