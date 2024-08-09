@@ -58,8 +58,6 @@ class EtcdLauncher {
       const std::vector<std::string>& existing_members_name);
 
   const uint64_t GetMemberID() {
-    std::cout << "LLLLLLLLLLLLLLl etcd_member_id_: " << etcd_member_id_
-              << std::endl;
     return etcd_member_id_;
   }
 
