@@ -569,8 +569,10 @@ void IMetaService::registerToEtcd() {
               op_t::Put(key + "/ipc_socket", self->server_ptr_->IPCSocket()));
           ops.emplace_back(op_t::Put(key + "/timestamp", timestamp));
           ops.emplace_back(op_t::Put("/next_instance_id", rank + 1));
-          ops.emplace_back(op_t::Put(key + "/rdma_endpoint",
-                                     self->server_ptr_->RDMAEndpoint()));
+          if (self->server_ptr_->RDMAEndpoint() != "") {
+            ops.emplace_back(op_t::Put(key + "/rdma_endpoint",
+                                       self->server_ptr_->RDMAEndpoint()));
+          }
           LOG(INFO) << "Decide to set rank as " << rank;
           return status;
         } else {
@@ -664,6 +666,7 @@ void IMetaService::checkInstanceStatus(
                     ops.emplace_back(op_t::Del(key + "/hostname"));
                     ops.emplace_back(op_t::Del(key + "/nodename"));
                     ops.emplace_back(op_t::Del(key + "/rpc_endpoint"));
+                    ops.emplace_back(op_t::Del(key + "/rdma_endpoint"));
                     ops.emplace_back(op_t::Del(key + "/ipc_socket"));
                   } else {
                     LOG(ERROR) << status.ToString();
