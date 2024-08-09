@@ -1,0 +1,1842 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="Vineyard Operator" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="notes/cloud-native/vineyard-operator.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="Architecture: The following figure demonstrates the architecture of vineyard operator. Architecture of vineyard operator Architecture of vineyard operator, Create a vineyard Cluster: After successf..." />
+<meta name="description" content="Architecture: The following figure demonstrates the architecture of vineyard operator. Architecture of vineyard operator Architecture of vineyard operator, Create a vineyard Cluster: After successf..." />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="vineyardctl" href="vineyardctl.html" /><link rel="prev" title="Deploy on Kubernetes" href="deploy-kubernetes.html" />
+
+    <link rel="shortcut icon" href="../../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Vineyard Operator - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/data-processing.html">Data processing</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/notes/cloud-native/vineyard-operator.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/notes/cloud-native/vineyard-operator.rst" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="vineyard-operator">
+<span id="id1"></span><h1>Vineyard Operator<a class="headerlink" href="#vineyard-operator" title="Permalink to this heading">¶</a></h1>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Permalink to this heading">¶</a></h2>
+<p>The following figure demonstrates the architecture of vineyard operator.</p>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../../_images/vineyard_operator_arch.png"><img alt="Architecture of vineyard operator" src="../../_images/vineyard_operator_arch.png" style="width: 75%;" /></a>
+<figcaption>
+<p><span class="caption-text">Architecture of vineyard operator</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="create-a-vineyard-cluster">
+<h2>Create a vineyard Cluster<a class="headerlink" href="#create-a-vineyard-cluster" title="Permalink to this heading">¶</a></h2>
+<p>After successfully installing the vineyard operator (refer to <a class="reference internal" href="deploy-kubernetes.html#deploy-on-kubernetes"><span class="std std-ref">Deploy on Kubernetes</span></a>
+for installation details), you can effortlessly create a vineyard cluster by utilizing
+the <code class="code docutils literal notranslate"><span class="pre">Vineyardd</span></code> CRD. The following example demonstrates the creation of a vineyard
+cluster with 3 daemon replicas:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The namespace of the vineyard cluster must be the same as the namespace of the
+vineyard operator, as the vineyard cluster will use the vineyard operator’s
+service account.</p>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Vineyardd</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">  </span><span class="c1"># use the same namespace as the vineyard operator</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>The vineyard-operator orchestrates the creation of a deployment for the required metadata
+service backend (<code class="code docutils literal notranslate"><span class="pre">etcd</span></code>), sets up appropriate services, and ultimately establishes a
+deployment for 3-replica vineyard servers. Upon successful deployment, the following
+components will be created and managed by the vineyard operator:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>all<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+</pre></div>
+</div>
+<div class="admonition-details admonition">
+<p class="admonition-title">Expected output</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>NAME<span class="w">                                               </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+pod/etcd0<span class="w">                                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>48s
+pod/etcd1<span class="w">                                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>48s
+pod/etcd2<span class="w">                                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>48s
+pod/vineyard-controller-manager-5c6f4bc454-8xm8q<span class="w">   </span><span class="m">2</span>/2<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>72s
+pod/vineyardd-sample-5cc797668f-9ggr9<span class="w">              </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>48s
+pod/vineyardd-sample-5cc797668f-nhw7p<span class="w">              </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>48s
+pod/vineyardd-sample-5cc797668f-r56h7<span class="w">              </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>48s
+
+NAME<span class="w">                                                  </span>TYPE<span class="w">        </span>CLUSTER-IP<span class="w">      </span>EXTERNAL-IP<span class="w">   </span>PORT<span class="o">(</span>S<span class="o">)</span><span class="w">             </span>AGE
+service/etcd-for-vineyard<span class="w">                             </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.174.41<span class="w">    </span>&lt;none&gt;<span class="w">        </span><span class="m">2379</span>/TCP<span class="w">            </span>48s
+service/etcd0<span class="w">                                         </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.128.87<span class="w">    </span>&lt;none&gt;<span class="w">        </span><span class="m">2379</span>/TCP,2380/TCP<span class="w">   </span>48s
+service/etcd1<span class="w">                                         </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.72.116<span class="w">    </span>&lt;none&gt;<span class="w">        </span><span class="m">2379</span>/TCP,2380/TCP<span class="w">   </span>48s
+service/etcd2<span class="w">                                         </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.99.182<span class="w">    </span>&lt;none&gt;<span class="w">        </span><span class="m">2379</span>/TCP,2380/TCP<span class="w">   </span>48s
+service/vineyard-controller-manager-metrics-service<span class="w">   </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.240.173<span class="w">   </span>&lt;none&gt;<span class="w">        </span><span class="m">8443</span>/TCP<span class="w">            </span>72s
+service/vineyard-webhook-service<span class="w">                      </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.41.132<span class="w">    </span>&lt;none&gt;<span class="w">        </span><span class="m">443</span>/TCP<span class="w">             </span>72s
+service/vineyardd-sample-rpc<span class="w">                          </span>ClusterIP<span class="w">   </span><span class="m">10</span>.96.102.183<span class="w">   </span>&lt;none&gt;<span class="w">        </span><span class="m">9600</span>/TCP<span class="w">            </span>48s
+
+NAME<span class="w">                                          </span>READY<span class="w">   </span>UP-TO-DATE<span class="w">   </span>AVAILABLE<span class="w">   </span>AGE
+deployment.apps/vineyard-controller-manager<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span><span class="m">1</span><span class="w">            </span><span class="m">1</span><span class="w">           </span>72s
+deployment.apps/vineyardd-sample<span class="w">              </span><span class="m">3</span>/3<span class="w">     </span><span class="m">3</span><span class="w">            </span><span class="m">3</span><span class="w">           </span>48s
+
+NAME<span class="w">                                                     </span>DESIRED<span class="w">   </span>CURRENT<span class="w">   </span>READY<span class="w">   </span>AGE
+replicaset.apps/vineyard-controller-manager-5c6f4bc454<span class="w">   </span><span class="m">1</span><span class="w">         </span><span class="m">1</span><span class="w">         </span><span class="m">1</span><span class="w">       </span>72s
+replicaset.apps/vineyardd-sample-5cc797668f<span class="w">              </span><span class="m">3</span><span class="w">         </span><span class="m">3</span><span class="w">         </span><span class="m">3</span><span class="w">       </span>48s
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<p>Also, if you want to use the custom vineyard socket path and mount something like /dev to the
+vineyard container, you could use the following YAML file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Vineyardd</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">vineyard</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># only for host path</span>
+<span class="w">    </span><span class="nt">socket</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/your/vineyard/socket/path</span>
+<span class="w">  </span><span class="c1"># you should set the securityContext.privileged to true</span>
+<span class="w">  </span><span class="c1"># if you want to mount /dev to the vineyard container</span>
+<span class="w">  </span><span class="nt">securityContext</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">privileged</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dev-volumes</span>
+<span class="w">    </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/dev</span>
+<span class="w">  </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dev-volumes</span>
+<span class="w">    </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/dev</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>For detailed configuration entries of vineyardd, please refer to <a class="reference internal" href="../references/crds.html#vineyardd"><span class="std std-ref">vineyardd CRD</span></a>.</p>
+</section>
+<section id="installing-vineyard-as-sidecar">
+<h2>Installing vineyard as sidecar<a class="headerlink" href="#installing-vineyard-as-sidecar" title="Permalink to this heading">¶</a></h2>
+<p>Vineyard can be seamlessly integrated as a sidecar container within a pod. We offer the <cite>Sidecar</cite>
+Custom Resource Definition (CRD) for configuring and managing the sidecar container. The <cite>Sidecar</cite>
+CRD shares many similarities with the <cite>Vineyardd</cite> CRD, and all available configurations can be found
+in the <a class="reference internal" href="../references/crds.html#sidecar"><span class="std std-ref">Sidecar CRD</span></a>.</p>
+<p>Besides, We provide some labels and annotations to help users to use the sidecar in vineyard operator.
+The following are all labels that we provide:</p>
+<div class="table-wrapper colwidths-given docutils container" id="id3">
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-text">Sidecar Configurations</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Yaml Fields</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>“sidecar.v6d.io/enabled”</p></td>
+<td><p>labels</p></td>
+<td><p>Enable the sidecar.</p></td>
+</tr>
+<tr class="row-odd"><td><p>“sidecar.v6d.io/name”</p></td>
+<td><p>annotations</p></td>
+<td><p>The name of sidecar cr. If the name is <cite>default</cite>, the default sidecar cr will be created.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>There are two methods to install vineyard as a sidecar:</p>
+<ul class="simple">
+<li><p>Utilize the <strong>default sidecar configuration</strong>. Users should add two annotations,
+<strong>sidecar.v6d.io/enabled: true</strong> and <strong>sidecar.v6d.io/name: default</strong>, to their app’s YAML.
+This will create a default sidecar Custom Resource (CR) for observation.</p></li>
+<li><p>Employ the <strong>custom sidecar configuration</strong>. Users must first create a custom sidecar CR,
+such as <cite>sidecar-demo</cite>, and then add two annotations, <strong>sidecar.v6d.io/enabled: true</strong> and
+<strong>sidecar.v6d.io/name: sidecar-demo</strong>, to their app’s YAML.</p></li>
+</ul>
+<p>The following example demonstrates how to install vineyard as a sidecar container within a
+pod. First, install the vineyard operator according to the previous steps, and then create
+a namespace with the specific label <cite>sidecar-injection: enabled</cite> to enable the sidecar.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>vineyard-job
+$<span class="w"> </span>kubectl<span class="w"> </span>label<span class="w"> </span>namespace<span class="w"> </span>vineyard-job<span class="w"> </span>sidecar-injection<span class="o">=</span>enabled
+</pre></div>
+</div>
+<p>Next, use the following YAML to inject the default sidecar into the pod.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please configure the command field of your app container to be in the format
+<strong>[“/bin/sh” or “/bin/bash”, “-c”, (your app command)]</strong>. After injecting the vineyard
+sidecar, the command field will be modified to <strong>[“/bin/sh” or “/bin/bash”, “-c”,
+while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;” + (your app command)]</strong> to
+ensure that the vineyard sidecar is ready before the app container starts.</p>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">sidecar.v6d.io/name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment</span>
+<span class="w">        </span><span class="nt">sidecar.v6d.io/enabled</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/sidecar-job</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;/bin/sh&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;-c&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;python3</span><span class="nv"> </span><span class="s">/job.py&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Next, you could see the sidecar container injected into the pod.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># get the default sidecar cr</span>
+<span class="l l-Scalar l-Scalar-Plain">$ kubectl get sidecar app-job-deployment-default-sidecar -n vineyard-job -o yaml</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Sidecar</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="c1"># the default sidecar&#39;s name is your label selector + &quot;-default-sidecar&quot;</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-job-deployment-default-sidecar</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">metric</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">enable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardcloudnative/vineyard-grok-exporter:latest</span>
+<span class="w">    </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app=job-deployment</span>
+<span class="w">  </span><span class="nt">service</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9600</span>
+<span class="w">    </span><span class="nt">selector</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rpc.vineyardd.v6d.io/rpc=vineyard-rpc</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ClusterIP</span>
+<span class="w">  </span><span class="nt">vineyard</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardcloudnative/vineyardd:latest</span>
+<span class="w">    </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">    </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">    </span><span class="nt">socket</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard.sock</span>
+<span class="w">    </span><span class="nt">spill</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">      </span><span class="nt">persistentVolumeClaimSpec</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">resources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">      </span><span class="nt">persistentVolumeSpec</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">      </span><span class="nt">spillLowerRate</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.3&quot;</span>
+<span class="w">      </span><span class="nt">spillUpperRate</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.8&quot;</span>
+<span class="w">    </span><span class="nt">streamThreshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="w">    </span><span class="nt">syncCRDs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="c1"># get the injected Pod, here we only show the important part of the Pod</span>
+<span class="l l-Scalar l-Scalar-Plain">$ kubectl get pod -l app=job-deployment -n vineyard-job -o yaml</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Pod</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-55664458f8-h4jzk</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">command</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/bin/sh</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-c</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;python3 /job.py</span>
+<span class="w">    </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/sidecar-job</span>
+<span class="w">    </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job</span>
+<span class="w">    </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-socket</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">command</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/bin/bash</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-c</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">      </span><span class="no">/usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock</span>
+<span class="w">      </span><span class="no">--stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard</span>
+<span class="w">      </span><span class="no">--etcd_endpoint http://etcd-for-vineyard:2379</span>
+<span class="w">    </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VINEYARDD_UID</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7b0c2ec8-49f3-4f8f-9e5f-8576a4dc4321</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VINEYARDD_NAME</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-job-deployment-with-default-sidecar-default-sidecar</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VINEYARDD_NAMESPACE</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardcloudnative/vineyardd:latest</span>
+<span class="w">    </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sidecar</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9600</span>
+<span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-rpc</span>
+<span class="w">      </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TCP</span>
+<span class="w">    </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-socket</span>
+<span class="w">  </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">emptyDir</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-socket</span>
+<span class="c1"># get the number of injected sidecar</span>
+<span class="l l-Scalar l-Scalar-Plain">$ kubectl get sidecar -A</span>
+<span class="l l-Scalar l-Scalar-Plain">NAMESPACE      NAME                                                      CURRENT   DESIRED</span>
+<span class="l l-Scalar l-Scalar-Plain">vineyard-job   app-job-deployment-with-default-sidecar-default-sidecar   2         2</span>
+</pre></div>
+</div>
+<p>If you don’t want to use the default sidecar configuration, you could create a custom
+sidecar cr as follows:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please make sure your custom sidecar cr is created before deploying your app workload
+and keep the same namespace with your app workload.</p>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Sidecar</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sidecar-sample</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app=job-deployment-with-custom-sidecar</span>
+<span class="w">  </span><span class="nt">vineyard</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">socket</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard.sock</span>
+<span class="w">    </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1024Mi</span>
+<span class="nn">---</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-with-custom-sidecar</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-with-custom-sidecar</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">sidecar.v6d.io/name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sidecar-sample&quot;</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-with-custom-sidecar</span>
+<span class="w">        </span><span class="nt">sidecar.v6d.io/enabled</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/sidecar-job</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;/bin/sh&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;-c&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;python3</span><span class="nv"> </span><span class="s">/job.py&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Also, if you want to use the custom vineyard socket path and mount something like /dev to the
+vineyard container, you could use the following YAML file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Sidecar</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sidecar-sample</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app=job-deployment-with-custom-sidecar</span>
+<span class="w">  </span><span class="nt">vineyard</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">socket</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard.sock</span>
+<span class="w">    </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1024Mi</span>
+<span class="w">  </span><span class="c1"># you should set the securityContext.privileged to true</span>
+<span class="w">  </span><span class="c1"># if you want to mount /dev to the vineyard container</span>
+<span class="w">  </span><span class="nt">securityContext</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">privileged</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dev-volumes</span>
+<span class="w">    </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/dev</span>
+<span class="w">  </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dev-volumes</span>
+<span class="w">    </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/dev</span>
+<span class="nn">---</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-with-custom-sidecar</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-with-custom-sidecar</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">sidecar.v6d.io/name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sidecar-sample&quot;</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job-deployment-with-custom-sidecar</span>
+<span class="w">        </span><span class="nt">sidecar.v6d.io/enabled</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/sidecar-job</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;/bin/sh&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;-c&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;python3</span><span class="nv"> </span><span class="s">/job.py&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>For more details about how to use the sidecar, please refer to the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/sidecar/e2e.yaml">sidecar e2e test</a> for
+more inspiration.</p>
+</section>
+<section id="objects-in-vineyard">
+<h2>Objects in Vineyard<a class="headerlink" href="#objects-in-vineyard" title="Permalink to this heading">¶</a></h2>
+<p>Vineyard objects are exposed to the Kubernetes control panel as Custom Resource Definitions (CRDs).
+In vineyard, objects are abstracted as global objects and local objects (refer to <a class="reference internal" href="../key-concepts/objects.html#vineyard-objects"><span class="std std-ref">Objects</span></a>),
+which are represented by the <cite>GlobalObject</cite> and <cite>LocalObject</cite> CRDs in the vineyard operator:</p>
+<section id="globalobject">
+<h3>GlobalObject<a class="headerlink" href="#globalobject" title="Permalink to this heading">¶</a></h3>
+<p>The <cite>GlobalObject</cite> custom resource definition (CRD) declaratively defines a global object
+within a vineyard cluster, and all configurations can be found in the
+<a class="reference internal" href="../references/crds.html#globalobject"><span class="std std-ref">GlobalObject CRD</span></a>.</p>
+<p>In general, the GlobalObjects are created as intermediate objects when deploying
+users’ applications. You could get them as follows.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>globalobjects<span class="w"> </span>-A
+NAMESPACE<span class="w">         </span>NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME
+vineyard-system<span class="w">   </span>o001bcbcea406acd0<span class="w">   </span>o001bcbcea406acd0<span class="w">          </span>s001bcbcea4069f60<span class="w">   </span>vineyard::GlobalDataFrame
+vineyard-system<span class="w">   </span>o001bcc19dbfc9c34<span class="w">   </span>o001bcc19dbfc9c34<span class="w">          </span>s001bcc19dbfc8d7a<span class="w">   </span>vineyard::GlobalDataFrame
+</pre></div>
+</div>
+</section>
+<section id="localobject">
+<h3>LocalObject<a class="headerlink" href="#localobject" title="Permalink to this heading">¶</a></h3>
+<p>The <strong>LocalObject</strong> custom resource definition (CRD) declaratively defines the local object
+in a Kubernetes cluster, and you can find all configurations in the <a class="reference internal" href="../references/crds.html#localobject"><span class="std std-ref">LocalObject CRD</span></a>.</p>
+<p>The LocalObjects are also intermediate objects just like the GlobalObjects, and you could
+get them as follows.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>localobjects<span class="w"> </span>-A
+</pre></div>
+</div>
+<div class="admonition-details admonition">
+<p class="admonition-title">Expected output</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>NAMESPACE<span class="w">         </span>NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME<span class="w">              </span>INSTANCE<span class="w">   </span>HOSTNAME
+vineyard-system<span class="w">   </span>o001bcbce202ab390<span class="w">   </span>o001bcbce202ab390<span class="w">          </span>s001bcbce202aa6f6<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+vineyard-system<span class="w">   </span>o001bcbce21d273e4<span class="w">   </span>o001bcbce21d273e4<span class="w">          </span>s001bcbce21d269c2<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">1</span><span class="w">          </span>kind-worker
+vineyard-system<span class="w">   </span>o001bcbce24606f6a<span class="w">   </span>o001bcbce24606f6a<span class="w">          </span>s001bcbce246067fc<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">2</span><span class="w">          </span>kind-worker3
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+</section>
+</section>
+<section id="vineyard-scheduler">
+<h2>Vineyard Scheduler<a class="headerlink" href="#vineyard-scheduler" title="Permalink to this heading">¶</a></h2>
+<p>The Vineyard operator includes a scheduler plugin designed to efficiently schedule workloads
+on Vineyard by placing them as close as possible to their input data, thereby reducing data
+migration costs. The Vineyard scheduler plugin is developed based on the <a class="reference external" href="https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/">Kubernetes Scheduling
+Framework</a>, and its overall scheduling strategy can be summarized as follows:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Vineyard Scheduler is compatible with Kubernetes versions 1.19 to 1.24. Ensure your Kubernetes
+cluster is within this version range for proper functionality.</p>
+</div>
+<ul>
+<li><p>All Vineyard workloads can only be deployed on nodes where the Vineyard daemon server is
+present.</p></li>
+<li><p>If a workload does not depend on any other workload, it will be scheduled using a
+<strong>round-robin</strong> approach. For example, if a workload has 3 replicas and there are 3 nodes
+with Vineyard daemon servers, the first replica will be scheduled on the first node, the
+second replica on the second node, and so on.</p></li>
+<li><p>If a workload depends on other workloads, it will be scheduled using a <strong>best-effort</strong> policy.
+Assuming a workload produces N chunks during its lifecycle, and there are M nodes with
+Vineyard daemon servers, the best-effort policy will attempt to make the next workload
+consume <code class="code docutils literal notranslate"><span class="pre">M/N</span></code>: chunks. For instance, imagine a workload produces 12 chunks with the
+following distribution:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">node1</span><span class="p">:</span> <span class="mi">0</span><span class="o">-</span><span class="mi">8</span>
+<span class="n">node2</span><span class="p">:</span> <span class="mi">9</span><span class="o">-</span><span class="mi">11</span>
+<span class="n">node3</span><span class="p">:</span> <span class="mi">12</span>
+</pre></div>
+</div>
+<p>The next workload has 3 replicas, and the best-effort policy will schedule it as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">replica1</span> <span class="o">-&gt;</span> <span class="n">node1</span> <span class="p">(</span><span class="n">consume</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span> <span class="n">chunks</span><span class="p">)</span>
+<span class="n">replica2</span> <span class="o">-&gt;</span> <span class="n">node1</span> <span class="p">(</span><span class="n">consume</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span> <span class="n">chunks</span><span class="p">)</span>
+<span class="n">replica3</span> <span class="o">-&gt;</span> <span class="n">node2</span> <span class="p">(</span><span class="n">consume</span> <span class="mi">9</span><span class="o">-</span><span class="mi">11</span> <span class="n">chunks</span><span class="p">,</span> <span class="n">the</span> <span class="n">other</span> <span class="n">chunks</span> <span class="n">will</span> <span class="n">be</span> <span class="n">migrated</span> <span class="n">to</span> <span class="n">the</span> <span class="n">node</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<section id="utilizing-the-vineyard-scheduler">
+<h3>Utilizing the Vineyard Scheduler<a class="headerlink" href="#utilizing-the-vineyard-scheduler" title="Permalink to this heading">¶</a></h3>
+<p>The Vineyard scheduler is integrated into the Vineyard operator and deployed alongside it.
+This scheduler plugin relies on specific annotations and labels to provide necessary input
+information. The required configurations are listed below in a clear and comprehensive manner:</p>
+<div class="admonition-details admonition">
+<p class="admonition-title">Scheduler Plugin Configurations</p>
+<blockquote>
+<div><div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Yaml Fields</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>“scheduling.k8s.v6d.io/required”</p></td>
+<td><p>annotations</p></td>
+<td><p>All jobs required by the job. If there are
+more than two tasks, use the concatenator ‘,’
+to concatenate them into a string.
+E.g. <cite>job1,job2,job3</cite>.
+If there is no required jobs, set <cite>none</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>“scheduling.k8s.v6d.io/vineyardd”</p></td>
+<td><p>labels</p></td>
+<td><p>The name or namespaced name of vineyardd. e.g.,
+<cite>vineyard-sample</cite> or
+<cite>vineyard-system/vineyard-sample</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>“scheduling.k8s.v6d.io/job “”</p></td>
+<td><p>labels</p></td>
+<td><p>The job name.</p></td>
+</tr>
+<tr class="row-odd"><td><p>“schedulerName”</p></td>
+<td><p>spec</p></td>
+<td><p>The vineyard scheduler’s name, and the
+default value is <cite>vineyard-scheduler</cite>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div></blockquote>
+</div>
+<p>In this section, we will demonstrate a comprehensive example of utilizing the Vineyard
+scheduler. To begin, ensure that the Vineyard operator and Vineyard daemon server are
+installed by following the steps outlined earlier. Then, proceed to deploy <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job1.py">workflow-job1</a>
+as shown below.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>ns<span class="w"> </span>vineyard-job
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1-deployment</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1</span>
+<span class="w">        </span><span class="c1"># vineyardd&#39;s name</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd-namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">        </span><span class="c1"># job name</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># vineyard scheduler name</span>
+<span class="w">      </span><span class="nt">schedulerName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-scheduler</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job1</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/workflow-job1</span>
+<span class="w">        </span><span class="c1"># please set the JOB_NAME env, it will be used by vineyard scheduler</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">      </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">        </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>We can see the created job and the objects produced by it:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>all<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                                                     </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+pod/v6d-workflow-demo-job1-deployment-6f479d695b-698xb<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>3m16s
+pod/v6d-workflow-demo-job1-deployment-6f479d695b-7zrw6<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>3m16s
+
+NAME<span class="w">                                                </span>READY<span class="w">   </span>UP-TO-DATE<span class="w">   </span>AVAILABLE<span class="w">   </span>AGE
+deployment.apps/v6d-workflow-demo-job1-deployment<span class="w">   </span><span class="m">2</span>/2<span class="w">     </span><span class="m">2</span><span class="w">            </span><span class="m">2</span><span class="w">           </span>3m16s
+
+NAME<span class="w">                                                           </span>DESIRED<span class="w">   </span>CURRENT<span class="w">   </span>READY<span class="w">   </span>AGE
+replicaset.apps/v6d-workflow-demo-job1-deployment-6f479d695b<span class="w">   </span><span class="m">2</span><span class="w">         </span><span class="m">2</span><span class="w">         </span><span class="m">2</span><span class="w">       </span>3m16s
+
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>globalobjects<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME
+o001c87014cf03c70<span class="w">   </span>o001c87014cf03c70<span class="w">          </span>s001c87014cf03262<span class="w">   </span>vineyard::Sequence
+o001c8729e49e06b8<span class="w">   </span>o001c8729e49e06b8<span class="w">          </span>s001c8729e49dfbb4<span class="w">   </span>vineyard::Sequence
+
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>localobjects<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME<span class="w">                  </span>INSTANCE<span class="w">   </span>HOSTNAME
+o001c87014ca81924<span class="w">   </span>o001c87014ca81924<span class="w">          </span>s001c87014ca80acc<span class="w">   </span>vineyard::Tensor&lt;int64&gt;<span class="w">   </span><span class="m">1</span><span class="w">          </span>kind-worker2
+o001c8729e4590626<span class="w">   </span>o001c8729e4590626<span class="w">          </span>s001c8729e458f47a<span class="w">   </span>vineyard::Tensor&lt;int64&gt;<span class="w">   </span><span class="m">2</span><span class="w">          </span>kind-worker3
+
+<span class="c1"># when a job is scheduled, the scheduler will create a configmap to record the globalobject id</span>
+<span class="c1"># that the next job will consume.</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>v6d-workflow-demo-job1<span class="w"> </span>-n<span class="w"> </span>vineyard-job<span class="w"> </span>-o<span class="w"> </span>yaml
+apiVersion:<span class="w"> </span>v1
+data:
+<span class="w">  </span>kind-worker3:<span class="w"> </span>o001c8729e4590626
+<span class="w">  </span>v6d-workflow-demo-job1:<span class="w"> </span>o001c8729e49e06b8
+kind:<span class="w"> </span>ConfigMap
+...
+</pre></div>
+</div>
+<p>Then deploy the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job2.py">workflow-job2</a> as follows.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job2-deployment</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job2</span>
+<span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="nt">template</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># required jobs</span>
+<span class="w">      </span><span class="nt">scheduling.k8s.v6d.io/required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1</span>
+<span class="w">    </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job2</span>
+<span class="w">      </span><span class="c1"># vineyardd&#39;s name</span>
+<span class="w">      </span><span class="nt">scheduling.k8s.v6d.io/vineyardd-namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">      </span><span class="nt">scheduling.k8s.v6d.io/vineyardd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">      </span><span class="c1"># job name</span>
+<span class="w">      </span><span class="nt">scheduling.k8s.v6d.io/job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job2</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># vineyard scheduler name</span>
+<span class="w">      </span><span class="nt">schedulerName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-scheduler</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">job2</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/workflow-job2</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job2</span>
+<span class="w">        </span><span class="c1"># pass node name to the environment</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NODENAME</span>
+<span class="w">          </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">fieldRef</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">fieldPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">spec.nodeName</span>
+<span class="w">        </span><span class="c1"># Notice, vineyard operator will create a configmap to pass the global object id produced by the previous job.</span>
+<span class="w">        </span><span class="c1"># Please set the configMapRef, it&#39;s name is the same as the job name.</span>
+<span class="w">        </span><span class="nt">envFrom</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">configMapRef</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v6d-workflow-demo-job1</span>
+<span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">      </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">        </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Now you can see that both jobs have been scheduled and become running:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>all<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+</pre></div>
+</div>
+<div class="admonition-details admonition">
+<p class="admonition-title">Expected output</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>NAME<span class="w">                                                     </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">      </span>AGE
+pod/v6d-workflow-demo-job1-deployment-6f479d695b-698xb<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">             </span>8m12s
+pod/v6d-workflow-demo-job1-deployment-6f479d695b-7zrw6<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">             </span>8m12s
+pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-4s7b2<span class="w">    </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">             </span>6m24s
+pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-cd5v2<span class="w">    </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">             </span>6m24s
+pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-n6zvm<span class="w">    </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">             </span>6m24s
+
+NAME<span class="w">                                                </span>READY<span class="w">   </span>UP-TO-DATE<span class="w">   </span>AVAILABLE<span class="w">   </span>AGE
+deployment.apps/v6d-workflow-demo-job1-deployment<span class="w">   </span><span class="m">2</span>/2<span class="w">     </span><span class="m">2</span><span class="w">            </span><span class="m">2</span><span class="w">           </span>8m12s
+deployment.apps/v6d-workflow-demo-job2-deployment<span class="w">   </span><span class="m">3</span>/3<span class="w">     </span><span class="m">3</span><span class="w">            </span><span class="m">3</span><span class="w">           </span>6m24s
+
+NAME<span class="w">                                                           </span>DESIRED<span class="w">   </span>CURRENT<span class="w">   </span>READY<span class="w">   </span>AGE
+replicaset.apps/v6d-workflow-demo-job1-deployment-6f479d695b<span class="w">   </span><span class="m">2</span><span class="w">         </span><span class="m">2</span><span class="w">         </span><span class="m">2</span><span class="w">       </span>8m12s
+replicaset.apps/v6d-workflow-demo-job2-deployment-b5b58cbdc<span class="w">    </span><span class="m">3</span><span class="w">         </span><span class="m">3</span><span class="w">         </span><span class="m">3</span><span class="w">       </span>6m24s
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<p>The above is the process of running the workload based on the vineyard scheduler, and it’s same
+as the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow/e2e.yaml">workflow e2e test</a>. What’s more, you could refer to the
+<a class="reference external" href="https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/workflow-demo">workflow demo</a>  to dig into what happens in the container.</p>
+</section>
+</section>
+<section id="operations-and-drivers">
+<h2>Operations and drivers<a class="headerlink" href="#operations-and-drivers" title="Permalink to this heading">¶</a></h2>
+<p>The <strong>Operation</strong> custom resource definition (CRD) elegantly defines the configurable
+pluggable drivers, primarily <cite>assembly</cite> and <cite>repartition</cite>, within a Kubernetes cluster.
+You could refer the <a class="reference internal" href="../references/crds.html#operation"><span class="std std-ref">Operation CRD</span></a> to get more details.</p>
+<p>The Operation Custom Resource (CR) is created by the vineyard scheduler while scheduling vineyard jobs.
+You can retrieve the created Operation CRs as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>operation<span class="w"> </span>-A
+NAMESPACE<span class="w">      </span>NAME<span class="w">                                    </span>OPERATION<span class="w">     </span>TYPE<span class="w">   </span>STATE
+vineyard-job<span class="w">   </span>dask-repartition-job2-bbf596bf4-985vc<span class="w">   </span>repartition<span class="w">   </span>dask
+</pre></div>
+</div>
+<p>Currently, the vineyard operator includes three pluggable drivers: <cite>checkpoint</cite>, <cite>assembly</cite>, and
+<cite>repartition</cite>. The following sections provide a brief introduction to each of these drivers.</p>
+<section id="checkpoint">
+<h3>Checkpoint<a class="headerlink" href="#checkpoint" title="Permalink to this heading">¶</a></h3>
+<p>Vineyard currently supports two types of checkpoint drivers:</p>
+<ol class="arabic simple">
+<li><p>Active checkpoint - <strong>Serialization</strong>: Users can store data in temporary or persistent storage
+for checkpoint purposes using the API (<cite>vineyard.io.serialize/deserialize</cite>). <em>Note</em> that the
+serialization process is triggered by the user within the application image, and the volume is
+also created by the user. Therefore, it is not managed by the vineyard operator.</p></li>
+<li><p>Passive checkpoint - <strong>Spill</strong>: Vineyard now supports spilling data from memory to storage
+when the data size exceeds the available memory capacity. There are two watermarks for memory
+spilling: the low watermark and the high watermark. When the data size surpasses the high watermark,
+vineyardd will spill the excess data to storage until it reaches the low watermark.</p></li>
+</ol>
+<section id="triggering-a-checkpoint-job">
+<h4>Triggering a checkpoint job<a class="headerlink" href="#triggering-a-checkpoint-job" title="Permalink to this heading">¶</a></h4>
+<p>Now, the checkpoint driver (<strong>Spill</strong>) is configured within the <cite>vineyardd</cite> Custom Resource
+Definition (CRD). To create a default vineyardd daemon server with the spill mechanism enabled,
+use the following YAML file:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The spill mechanism supports temporary storage (<a class="reference external" href="https://kubernetes.io/docs/concepts/storage/volumes/#hostpath">HostPath</a>) and persistent storage
+(<a class="reference external" href="https://kubernetes.io/docs/concepts/storage/persistent-volumes">PersistentVolume</a>)</p>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Vineyardd</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">  </span><span class="c1"># use the same namespace as the vineyard operator</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">vineyard</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># spill configuration</span>
+<span class="w">    </span><span class="nt">spill</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">spill-path</span>
+<span class="w">      </span><span class="c1"># please make sure the path exists</span>
+<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/vineyard/spill</span>
+<span class="w">      </span><span class="nt">spillLowerRate</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.3&quot;</span>
+<span class="w">      </span><span class="nt">spillUpperRate</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.8&quot;</span>
+<span class="w">      </span><span class="nt">persistentVolumeSpec</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">storageClassName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">manual</span>
+<span class="w">        </span><span class="nt">capacity</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1Gi</span>
+<span class="w">        </span><span class="nt">accessModes</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ReadWriteOnce</span>
+<span class="w">        </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/vineyard/spill</span>
+<span class="w">      </span><span class="nt">persistentVolumeClaimSpec</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">storageClassName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">manual</span>
+<span class="w">        </span><span class="nt">accessModes</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ReadWriteOnce</span>
+<span class="w">        </span><span class="nt">resources</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">512Mi</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>For a comprehensive understanding of the checkpoint mechanism in the vineyard operator,
+please refer to the <a class="reference external" href="https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/failover-demo">checkpoint examples</a>. Additionally, the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/serialize/e2e.yaml">serialize e2e test</a> and
+the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/spill/e2e.yaml">spill e2e test</a> can provide valuable insights on how to effectively utilize the
+checkpoint mechanism within a workflow.</p>
+</section>
+</section>
+<section id="assembly">
+<h3>Assembly<a class="headerlink" href="#assembly" title="Permalink to this heading">¶</a></h3>
+<p>In real-world scenarios, workloads often involve various computing engines. Some of these
+engines support stream types to accelerate data processing, while others do not. To ensure
+the seamless operation of the workload, an assembly mechanism is required to convert the
+stream type into a chunk type. This conversion enables subsequent computing engines that
+do not support stream types to read the metadata generated by the previous engine.</p>
+<section id="triggering-an-assembly-job">
+<h4>Triggering an assembly job<a class="headerlink" href="#triggering-an-assembly-job" title="Permalink to this heading">¶</a></h4>
+<p>To reduce the load on the Kubernetes API Server, we offer a namespace selector for assembly.
+The assembly driver will only be applied to namespaces with the specific label
+<cite>operation-injection: enabled</cite>. Therefore, ensure that the application’s namespace has
+this label before using the assembly mechanism.</p>
+<p>We provide several labels to assist users in utilizing the assembly mechanism in the
+vineyard operator. The following are the available labels:</p>
+<div class="admonition-details admonition">
+<p class="admonition-title">Assembly Drivers Configurations</p>
+<blockquote>
+<div><div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Yaml Fields</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>“assembly.v6d.io/enabled”</p></td>
+<td><p>labels</p></td>
+<td><p>If the job needs an assembly operation
+before deploying it, then set <cite>true</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>“assembly.v6d.io/type”</p></td>
+<td><p>labels</p></td>
+<td><p>There are two types in assembly operation,
+<cite>local</cite> only for localobject(stream on the same node),
+<cite>distributed</cite> for globalobject(stream on different nodes).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div></blockquote>
+</div>
+<p>In this example, we demonstrate how to utilize the assembly mechanism in the
+vineyard operator. We have a workflow consisting of two workloads: the first
+workload processes a stream, and the second workload processes a chunk. The
+assembly mechanism is used to convert the stream output from the first workload
+into a chunk format that can be consumed by the second workload. The following
+YAML file represents the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-job1.py">assembly workload1</a>:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ensure that the vineyard operator and vineyardd are installed before
+executing the following YAML file.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>vineyard-job
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">        </span><span class="c1"># this label represents the vineyardd&#39;s name that need to be used</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd-namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">schedulerName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-scheduler</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">          </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/assembly-job1</span>
+<span class="w">          </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">              </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">          </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">          </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">      </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">          </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+<span class="c1"># we can get the localobjects produced by the first workload, it&#39;s a stream type.</span>
+<span class="l l-Scalar l-Scalar-Plain">$ kubectl get localobjects -n vineyard-system</span>
+<span class="l l-Scalar l-Scalar-Plain">NAME                ID                  NAME   SIGNATURE           TYPENAME                      INSTANCE   HOSTNAME</span>
+<span class="l l-Scalar l-Scalar-Plain">o001d1b280049b146   o001d1b280049b146          s001d1b280049a4d4   vineyard::RecordBatchStream   0          kind-worker2</span>
+</pre></div>
+</div>
+<p>From the output above, it is evident that the localobjects generated by the first
+workload are of the stream type. Next, we will deploy the second workload utilizing
+the assembly mechanism. The following YAML file represents the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-job2.py">assembly workload2</a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># remember label the namespace with the label `operation-injection: enabled` to</span>
+<span class="c1"># enable pluggable drivers.</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>label<span class="w"> </span>namespace<span class="w"> </span>vineyard-job<span class="w"> </span>operation-injection<span class="o">=</span>enabled
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job2</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job2</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job2</span>
+<span class="w">        </span><span class="nt">assembly.v6d.io/enabled</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">        </span><span class="nt">assembly.v6d.io/type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;local&quot;</span>
+<span class="w">        </span><span class="c1"># this label represents the vineyardd&#39;s name that need to be used</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd-namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job2</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">schedulerName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-scheduler</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job2</span>
+<span class="w">          </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/assembly-job2</span>
+<span class="w">          </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">              </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job2</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">REQUIRED_JOB_NAME</span>
+<span class="w">              </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">          </span><span class="nt">envFrom</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">configMapRef</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">assembly-job1</span>
+<span class="w">          </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">          </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">      </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">          </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Upon deploying the second workload, it remains in a pending state. This indicates that the scheduler
+has identified the need for an assembly operation, and consequently, the corresponding assembly
+operation Custom Resource (CR) will be created.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># get all workloads, the job2 is pending as it needs an assembly operation.</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                             </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+assembly-job1-86c99c995f-nzns8<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>2m
+assembly-job2-646b78f494-cvz2w<span class="w">   </span><span class="m">0</span>/1<span class="w">     </span>Pending<span class="w">   </span><span class="m">0</span><span class="w">          </span>53s
+
+<span class="c1"># the assembly operation CR is created by the scheduler.</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>operation<span class="w"> </span>-A
+NAMESPACE<span class="w">      </span>NAME<span class="w">                             </span>OPERATION<span class="w">   </span>TYPE<span class="w">    </span>STATE
+vineyard-job<span class="w">   </span>assembly-job2-646b78f494-cvz2w<span class="w">   </span>assembly<span class="w">    </span><span class="nb">local</span>
+</pre></div>
+</div>
+<p>During the assembly operation, the Operation Controller will create a job to run assembly
+operation. We can get the objects produced by the job.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># get the assembly operation job</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>job<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAMESPACE<span class="w">      </span>NAME<span class="w">                         </span>COMPLETIONS<span class="w">   </span>DURATION<span class="w">   </span>AGE
+vineyard-job<span class="w">   </span>assemble-o001d1b280049b146<span class="w">   </span><span class="m">1</span>/1<span class="w">           </span>26s<span class="w">        </span>119s
+<span class="c1"># get the pod</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                               </span>READY<span class="w">   </span>STATUS<span class="w">      </span>RESTARTS<span class="w">   </span>AGE
+assemble-o001d1b280049b146-fzws7<span class="w">   </span><span class="m">0</span>/1<span class="w">     </span>Completed<span class="w">   </span><span class="m">0</span><span class="w">          </span>5m55s
+assembly-job1-86c99c995f-nzns8<span class="w">     </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">     </span><span class="m">0</span><span class="w">          </span>4m
+assembly-job2-646b78f494-cvz2w<span class="w">     </span><span class="m">0</span>/1<span class="w">     </span>Pending<span class="w">     </span><span class="m">0</span><span class="w">          </span>5m
+
+<span class="c1"># get the localobjects produced by the job</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>localobjects<span class="w"> </span>-l<span class="w"> </span>k8s.v6d.io/created-podname<span class="o">=</span>assemble-o001d1b280049b146-fzws7<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME<span class="w">              </span>INSTANCE<span class="w">   </span>HOSTNAME
+o001d1b56f0ec01f8<span class="w">   </span>o001d1b56f0ec01f8<span class="w">          </span>s001d1b56f0ebf578<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b5707c74e62<span class="w">   </span>o001d1b5707c74e62<span class="w">          </span>s001d1b5707c742e0<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b571f47cfe2<span class="w">   </span>o001d1b571f47cfe2<span class="w">          </span>s001d1b571f47c3c0<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b5736a6fd6c<span class="w">   </span>o001d1b5736a6fd6c<span class="w">          </span>s001d1b5736a6f1cc<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b574d9b94ae<span class="w">   </span>o001d1b574d9b94ae<span class="w">          </span>s001d1b574d9b8a9e<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b5765629cbc<span class="w">   </span>o001d1b5765629cbc<span class="w">          </span>s001d1b57656290a8<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b57809911ce<span class="w">   </span>o001d1b57809911ce<span class="w">          </span>s001d1b57809904e0<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b5797a9f958<span class="w">   </span>o001d1b5797a9f958<span class="w">          </span>s001d1b5797a9ee82<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b57add9581c<span class="w">   </span>o001d1b57add9581c<span class="w">          </span>s001d1b57add94e62<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+o001d1b57c53875ae<span class="w">   </span>o001d1b57c53875ae<span class="w">          </span>s001d1b57c5386a22<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker2
+
+<span class="c1"># get the globalobjects produced by the job</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>globalobjects<span class="w"> </span>-l<span class="w"> </span>k8s.v6d.io/created-podname<span class="o">=</span>assemble-o001d1b280049b146-fzws7<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME
+o001d1b57dc2c74ee<span class="w">   </span>o001d1b57dc2c74ee<span class="w">          </span>s001d1b57dc2c6a4a<span class="w">   </span>vineyard::Sequence
+</pre></div>
+</div>
+<p>Each stream will be transformed into a globalobject. To make the second workload obtain the
+globalobject generated by the assembly operation, the vineyard scheduler will create a configmap
+to store the globalobject id as follows.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>assembly-job1<span class="w"> </span>-n<span class="w"> </span>vineyard-job<span class="w"> </span>-o<span class="w"> </span>yaml
+apiVersion:<span class="w"> </span>v1
+data:
+<span class="w">  </span>assembly-job1:<span class="w"> </span>o001d1b57dc2c74ee
+kind:<span class="w"> </span>ConfigMap
+...
+</pre></div>
+</div>
+<p>Upon completion of the assembly operation, the scheduler will reschedule the second workload,
+allowing it to be successfully deployed as shown below:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                               </span>READY<span class="w">   </span>STATUS<span class="w">      </span>RESTARTS<span class="w">   </span>AGE
+assemble-o001d1b280049b146-fzws7<span class="w">   </span><span class="m">0</span>/1<span class="w">     </span>Completed<span class="w">   </span><span class="m">0</span><span class="w">          </span>9m55s
+assembly-job1-86c99c995f-nzns8<span class="w">     </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">     </span><span class="m">0</span><span class="w">          </span>8m
+assembly-job2-646b78f494-cvz2w<span class="w">     </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">     </span><span class="m">0</span><span class="w">          </span>9m
+</pre></div>
+</div>
+<p>The assembly operation process is demonstrated in the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly/local-assembly-e2e.yaml">local assembly e2e test</a>. For more
+details, please refer to the <a class="reference external" href="https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/assembly-demo">assembly demo</a> and <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-local.py">local assembly operation</a>.</p>
+<p>Additionally, we also support <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-distributed.py">distributed assembly operation</a>. You can explore the
+<cite>distributed assembly e2e test</cite> for further insights.</p>
+</section>
+</section>
+<section id="repartitioning">
+<h3>Repartitioning<a class="headerlink" href="#repartitioning" title="Permalink to this heading">¶</a></h3>
+<p>Repartitioning is a mechanism that adjusts the distribution of data across the Vineyard
+cluster. It is particularly useful when the number of workers cannot accommodate the required
+number of partitions. For example, if a workload creates 4 partitions, but the subsequent
+workload has only 3 workers, the repartitioning mechanism will redistribute the partitions
+from 4 to 3, allowing the next workload to function as expected. Currently, the Vineyard
+operator supports repartitioning based on <a class="reference external" href="https://www.dask.org/get-started">dask</a>.</p>
+<section id="initiating-a-repartition-job">
+<h4>Initiating a Repartition Job<a class="headerlink" href="#initiating-a-repartition-job" title="Permalink to this heading">¶</a></h4>
+<p>For workloads based on Dask, we provide several annotations and labels to help users
+utilize the repartitioning mechanism in the Vineyard operator. The following list contains
+all the labels and annotations we offer:</p>
+<div class="admonition-details admonition">
+<p class="admonition-title">Dask Repartition Drivers Configurations</p>
+<blockquote>
+<div><div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Yaml Fields</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>“scheduling.k8s.v6d.io/dask-scheduler”</p></td>
+<td><p>annotations</p></td>
+<td><p>The service of dask scheduler.</p></td>
+</tr>
+<tr class="row-odd"><td><p>“scheduling.k8s.v6d.io/dask-worker-selector”</p></td>
+<td><p>annotations</p></td>
+<td><p>The label selector of dask worker pod.</p></td>
+</tr>
+<tr class="row-even"><td><p>“repartition.v6d.io/enabled”</p></td>
+<td><p>labels</p></td>
+<td><p>Enable the repartition.</p></td>
+</tr>
+<tr class="row-odd"><td><p>“repartition.v6d.io/type”</p></td>
+<td><p>labels</p></td>
+<td><p>The type of repartition, at present,
+only support <cite>dask</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>“scheduling.k8s.v6d.io/replicas”</p></td>
+<td><p>labels</p></td>
+<td><p>The replicas of the workload.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div></blockquote>
+</div>
+<p>The following is a demo of repartition based on dask. At first, we create a dask cluster
+with 3 workers.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please make sure you have installed the vineyard operator and vineyardd before
+running the following yaml file.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># install dask scheduler and dask worker.</span>
+$<span class="w"> </span>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>dask<span class="w"> </span>https://helm.dask.org/
+$<span class="w"> </span>helm<span class="w"> </span>repo<span class="w"> </span>update
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># the dask-worker&#39;s image is built with vineyard, please refer</span>
+<span class="c1"># https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition-demo/Dockerfile.dask-worker-with-vineyard.</span>
+<span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | helm install dask-cluster dask/dask --values -</span>
+<span class="l l-Scalar l-Scalar-Plain">scheduler</span><span class="p p-Indicator">:</span>
+<span class="w">  </span><span class="nt">image</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2022.8.1&quot;</span>
+
+<span class="nt">jupyter</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+
+<span class="nt">worker</span><span class="p">:</span>
+<span class="w">  </span><span class="c1"># worker numbers</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">  </span><span class="nt">image</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/dask-worker-with-vineyard</span>
+<span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">latest</span>
+<span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VINEYARD_IPC_SOCKET</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard.sock</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VINEYARD_RPC_SOCKET</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample-rpc.vineyard-system:9600</span>
+<span class="w">  </span><span class="nt">mounts</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">        </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="w">    </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Deploy the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition-demo/job1.py">repartition workload1</a> as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>vineyard-job
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/dask-scheduler</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tcp://my-release-dask-scheduler.default:8786&quot;</span>
+<span class="w">        </span><span class="c1"># use &#39;,&#39; to separate the different labels here</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/dask-worker-selector</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app:dask,component:worker&quot;</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">        </span><span class="nt">repartition.v6d.io/type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dask&quot;</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/replicas</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span>
+<span class="w">        </span><span class="c1"># this label represents the vineyardd&#39;s name that need to be used</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd-namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">schedulerName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-scheduler</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/dask-repartition-job1</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DASK_SCHEDULER</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tcp://my-release-dask-scheduler.default:8786</span>
+<span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">      </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">        </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>The first workload will create 4 partitions (each partition as a localobject):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>globalobjects<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME
+o001d2a6ae6c6e2e8<span class="w">   </span>o001d2a6ae6c6e2e8<span class="w">          </span>s001d2a6ae6c6d4f4<span class="w">   </span>vineyard::GlobalDataFrame
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>localobjects<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME<span class="w">              </span>INSTANCE<span class="w">   </span>HOSTNAME
+o001d2a6a6483ac44<span class="w">   </span>o001d2a6a6483ac44<span class="w">          </span>s001d2a6a6483a3ce<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">1</span><span class="w">          </span>kind-worker3
+o001d2a6a64a29cf4<span class="w">   </span>o001d2a6a64a29cf4<span class="w">          </span>s001d2a6a64a28f2e<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">0</span><span class="w">          </span>kind-worker
+o001d2a6a66709f20<span class="w">   </span>o001d2a6a66709f20<span class="w">          </span>s001d2a6a667092a2<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">2</span><span class="w">          </span>kind-worker2
+o001d2a6ace0f6e30<span class="w">   </span>o001d2a6ace0f6e30<span class="w">          </span>s001d2a6ace0f65b8<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">2</span><span class="w">          </span>kind-worker2
+</pre></div>
+</div>
+<p>Deploy the <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition-demo/job2.py">repartition workload2</a> as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>label<span class="w"> </span>namespace<span class="w"> </span>vineyard-job<span class="w"> </span>operation-injection<span class="o">=</span>enabled
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job2</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-job</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job2</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/required</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dask-repartition-job1&quot;</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/dask-scheduler</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tcp://my-release-dask-scheduler.default:8786&quot;</span>
+<span class="w">        </span><span class="c1"># use &#39;,&#39; to separate the different labels here</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/dask-worker-selector</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app:dask,component:worker&quot;</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job2</span>
+<span class="w">        </span><span class="nt">repartition.v6d.io/enabled</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">        </span><span class="nt">repartition.v6d.io/type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dask&quot;</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/replicas</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span>
+<span class="w">        </span><span class="c1"># this label represents the vineyardd&#39;s name that need to be used</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd-namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/vineyardd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">        </span><span class="nt">scheduling.k8s.v6d.io/job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job2</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">schedulerName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-scheduler</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job2</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/v6d-io/v6d/dask-repartition-job2</span>
+<span class="w">        </span><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IfNotPresent</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job2</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DASK_SCHEDULER</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tcp://my-release-dask-scheduler.default:8786</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">REQUIRED_JOB_NAME</span>
+<span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">        </span><span class="nt">envFrom</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">configMapRef</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dask-repartition-job1</span>
+<span class="w">        </span><span class="nt">volumeMounts</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mountPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">      </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-sock</span>
+<span class="w">        </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>The second workload waits for the repartition operation to finish:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># check all workloads</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                                     </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+dask-repartition-job1-5dbfc54997-7kghk<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>92s
+dask-repartition-job2-bbf596bf4-cvrt2<span class="w">    </span><span class="m">0</span>/1<span class="w">     </span>Pending<span class="w">   </span><span class="m">0</span><span class="w">          </span>49s
+
+<span class="c1"># check the repartition operation</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>operation<span class="w"> </span>-A
+NAMESPACE<span class="w">      </span>NAME<span class="w">                                    </span>OPERATION<span class="w">     </span>TYPE<span class="w">   </span>STATE
+vineyard-job<span class="w">   </span>dask-repartition-job2-bbf596bf4-cvrt2<span class="w">   </span>repartition<span class="w">   </span>dask
+
+<span class="c1"># check the job</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>job<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                            </span>COMPLETIONS<span class="w">   </span>DURATION<span class="w">   </span>AGE
+repartition-o001d2a6ae6c6e2e8<span class="w">   </span><span class="m">0</span>/1<span class="w">           </span>8s<span class="w">         </span>8s
+</pre></div>
+</div>
+<p>After the repartition job finishes, the second workload will be scheduled:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># check all workloads</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-job
+NAME<span class="w">                                     </span>READY<span class="w">   </span>STATUS<span class="w">      </span>RESTARTS<span class="w">   </span>AGE
+dask-repartition-job1-5dbfc54997-7kghk<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">     </span><span class="m">0</span><span class="w">          </span>5m43s
+dask-repartition-job2-bbf596bf4-cvrt2<span class="w">    </span><span class="m">0</span>/1<span class="w">     </span>Pending<span class="w">     </span><span class="m">0</span><span class="w">          </span>4m30s
+repartition-o001d2a6ae6c6e2e8-79wcm<span class="w">      </span><span class="m">0</span>/1<span class="w">     </span>Completed<span class="w">   </span><span class="m">0</span><span class="w">          </span>3m30s
+
+<span class="c1"># check the repartition operation</span>
+<span class="c1"># as the second workload only has 1 replica, the repartition operation will repartitioned</span>
+<span class="c1"># the global object into 1 partition</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>globalobjects<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME
+o001d2ab523e3fbd0<span class="w">   </span>o001d2ab523e3fbd0<span class="w">          </span>s001d2ab523e3f0e6<span class="w">   </span>vineyard::GlobalDataFrame
+
+<span class="c1"># the repartition operation will create a new local object(only 1 partition)</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>localobjects<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAMESPACE<span class="w">         </span>NAME<span class="w">                </span>ID<span class="w">                  </span>NAME<span class="w">   </span>SIGNATURE<span class="w">           </span>TYPENAME<span class="w">              </span>INSTANCE<span class="w">   </span>HOSTNAME
+vineyard-system<span class="w">   </span>o001d2dc18d72a47e<span class="w">   </span>o001d2dc18d72a47e<span class="w">          </span>s001d2dc18d729ab6<span class="w">   </span>vineyard::DataFrame<span class="w">   </span><span class="m">2</span><span class="w">          </span>kind-worker2
+</pre></div>
+</div>
+<p>The whole workflow can be found in <a class="reference external" href="https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/dask-repartition-e2e.yaml">dask repartition e2e test</a>. What’s more,
+please refer the <a class="reference external" href="https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/repartition-demo">repartition directory</a> to get more details.</p>
+</section>
+</section>
+</section>
+<section id="failover-mechanism-of-vineyard-cluster">
+<h2>Failover mechanism of vineyard cluster<a class="headerlink" href="#failover-mechanism-of-vineyard-cluster" title="Permalink to this heading">¶</a></h2>
+<p>If you want to back up data for the current vineyard cluster, you can create a Backup CR to
+perform a backup operation. As the Backup CR will use the default service account of the
+namespace the vineyard operator is deployed, you need to set up the same namespace as
+the vineyard operator. Please refer the <a class="reference internal" href="../references/crds.html#backup"><span class="std std-ref">Backup CRD</span></a>
+for more details.</p>
+<p>After data backup, you can create a Recover CR to restore a certain vineyard backup data.
+Please refer the <a class="reference internal" href="../references/crds.html#recover"><span class="std std-ref">Recover CRD</span></a> for more details.</p>
+<p>Next, we will show how to use the failover mechanism in vineyard operator. Assuming that
+we have a vineyard cluster that contains some objects, then we create a backup cr to back
+up the data. The following is the yaml file of the backup:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please make sure you have installed the vineyard operator and vineyardd before
+running the following yaml file.</p>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Backup</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backup-sample</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">vineyarddName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyardd-sample</span>
+<span class="w">  </span><span class="nt">vineyarddNamespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="w">  </span><span class="nt">backupPath</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/vineyard/dump</span>
+<span class="w">  </span><span class="nt">persistentVolumeSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">storageClassName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">manual</span>
+<span class="w">    </span><span class="nt">capacity</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1Gi</span>
+<span class="w">    </span><span class="nt">accessModes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ReadWriteOnce</span>
+<span class="w">    </span><span class="nt">hostPath</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/vineyard/dump</span>
+<span class="w">  </span><span class="nt">persistentVolumeClaimSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">storageClassName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">manual</span>
+<span class="w">    </span><span class="nt">accessModes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ReadWriteOnce</span>
+<span class="w">    </span><span class="nt">resources</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1Gi</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Assuming that the vineyard cluster crashes at some point, we create <code class="code docutils literal notranslate"><span class="pre">Recover</span></code> CR to
+restore the data in the vineyard cluster, and the recover yaml file is as follows:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">$ cat &lt;&lt;EOF | kubectl apply -f -</span>
+<span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">k8s.v6d.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Recover</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">recover-sample</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">backupName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backup-sample</span>
+<span class="w">  </span><span class="nt">backupNamespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vineyard-system</span>
+<span class="l l-Scalar l-Scalar-Plain">EOF</span>
+</pre></div>
+</div>
+<p>Then you could get the Recover’s status to get the mapping relationship between the
+object ID during backup and the object ID during recovery as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>recover<span class="w"> </span>-A
+NAMESPACE<span class="w">            </span>NAME<span class="w">             </span>MAPPING<span class="w">                                                                                                                     </span>STATE
+vineyard-system<span class="w">      </span>recover-sample<span class="w">   </span><span class="o">{</span><span class="s2">&quot;o000ef92379fd8850&quot;</span>:<span class="s2">&quot;o000ef9ea5189718d&quot;</span>,<span class="s2">&quot;o000ef9237a3a5432&quot;</span>:<span class="s2">&quot;o000ef9eb5d26ad5e&quot;</span>,<span class="s2">&quot;o000ef97a8289973f&quot;</span>:<span class="s2">&quot;o000ef9ed586ef1d3&quot;</span><span class="o">}</span><span class="w">   </span>Succeed
+</pre></div>
+</div>
+<p>If you want to get more details about the failover mechanism of vineyard cluster, please refer
+the <a class="reference external" href="https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/failover/e2e.yaml">failover e2e test</a>.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="vineyardctl.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title"><code class="docutils literal notranslate"><span class="pre">vineyardctl</span></code></div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="deploy-kubernetes.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title">Deploy on Kubernetes</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">Vineyard Operator</a><ul>
+<li><a class="reference internal" href="#architecture">Architecture</a></li>
+<li><a class="reference internal" href="#create-a-vineyard-cluster">Create a vineyard Cluster</a></li>
+<li><a class="reference internal" href="#installing-vineyard-as-sidecar">Installing vineyard as sidecar</a></li>
+<li><a class="reference internal" href="#objects-in-vineyard">Objects in Vineyard</a><ul>
+<li><a class="reference internal" href="#globalobject">GlobalObject</a></li>
+<li><a class="reference internal" href="#localobject">LocalObject</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#vineyard-scheduler">Vineyard Scheduler</a><ul>
+<li><a class="reference internal" href="#utilizing-the-vineyard-scheduler">Utilizing the Vineyard Scheduler</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#operations-and-drivers">Operations and drivers</a><ul>
+<li><a class="reference internal" href="#checkpoint">Checkpoint</a><ul>
+<li><a class="reference internal" href="#triggering-a-checkpoint-job">Triggering a checkpoint job</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#assembly">Assembly</a><ul>
+<li><a class="reference internal" href="#triggering-an-assembly-job">Triggering an assembly job</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#repartitioning">Repartitioning</a><ul>
+<li><a class="reference internal" href="#initiating-a-repartition-job">Initiating a Repartition Job</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#failover-mechanism-of-vineyard-cluster">Failover mechanism of vineyard cluster</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

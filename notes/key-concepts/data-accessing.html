@@ -1,0 +1,821 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="Data Accessing" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="notes/key-concepts/data-accessing.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="Vineyard is designed to support distributed object sharing and offers both IPCClient and RPCClient for efficient data access. This section will guide you through various methods of accessing object..." />
+<meta name="description" content="Vineyard is designed to support distributed object sharing and offers both IPCClient and RPCClient for efficient data access. This section will guide you through various methods of accessing object..." />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Streams in Vineyard" href="streams.html" /><link rel="prev" title="Code Generation for Boilerplate" href="vcdl.html" />
+
+    <link rel="shortcut icon" href="../../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Data Accessing - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../key-concepts.html">Key Concepts</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/data-processing.html">Data processing</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/notes/key-concepts/data-accessing.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/notes/key-concepts/data-accessing.rst" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="data-accessing">
+<h1>Data Accessing<a class="headerlink" href="#data-accessing" title="Permalink to this heading">¶</a></h1>
+<p>Vineyard is designed to support distributed object sharing and offers both IPCClient
+and RPCClient for efficient data access. This section will guide you through various
+methods of accessing objects within vineyard. For more information on vineyard object
+basics, please refer to <a class="reference internal" href="objects.html#metadata-and-payloads"><span class="std std-ref">Object = metadata + payloads</span></a> and <a class="reference internal" href="objects.html#distributed-objects"><span class="std std-ref">Distributed objects</span></a>.</p>
+<section id="ipcclient-vs-rpcclient">
+<h2>IPCClient vs. RPCClient<a class="headerlink" href="#ipcclient-vs-rpcclient" title="Permalink to this heading">¶</a></h2>
+<p>As depicted in the above figure, data is partitioned across different vineyard
+instances. The concept of zero-copy sharing was explained in <a class="reference internal" href="../architecture.html#architecture-of-vineyard"><span class="std std-ref">Architecture</span></a>.
+Memory mapping is only available for clients on the same instance, while metadata
+is globally synchronized and accessible from clients connected to instances on other hosts.</p>
+<p>Vineyard provides two clients to support IPC and RPC scenarios:</p>
+<ul class="simple">
+<li><p>IPC Client</p>
+<ul>
+<li><p>Can only connect to instances deployed on the same host.</p></li>
+<li><p>Offers full support for local data access. Accessing local blobs is enabled
+by zero-copy memory mapping.</p></li>
+</ul>
+</li>
+<li><p>RPC Client</p>
+<ul>
+<li><p>Can connect to any instance with an enabled RPC endpoint.</p></li>
+<li><p>Provides limited support for remote data access. Creating and fetching remote
+blobs incurs considerable network transfer overhead.</p></li>
+</ul>
+</li>
+</ul>
+<section id="local-vs-remote">
+<h3>Local vs. Remote<a class="headerlink" href="#local-vs-remote" title="Permalink to this heading">¶</a></h3>
+<p>Distributed shared objects are typically partitioned, with each vineyard instance managing
+some chunks of the entire object. As shown in <a class="reference internal" href="objects.html#distributed-objects"><span class="std std-ref">Distributed objects</span></a>, a <code class="code docutils literal notranslate"><span class="pre">GlobalTensor</span></code>
+is partitioned into three chunks, and each instance holds one chunk of type <code class="code docutils literal notranslate"><span class="pre">Tensor</span></code>.</p>
+<p><strong>From the perspective of computing engines</strong>, distributed computing engines launch
+workers on vineyard instances. Each worker connects to the co-located local instance and
+is responsible for processing chunks in that local instance. For example, when starting a Dask
+cluster on a vineyard cluster as illustrated in the picture above, each Dask worker is responsible
+for executing computations on its local chunks. Some computing tasks require communication between
+workers, such as aggregation. In these cases, the communication is performed by the computing
+engine itself (in this case, the Dask cluster).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>We assume that the computing engines built upon vineyard are responsible for scheduling
+tasks based on their awareness of the underlying data partitioning within the vineyard
+cluster.</p>
+<p>This design is well-suited for commonly-used modern computing engines,such as GraphScope,
+Spark, Presto, Dask, Mars, and Ray.</p>
+</div>
+</section>
+</section>
+<section id="local-objects">
+<h2>Local Objects<a class="headerlink" href="#local-objects" title="Permalink to this heading">¶</a></h2>
+<p>Creating and accessing local objects in vineyard can be easily achieved using <code class="code docutils literal notranslate"><span class="pre">put</span></code> and <code class="code docutils literal notranslate"><span class="pre">get</span></code> methods (see
+<a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.put" title="vineyard.IPCClient.put"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.put()</span></code></a> and <a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.get" title="vineyard.IPCClient.get"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.get()</span></code></a>).</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">Effortlessly create and access local objects using <code class="code docutils literal notranslate"><span class="pre">put</span></code> and <code class="code docutils literal notranslate"><span class="pre">get</span></code></span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">vineyard_ipc_client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;/tmp/vineyard.sock&quot;</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># put object into vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">r</span> <span class="o">=</span> <span class="n">vineyard_ipc_client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">r</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">o00053008257020f8</span><span class="p">,</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">_C</span><span class="o">.</span><span class="n">ObjectID</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># get object from vineyard using object id</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vineyard_ipc_client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">data</span>
+           <span class="mi">0</span>         <span class="mi">1</span>
+ <span class="mi">0</span>  <span class="mf">0.534487</span>  <span class="mf">0.261941</span>
+ <span class="mi">1</span>  <span class="mf">0.901056</span>  <span class="mf">0.441583</span>
+ <span class="mi">2</span>  <span class="mf">0.687568</span>  <span class="mf">0.671564</span>
+ <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+<p>Vineyard provides low-level APIs to operate on metadatas and raw blobs as well.</p>
+<section id="accessing-metadatas">
+<h3>Accessing metadatas<a class="headerlink" href="#accessing-metadatas" title="Permalink to this heading">¶</a></h3>
+<p>The method <a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.get_meta" title="vineyard.IPCClient.get_meta"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.get_meta()</span></code></a> can be used to inspect metadata in the
+vineyard cluster, which returns a <a class="reference internal" href="../references/python-api.html#vineyard.ObjectMeta" title="vineyard.ObjectMeta"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.ObjectMeta</span></code></a> value:</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Accessing metadata in vineyard</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">vineyard_ipc_client</span><span class="o">.</span><span class="n">get_meta</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span><span class="o">.</span><span class="n">id</span>
+ <span class="n">o00053008257020f8</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span><span class="o">.</span><span class="n">instance_id</span>
+ <span class="mi">0</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span><span class="o">.</span><span class="n">typename</span>
+ <span class="s1">&#39;vineyard::DataFrame&#39;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span>
+ <span class="p">{</span>
+     <span class="s2">&quot;instance_id&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+     <span class="s2">&quot;nbytes&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+     <span class="s2">&quot;signature&quot;</span><span class="p">:</span> <span class="mi">1460186430481176</span><span class="p">,</span>
+     <span class="s2">&quot;transient&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+     <span class="s2">&quot;typename&quot;</span><span class="p">:</span> <span class="s2">&quot;vineyard::DataFrame&quot;</span>
+     <span class="s2">&quot;__values_-value-0&quot;</span><span class="p">:</span> <span class="p">{</span>
+         <span class="s2">&quot;global&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+         <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;o0005300822f54d1c&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;instance_id&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+         <span class="s2">&quot;nbytes&quot;</span><span class="p">:</span> <span class="mi">80</span><span class="p">,</span>
+         <span class="s2">&quot;order_&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="se">\&quot;</span><span class="s2">F</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;shape_&quot;</span><span class="p">:</span> <span class="s2">&quot;[10]&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;signature&quot;</span><span class="p">:</span> <span class="mi">1460186388165810</span><span class="p">,</span>
+         <span class="s2">&quot;transient&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+         <span class="s2">&quot;typename&quot;</span><span class="p">:</span> <span class="s2">&quot;vineyard::Tensor&lt;double&gt;&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;value_type_&quot;</span><span class="p">:</span> <span class="s2">&quot;float64&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;value_type_meta_&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;f8&quot;</span>
+         <span class="s2">&quot;buffer_&quot;</span><span class="p">:</span> <span class="p">{</span>
+             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;o8005300822d858df&quot;</span><span class="p">,</span>
+             <span class="s2">&quot;typename&quot;</span><span class="p">:</span> <span class="s2">&quot;vineyard::Blob&quot;</span>
+             <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="using-blobs">
+<h3>Using blobs<a class="headerlink" href="#using-blobs" title="Permalink to this heading">¶</a></h3>
+<p>Vineyard offers low-level APIs for creating and accessing local blobs with enhanced efficiency:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.create_blob" title="vineyard.IPCClient.create_blob"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.create_blob()</span></code></a>: creates an empty <a class="reference internal" href="../references/python-api.html#vineyard.BlobBuilder" title="vineyard.BlobBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.BlobBuilder</span></code></a> for
+you to fill with data.</p></li>
+<li><p><a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.get_blob" title="vineyard.IPCClient.get_blob"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.get_blob()</span></code></a>: retrieves a <a class="reference internal" href="../references/python-api.html#vineyard.Blob" title="vineyard.Blob"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.Blob</span></code></a> from the vineyard
+cluster using zero-copy techniques.</p></li>
+<li><p><a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.get_blobs" title="vineyard.IPCClient.get_blobs"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.get_blobs()</span></code></a>: fetches a list of <code class="code docutils literal notranslate"><span class="pre">List[vineyard.Blob]</span></code> from the
+vineyard cluster, also utilizing zero-copy methods.</p></li>
+</ul>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">Creating local blobs</span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">vineyard_ipc_client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;/tmp/vineyard.sock&quot;</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># mock a data</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">payload</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;abcdefgh1234567890uvwxyz&#39;</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># create a blob builder</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">buffer_builder</span> <span class="o">=</span> <span class="n">vineyard_ipc_client</span><span class="o">.</span><span class="n">create_blob</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># copy the mocked data into the builder</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">buffer_builder</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># seal the builder then we will get a blob</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">blob</span> <span class="o">=</span> <span class="n">buffer_builder</span><span class="o">.</span><span class="n">seal</span><span class="p">(</span><span class="n">vineyard_ipc_client</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Accessing local blobs</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="c1"># get the blob from vineyard using object id</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">blob</span> <span class="o">=</span> <span class="n">vineyard_ipc_client</span><span class="o">.</span><span class="n">get_blob</span><span class="p">(</span><span class="n">blob</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">blob</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">Object</span> <span class="o">&lt;</span><span class="s2">&quot;o800532e4ab1f2087&quot;</span><span class="p">:</span> <span class="n">vineyard</span><span class="p">::</span><span class="n">Blob</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">_C</span><span class="o">.</span><span class="n">Blob</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># inspect the value</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="nb">bytes</span><span class="p">(</span><span class="nb">memoryview</span><span class="p">(</span><span class="n">blob</span><span class="p">))</span>
+ <span class="sa">b</span><span class="s1">&#39;abcdefgh1234567890uvwxyz&#39;</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="remote-objects">
+<h2>Remote Objects<a class="headerlink" href="#remote-objects" title="Permalink to this heading">¶</a></h2>
+<p>Creating and accessing remote objects in vineyard can be easily achieved using <code class="code docutils literal notranslate"><span class="pre">put</span></code> and <code class="code docutils literal notranslate"><span class="pre">get</span></code> methods (see
+<a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.put" title="vineyard.RPCClient.put"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.put()</span></code></a> and <a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.get" title="vineyard.RPCClient.get"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.get()</span></code></a>).</p>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text">Effortlessly create and access remote objects using <code class="code docutils literal notranslate"><span class="pre">put</span></code> and <code class="code docutils literal notranslate"><span class="pre">get</span></code></span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">vineyard_rpc_client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">9600</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># put object into vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">r</span> <span class="o">=</span> <span class="n">vineyard_rpc_client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">r</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">o000a45730a85f8fe</span><span class="p">,</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">_C</span><span class="o">.</span><span class="n">ObjectID</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># get object from vineyard using object id</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vineyard_rpc_client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">data</span>
+           <span class="mi">0</span>         <span class="mi">1</span>
+ <span class="mi">0</span>  <span class="mf">0.884227</span>  <span class="mf">0.576031</span>
+ <span class="mi">1</span>  <span class="mf">0.863040</span>  <span class="mf">0.069815</span>
+ <span class="mi">2</span>  <span class="mf">0.297906</span>  <span class="mf">0.911874</span>
+ <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+<p>The RPC client enables inspection of remote object metadata and facilitates operations on blobs
+within the remote cluster, while taking into account the associated network transfer costs.</p>
+<section id="inspecting-metadata">
+<h3>Inspecting metadata<a class="headerlink" href="#inspecting-metadata" title="Permalink to this heading">¶</a></h3>
+<p>The method <a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.get_meta" title="vineyard.RPCClient.get_meta"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.get_meta()</span></code></a> allows you to access object metadata in a similar
+manner to <a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.get_meta" title="vineyard.IPCClient.get_meta"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.get_meta()</span></code></a>, but with the added capability of connecting to a
+remote instance.</p>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text">Metadata accessing using RPCClient</span><a class="headerlink" href="#id6" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">vineyard_rpc_client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">9600</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># the `r` from the above &quot;Local Objects&quot; section</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">vineyard_rpc_client</span><span class="o">.</span><span class="n">get_meta</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span><span class="o">.</span><span class="n">id</span>
+ <span class="n">o00053008257020f8</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span><span class="o">.</span><span class="n">instance_id</span>
+ <span class="mi">0</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">meta</span><span class="o">.</span><span class="n">typename</span>
+ <span class="s1">&#39;vineyard::DataFrame&#39;</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="using-remote-blobs">
+<h3>Using remote blobs<a class="headerlink" href="#using-remote-blobs" title="Permalink to this heading">¶</a></h3>
+<p>However, due to the absence of memory sharing between hosts, zero-copy data sharing is not feasible when
+connecting to a vineyard instance that is not deployed on the same host as the client. Transferring data
+over the network incurs significant costs, and vineyard requires users to explicitly issue a <code class="code docutils literal notranslate"><span class="pre">migrate</span></code>
+command to move data from the remote instance to the local instance. For more details, please refer to
+<a class="reference internal" href="../architecture.html#client-side"><span class="std std-ref">Object Migration in Vineyard</span></a>.</p>
+<p>For added convenience, we also provide APIs to fetch remote blobs to the local client by transferring
+payloads over the network.</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.create_remote_blob" title="vineyard.RPCClient.create_remote_blob"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.create_remote_blob()</span></code></a>: put a <strong>filled</strong> remote blob builder
+<a class="reference internal" href="../references/python-api.html#vineyard.RemoteBlobBuilder" title="vineyard.RemoteBlobBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.RemoteBlobBuilder</span></code></a> to connected remote instance.</p></li>
+<li><p><a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.get_remote_blob" title="vineyard.RPCClient.get_remote_blob"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.get_remote_blob()</span></code></a>: obtain a remote blob <a class="reference internal" href="../references/python-api.html#vineyard.RemoteBlob" title="vineyard.RemoteBlob"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.RemoteBlob</span></code></a>
+from the vineyard cluster by copying over the network.</p></li>
+<li><p><a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.get_remote_blobs" title="vineyard.RPCClient.get_remote_blobs"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.get_remote_blobs()</span></code></a>: obtain a set of remote blobs
+<code class="code docutils literal notranslate"><span class="pre">List[vineyard.RemoteBlob]</span></code> from the vineyard cluster by copying over the network.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Note that the <code class="code docutils literal notranslate"><span class="pre">remote</span></code> in the above APIs means the blob will be transferred using
+TCP network. For large blobs, it implies a significant cost of time.</p>
+</div>
+<div class="literal-block-wrapper docutils container" id="id7">
+<div class="code-block-caption"><span class="caption-text">Creating remote blobs</span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">vineyard</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">vineyard_rpc_client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="mi">9600</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># mock a data</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">payload</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;abcdefgh1234567890uvwxyz&#39;</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># create an empty blob builder</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">remote_buffer_builder</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">RemoteBlobBuilder</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># copy the mocked data into the builder</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">remote_buffer_builder</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># create the remote blob using the RPCClient, with the `remote_buffer_builder` as argument</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">remote_blob_meta</span> <span class="o">=</span> <span class="n">vineyard_rpc_client</span><span class="o">.</span><span class="n">create_remote_blob</span><span class="p">(</span><span class="n">remote_buffer_builder</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id8">
+<div class="code-block-caption"><span class="caption-text">Accessing remote blobs</span><a class="headerlink" href="#id8" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="o">&gt;&gt;&gt;</span> <span class="c1"># get the remote blob from vineyard using object id</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">remote_blob</span> <span class="o">=</span> <span class="n">vineyard_rpc_client</span><span class="o">.</span><span class="n">get_remote_blob</span><span class="p">(</span><span class="n">remote_blob_meta</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="n">remote_blob</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">remote_blob</span><span class="p">)</span>
+ <span class="p">(</span><span class="o">&lt;</span><span class="n">vineyard</span><span class="o">.</span><span class="n">_C</span><span class="o">.</span><span class="n">RemoteBlob</span> <span class="n">at</span> <span class="mh">0x142204870</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">_C</span><span class="o">.</span><span class="n">RemoteBlob</span><span class="p">)</span>
+ <span class="o">&gt;&gt;&gt;</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="c1"># inspect the value of remote blob</span>
+ <span class="o">&gt;&gt;&gt;</span> <span class="nb">bytes</span><span class="p">(</span><span class="nb">memoryview</span><span class="p">(</span><span class="n">remote_blob</span><span class="p">))</span>
+ <span class="sa">b</span><span class="s1">&#39;abcdefgh1234567890uvwxyz&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The APIs for creating blobs in <a class="reference internal" href="../references/python-api.html#vineyard.IPCClient" title="vineyard.IPCClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.IPCClient</span></code></a> and <a class="reference internal" href="../references/python-api.html#vineyard.RPCClient" title="vineyard.RPCClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.RPCClient</span></code></a>
+have subtle differences. The <a class="reference internal" href="../references/python-api.html#vineyard.IPCClient.create_blob" title="vineyard.IPCClient.create_blob"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.IPCClient.create_blob()</span></code></a> method first allocates
+a shared memory buffer to create an empty blob builder, allowing the user to fill the buffer
+and then seal it. In contrast, the <a class="reference internal" href="../references/python-api.html#vineyard.RPCClient.create_remote_blob" title="vineyard.RPCClient.create_remote_blob"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.RPCClient.create_remote_blob()</span></code></a> method
+creates a remote blob builder on-the-fly, enabling the user to fill the buffer and subsequently
+use the client API to send the <code class="code docutils literal notranslate"><span class="pre">remote_buffer_builder</span></code> to the remote instance.</p>
+</div>
+</section>
+</section>
+<section id="utilizing-distributed-objects">
+<h2>Utilizing Distributed Objects<a class="headerlink" href="#utilizing-distributed-objects" title="Permalink to this heading">¶</a></h2>
+<p>In the illustration at the beginning of this section, we demonstrate that vineyard is capable of sharing
+distributed objects partitioned across multiple hosts. Accessing these distributed objects
+in vineyard can be achieved through two distinct approaches:</p>
+<ul>
+<li><p>Inspecting metadata of global.</p>
+<p>The metadata of global objects can be examined using the <a class="reference internal" href="../references/python-api.html#vineyard.RPCClient" title="vineyard.RPCClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.RPCClient</span></code></a>. This allows
+computing engines to understand the distribution of partitions of global tensors using the
+RPCClient, and subsequently schedule jobs over those chunks based on the distribution information.</p>
+<p>Mars employs this method to consume distributed tensors and dataframes in vineyard.</p>
+<p>Additionally, by leveraging the metadata of global objects and the server metadata accessible
+via <a class="reference internal" href="../references/python-api.html#vineyard.Client.meta" title="vineyard.Client.meta"><code class="xref py py-meth docutils literal notranslate"><span class="pre">vineyard.Client.meta()</span></code></a>, multiple RPC clients can connect to retrieve the corresponding
+blobs from different nodes. These blobs are then assembled locally into a single object. This approach
+is also the default method for <code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.client</span></code>.</p>
+</li>
+<li><p>Accessing local partitions of global objects using the <code class="code docutils literal notranslate"><span class="pre">IPCClient</span></code>:</p>
+<p>Another prevalent pattern for accessing shared global objects involves launching a worker on each
+instance where the global object is partitioned. Then, using the <a class="reference internal" href="../references/python-api.html#vineyard.IPCClient" title="vineyard.IPCClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">vineyard.IPCClient</span></code></a>,
+workers can obtain the local partitions of the global object. Each worker is responsible for
+processing its local partitions.</p>
+<p>This pattern is commonly utilized in many computing engines that have been integrated with
+vineyard, such as GraphScope and Presto.</p>
+</li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="streams.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title">Streams in Vineyard</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="vcdl.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title">Code Generation for Boilerplate</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">Data Accessing</a><ul>
+<li><a class="reference internal" href="#ipcclient-vs-rpcclient">IPCClient vs. RPCClient</a><ul>
+<li><a class="reference internal" href="#local-vs-remote">Local vs. Remote</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#local-objects">Local Objects</a><ul>
+<li><a class="reference internal" href="#accessing-metadatas">Accessing metadatas</a></li>
+<li><a class="reference internal" href="#using-blobs">Using blobs</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#remote-objects">Remote Objects</a><ul>
+<li><a class="reference internal" href="#inspecting-metadata">Inspecting metadata</a></li>
+<li><a class="reference internal" href="#using-remote-blobs">Using remote blobs</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#utilizing-distributed-objects">Utilizing Distributed Objects</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

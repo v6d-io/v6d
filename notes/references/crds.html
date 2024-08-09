@@ -1,0 +1,1613 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="API Reference" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="notes/references/crds.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="Packages: k8s.v6d.io/v1alpha1. k8s.v6d.io/v1alpha1: Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group Resource Types: Backup, BackupList, CSIDriver, CSIDriverList, Glo..." />
+<meta name="description" content="Packages: k8s.v6d.io/v1alpha1. k8s.v6d.io/v1alpha1: Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group Resource Types: Backup, BackupList, CSIDriver, CSIDriverList, Glo..." />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Getting Involved" href="../developers.html" /><link rel="prev" title="C++ API Reference" href="cpp-api.html" />
+
+    <link rel="shortcut icon" href="../../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>API Reference - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/data-processing.html">Data processing</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/data-processing/gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../references.html">API Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/notes/references/crds.md?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/notes/references/crds.md" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section class="tex2jax_ignore mathjax_ignore" id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading">¶</a></h1>
+<section id="packages">
+<h2>Packages<a class="headerlink" href="#packages" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>k8s.v6d.io/v1alpha1</p></li>
+</ul>
+</section>
+<section id="k8s-v6d-io-v1alpha1">
+<h2><a class="reference external" href="http://k8s.v6d.io/v1alpha1">k8s.v6d.io/v1alpha1</a><a class="headerlink" href="#k8s-v6d-io-v1alpha1" title="Permalink to this heading">¶</a></h2>
+<p>Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group</p>
+<section id="resource-types">
+<h3>Resource Types<a class="headerlink" href="#resource-types" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><a class="reference internal" href="#backup"><span class="std std-ref">Backup</span></a></p></li>
+<li><p><a class="reference internal" href="#backuplist"><span class="std std-ref">BackupList</span></a></p></li>
+<li><p><a class="reference internal" href="#csidriver"><span class="std std-ref">CSIDriver</span></a></p></li>
+<li><p><a class="reference internal" href="#csidriverlist"><span class="std std-ref">CSIDriverList</span></a></p></li>
+<li><p><a class="reference internal" href="#globalobject"><span class="std std-ref">GlobalObject</span></a></p></li>
+<li><p><a class="reference internal" href="#globalobjectlist"><span class="std std-ref">GlobalObjectList</span></a></p></li>
+<li><p><a class="reference internal" href="#localobject"><span class="std std-ref">LocalObject</span></a></p></li>
+<li><p><a class="reference internal" href="#localobjectlist"><span class="std std-ref">LocalObjectList</span></a></p></li>
+<li><p><a class="reference internal" href="#operation"><span class="std std-ref">Operation</span></a></p></li>
+<li><p><a class="reference internal" href="#operationlist"><span class="std std-ref">OperationList</span></a></p></li>
+<li><p><a class="reference internal" href="#recover"><span class="std std-ref">Recover</span></a></p></li>
+<li><p><a class="reference internal" href="#recoverlist"><span class="std std-ref">RecoverList</span></a></p></li>
+<li><p><a class="reference internal" href="#sidecar"><span class="std std-ref">Sidecar</span></a></p></li>
+<li><p><a class="reference internal" href="#sidecarlist"><span class="std std-ref">SidecarList</span></a></p></li>
+<li><p><a class="reference internal" href="#vineyardd"><span class="std std-ref">Vineyardd</span></a></p></li>
+<li><p><a class="reference internal" href="#vineyarddlist"><span class="std std-ref">VineyarddList</span></a></p></li>
+</ul>
+<section id="backup">
+<h4>Backup<a class="headerlink" href="#backup" title="Permalink to this heading">¶</a></h4>
+<p>Backup describes a backup operation of vineyard objects, which uses the <a class="reference external" href="https://kubernetes.io/docs/concepts/storage/persistent-volumes/">Kubernetes PersistentVolume</a> to store the backup data. Every backup operation will be binded with the name of Backup.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#backuplist"><span class="std std-ref">BackupList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Backup</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#backupspec"><span class="std std-ref">BackupSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="backuplist">
+<h4>BackupList<a class="headerlink" href="#backuplist" title="Permalink to this heading">¶</a></h4>
+<p>BackupList contains a list of Backup</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BackupList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#backup"><span class="std std-ref">Backup</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="backupspec">
+<h4>BackupSpec<a class="headerlink" href="#backupspec" title="Permalink to this heading">¶</a></h4>
+<p>BackupSpec defines the desired state of Backup</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#backup"><span class="std std-ref">Backup</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vineyarddName</span></code> <em>string</em></p></td>
+<td><p>the name of the vineyard cluster</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vineyarddNamespace</span></code> <em>string</em></p></td>
+<td><p>the namespace of the vineyard cluster</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">objecIDs</span></code> <em>string array</em></p></td>
+<td><p>the specific objects to be backed up if not specified, all objects will be backed up</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">backupPath</span></code> <em>string</em></p></td>
+<td><p>the path of backup data</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">persistentVolumeSpec</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumespec-v1-core">PersistentVolumeSpec</a></em></p></td>
+<td><p>the PersistentVolumeSpec of the backup data</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">persistentVolumeClaimSpec</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core">PersistentVolumeClaimSpec</a></em></p></td>
+<td><p>the PersistentVolumeClaimSpec of the backup data</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="csidriver">
+<h4>CSIDriver<a class="headerlink" href="#csidriver" title="Permalink to this heading">¶</a></h4>
+<p>CSIDriver is the Schema for the csidrivers API</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#csidriverlist"><span class="std std-ref">CSIDriverList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CSIDriver</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#csidriverspec"><span class="std std-ref">CSIDriverSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="csidriverlist">
+<h4>CSIDriverList<a class="headerlink" href="#csidriverlist" title="Permalink to this heading">¶</a></h4>
+<p>CSIDriverList contains a list of CSIDriver</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CSIDriverList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#csidriver"><span class="std std-ref">CSIDriver</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="csidriverspec">
+<h4>CSIDriverSpec<a class="headerlink" href="#csidriverspec" title="Permalink to this heading">¶</a></h4>
+<p>CSIDriverSpec defines the desired state of CSIDriver</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#csidriver"><span class="std std-ref">CSIDriver</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">image</span></code> <em>string</em></p></td>
+<td><p>Image is the name of the csi driver image</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">imagePullPolicy</span></code> <em>string</em></p></td>
+<td><p>ImagePullPolicy is the image pull policy of the csi driver</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">storageClassName</span></code> <em>string</em></p></td>
+<td><p>StorageClassName is the name of the storage class</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">volumeBindingMode</span></code> <em>string</em></p></td>
+<td><p>VolumeBindingMode is the volume binding mode of the storage class</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sidecar</span></code> <em><a class="reference internal" href="#csisidecar"><span class="std std-ref">CSISidecar</span></a></em></p></td>
+<td><p>Sidecar is the configuration for the CSI sidecar container nolint: lll</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">clusters</span></code> <em><a class="reference internal" href="#vineyardclusters"><span class="std std-ref">VineyardClusters</span></a> array</em></p></td>
+<td><p>Clusters are the list of vineyard clusters</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">enableToleration</span></code> <em>boolean</em></p></td>
+<td><p>EnableToleration is the flag to enable toleration for the csi driver</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">enableVerboseLog</span></code> <em>boolean</em></p></td>
+<td><p>EnableVerboseLog is the flag to enable verbose log for the csi driver</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="csisidecar">
+<h4>CSISidecar<a class="headerlink" href="#csisidecar" title="Permalink to this heading">¶</a></h4>
+<p>CSISidecar holds the configuration for the CSI sidecar container</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#csidriverspec"><span class="std std-ref">CSIDriverSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">provisionerImage</span></code> <em>string</em></p></td>
+<td><p>ProvisionerImage is the image of the provisioner sidecar</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">attacherImage</span></code> <em>string</em></p></td>
+<td><p>AttacherImage is the image of the attacher sidecar</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nodeRegistrarImage</span></code> <em>string</em></p></td>
+<td><p>NodeRegistrarImage is the image of the node registrar sidecar</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">livenessProbeImage</span></code> <em>string</em></p></td>
+<td><p>LivenessProbeImage is the image of the liveness probe sidecar</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">imagePullPolicy</span></code> <em>string</em></p></td>
+<td><p>ImagePullPolicy is the image pull policy of all sidecar containers</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">enableTopology</span></code> <em>boolean</em></p></td>
+<td><p>EnableTopology is the flag to enable topology for the csi driver</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="globalobject">
+<h4>GlobalObject<a class="headerlink" href="#globalobject" title="Permalink to this heading">¶</a></h4>
+<p>GlobalObject describes a global object in vineyard, whose metadata will be stored in etcd.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#globalobjectlist"><span class="std std-ref">GlobalObjectList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GlobalObject</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#globalobjectspec"><span class="std std-ref">GlobalObjectSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="globalobjectlist">
+<h4>GlobalObjectList<a class="headerlink" href="#globalobjectlist" title="Permalink to this heading">¶</a></h4>
+<p>GlobalObjectList contains a list of GlobalObject</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GlobalObjectList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#globalobject"><span class="std std-ref">GlobalObject</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="globalobjectspec">
+<h4>GlobalObjectSpec<a class="headerlink" href="#globalobjectspec" title="Permalink to this heading">¶</a></h4>
+<p>GlobalObjectSpec defines the desired state of GlobalObject</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#globalobject"><span class="std std-ref">GlobalObject</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">id</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">signature</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">typename</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">members</span></code> <em>string array</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em>string</em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="localobject">
+<h4>LocalObject<a class="headerlink" href="#localobject" title="Permalink to this heading">¶</a></h4>
+<p>LocalObject describes a local object in vineyard, whose metadata will only be stored in local vineyard.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#localobjectlist"><span class="std std-ref">LocalObjectList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">LocalObject</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#localobjectspec"><span class="std std-ref">LocalObjectSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="localobjectlist">
+<h4>LocalObjectList<a class="headerlink" href="#localobjectlist" title="Permalink to this heading">¶</a></h4>
+<p>LocalObjectList contains a list of LocalObject</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">LocalObjectList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#localobject"><span class="std std-ref">LocalObject</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="localobjectspec">
+<h4>LocalObjectSpec<a class="headerlink" href="#localobjectspec" title="Permalink to this heading">¶</a></h4>
+<p>LocalObjectSpec defines the desired state of LocalObject</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#localobject"><span class="std std-ref">LocalObject</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">id</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">signature</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">typename</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">instance_id</span></code> <em>integer</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hostname</span></code> <em>string</em></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em>string</em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="metricconfig">
+<h4>MetricConfig<a class="headerlink" href="#metricconfig" title="Permalink to this heading">¶</a></h4>
+<p>MetricConfig holds the configuration about metric container</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#sidecarspec"><span class="std std-ref">SidecarSpec</span></a></p></li>
+<li><p><a class="reference internal" href="#vineyarddspec"><span class="std std-ref">VineyarddSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">enable</span></code> <em>boolean</em></p></td>
+<td><p>Enable metrics</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">image</span></code> <em>string</em></p></td>
+<td><p>represent the metric’s image</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">imagePullPolicy</span></code> <em>string</em></p></td>
+<td><p>the policy about pulling image</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="operation">
+<h4>Operation<a class="headerlink" href="#operation" title="Permalink to this heading">¶</a></h4>
+<p>Operation describes an operation between workloads, such as assembly and repartition.
+As for the <code class="docutils literal notranslate"><span class="pre">assembly</span></code> operation, there are several kinds of computing engines, some may not support the stream data, so we need to insert an <code class="docutils literal notranslate"><span class="pre">assembly</span></code> operation to assemble the stream data into a batch data, so that the next computing engines can process the data.
+As for the <code class="docutils literal notranslate"><span class="pre">repartition</span></code> operation, the vineyard has integrated with the distributed computing engines, such as Dask. If you want to repartition the data to adapt the dask workers, then the <code class="docutils literal notranslate"><span class="pre">repartition</span></code> operation is essential for such scenario.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#operationlist"><span class="std std-ref">OperationList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Operation</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#operationspec"><span class="std std-ref">OperationSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="operationlist">
+<h4>OperationList<a class="headerlink" href="#operationlist" title="Permalink to this heading">¶</a></h4>
+<p>OperationList contains a list of Operation</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">OperationList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#operation"><span class="std std-ref">Operation</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="operationspec">
+<h4>OperationSpec<a class="headerlink" href="#operationspec" title="Permalink to this heading">¶</a></h4>
+<p>OperationSpec defines the desired state of Operation</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#operation"><span class="std std-ref">Operation</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code> <em>string</em></p></td>
+<td><p>the name of vineyard pluggable drivers, including assembly and repartition.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">type</span></code> <em>string</em></p></td>
+<td><p>the type of object, including local and distributed.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">require</span></code> <em>string</em></p></td>
+<td><p>the required job’s name of the operation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">target</span></code> <em>string</em></p></td>
+<td><p>the target job’s name of the operation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timeoutSeconds</span></code> <em>integer</em></p></td>
+<td><p>TimeoutSeconds is the timeout of the operation.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="pluginimageconfig">
+<h4>PluginImageConfig<a class="headerlink" href="#pluginimageconfig" title="Permalink to this heading">¶</a></h4>
+<p>PluginImageConfig holds all image configuration about pluggable drivers(backup, recover, local assembly, distributed assembly, repartition)</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#vineyarddspec"><span class="std std-ref">VineyarddSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">backupImage</span></code> <em>string</em></p></td>
+<td><p>the image of backup operation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">recoverImage</span></code> <em>string</em></p></td>
+<td><p>the image of recover operation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">daskRepartitionImage</span></code> <em>string</em></p></td>
+<td><p>the image of dask repartition operation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">localAssemblyImage</span></code> <em>string</em></p></td>
+<td><p>the image of local assembly operation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">distributedAssemblyImage</span></code> <em>string</em></p></td>
+<td><p>the image of distributed assembly operation</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="recover">
+<h4>Recover<a class="headerlink" href="#recover" title="Permalink to this heading">¶</a></h4>
+<p>Recover describes a recover operation of vineyard objects, which is used to recover a specific backup operation.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#recoverlist"><span class="std std-ref">RecoverList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Recover</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#recoverspec"><span class="std std-ref">RecoverSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="recoverlist">
+<h4>RecoverList<a class="headerlink" href="#recoverlist" title="Permalink to this heading">¶</a></h4>
+<p>RecoverList contains a list of Recover</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RecoverList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#recover"><span class="std std-ref">Recover</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="recoverspec">
+<h4>RecoverSpec<a class="headerlink" href="#recoverspec" title="Permalink to this heading">¶</a></h4>
+<p>RecoverSpec defines the desired state of Recover</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#recover"><span class="std std-ref">Recover</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">backupName</span></code> <em>string</em></p></td>
+<td><p>the name of backup</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">backupNamespace</span></code> <em>string</em></p></td>
+<td><p>the namespace of backup</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="serviceconfig">
+<h4>ServiceConfig<a class="headerlink" href="#serviceconfig" title="Permalink to this heading">¶</a></h4>
+<p>ServiceConfig holds all service configuration about vineyardd</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#sidecarspec"><span class="std std-ref">SidecarSpec</span></a></p></li>
+<li><p><a class="reference internal" href="#vineyarddspec"><span class="std std-ref">VineyarddSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">type</span></code> <em>string</em></p></td>
+<td><p>service type</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">port</span></code> <em>integer</em></p></td>
+<td><p>service port</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="sidecar">
+<h4>Sidecar<a class="headerlink" href="#sidecar" title="Permalink to this heading">¶</a></h4>
+<p>Sidecar is used for configuring and managing the vineyard sidecar container.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#sidecarlist"><span class="std std-ref">SidecarList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Sidecar</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#sidecarspec"><span class="std std-ref">SidecarSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="sidecarlist">
+<h4>SidecarList<a class="headerlink" href="#sidecarlist" title="Permalink to this heading">¶</a></h4>
+<p>SidecarList contains a list of Sidecar</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SidecarList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#sidecar"><span class="std std-ref">Sidecar</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="sidecarspec">
+<h4>SidecarSpec<a class="headerlink" href="#sidecarspec" title="Permalink to this heading">¶</a></h4>
+<p>SidecarSpec defines the desired state of Sidecar</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#sidecar"><span class="std std-ref">Sidecar</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">selector</span></code> <em>string</em></p></td>
+<td><p>the selector of pod</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">replicas</span></code> <em>integer</em></p></td>
+<td><p>the replicas of workload</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">etcdReplicas</span></code> <em>integer</em></p></td>
+<td><p>EtcdReplicas describe the etcd replicas</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vineyard</span></code> <em><a class="reference internal" href="#vineyardconfig"><span class="std std-ref">VineyardConfig</span></a></em></p></td>
+<td><p>vineyard container configuration nolint: lll</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metric</span></code> <em><a class="reference internal" href="#metricconfig"><span class="std std-ref">MetricConfig</span></a></em></p></td>
+<td><p>metric container configuration</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">volume</span></code> <em><a class="reference internal" href="#volumeconfig"><span class="std std-ref">VolumeConfig</span></a></em></p></td>
+<td><p>metric configurations</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">service</span></code> <em><a class="reference internal" href="#serviceconfig"><span class="std std-ref">ServiceConfig</span></a></em></p></td>
+<td><p>rpc service configuration</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">securityContext</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#securitycontext-v1-core">SecurityContext</a></em></p></td>
+<td><p>SecurityContext holds the security context settings for the vineyardd container.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">volumes</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core">Volume</a> array</em></p></td>
+<td><p>Volumes is the list of Kubernetes volumes that can be mounted by the vineyard container.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">volumeMounts</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core">VolumeMount</a> array</em></p></td>
+<td><p>VolumeMounts specifies the volumes listed in “.spec.volumes” to mount into the vineyard container.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="spillconfig">
+<h4>SpillConfig<a class="headerlink" href="#spillconfig" title="Permalink to this heading">¶</a></h4>
+<p>SpillConfig holds all configuration about spilling</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#vineyardconfig"><span class="std std-ref">VineyardConfig</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code> <em>string</em></p></td>
+<td><p>the name of the spill config</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">path</span></code> <em>string</em></p></td>
+<td><p>the path of spilling</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">spillLowerRate</span></code> <em>string</em></p></td>
+<td><p>low watermark of spilling memory</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spillUpperRate</span></code> <em>string</em></p></td>
+<td><p>high watermark of triggering spilling</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">persistentVolumeSpec</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumespec-v1-core">PersistentVolumeSpec</a></em></p></td>
+<td><p>the PersistentVolumeSpec of the spilling PV</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">persistentVolumeClaimSpec</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core">PersistentVolumeClaimSpec</a></em></p></td>
+<td><p>the PersistentVolumeClaimSpec of the spill file</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="vineyardclusters">
+<h4>VineyardClusters<a class="headerlink" href="#vineyardclusters" title="Permalink to this heading">¶</a></h4>
+<p>VineyardClusters contains the list of vineyard clusters</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#csidriverspec"><span class="std std-ref">CSIDriverSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">namespace</span></code> <em>string</em></p></td>
+<td><p>Namespace is the namespace of the vineyard cluster</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code> <em>string</em></p></td>
+<td><p>Name is the name of the vineyard deployment</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="vineyardconfig">
+<h4>VineyardConfig<a class="headerlink" href="#vineyardconfig" title="Permalink to this heading">¶</a></h4>
+<p>VineyardConfig holds all configuration about vineyard container</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#sidecarspec"><span class="std std-ref">SidecarSpec</span></a></p></li>
+<li><p><a class="reference internal" href="#vineyarddspec"><span class="std std-ref">VineyarddSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">image</span></code> <em>string</em></p></td>
+<td><p>represent the vineyardd’s image</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">imagePullPolicy</span></code> <em>string</em></p></td>
+<td><p>the policy about pulling image</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">syncCRDs</span></code> <em>boolean</em></p></td>
+<td><p>synchronize CRDs when persisting objects</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">socket</span></code> <em>string</em></p></td>
+<td><p>The directory on host for the IPC socket file. The UNIX-domain socket will be placed as <code class="docutils literal notranslate"><span class="pre">${Socket}/vineyard.sock</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">size</span></code> <em>string</em></p></td>
+<td><p>shared memory size for vineyardd</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">reserveMemory</span></code> <em>boolean</em></p></td>
+<td><p>reserve the shared memory for vineyardd</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">streamThreshold</span></code> <em>integer</em></p></td>
+<td><p>memory threshold of streams (percentage of total memory)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spill</span></code> <em><a class="reference internal" href="#spillconfig"><span class="std std-ref">SpillConfig</span></a></em></p></td>
+<td><p>the configuration of spilling</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">env</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core">EnvVar</a> array</em></p></td>
+<td><p>vineyard environment configuration</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">memory</span></code> <em>string</em></p></td>
+<td><p>the memory resources of vineyard container</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cpu</span></code> <em>string</em></p></td>
+<td><p>the cpu resources of vineyard container</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="vineyardd">
+<h4>Vineyardd<a class="headerlink" href="#vineyardd" title="Permalink to this heading">¶</a></h4>
+<p>Vineyardd is used to deploy a vineyard cluster on kubernetes, which can simplify the configurations of the vineyard binary, the external etcd cluster and the vineyard <a class="reference external" href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/">Deployment</a>. As vineyard is bound to a specific socket on the hostpath by default, the vineyard pod cannot be deployed on the same node. Before deploying vineyardd, you should know how many nodes are available for vineyard pod to deploy on and make sure the vineyardd pod number is less than the number of available nodes.</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#vineyarddlist"><span class="std std-ref">VineyarddList</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vineyardd</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">ObjectMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">spec</span></code> <em><a class="reference internal" href="#vineyarddspec"><span class="std std-ref">VineyarddSpec</span></a></em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="vineyarddlist">
+<h4>VineyarddList<a class="headerlink" href="#vineyarddlist" title="Permalink to this heading">¶</a></h4>
+<p>VineyarddList contains a list of Vineyardd</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apiVersion</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">k8s.v6d.io/v1alpha1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> <em>string</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VineyarddList</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta">ListMeta</a></em></p></td>
+<td><p>Refer to Kubernetes API documentation for fields of <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">items</span></code> <em><a class="reference internal" href="#vineyardd"><span class="std std-ref">Vineyardd</span></a> array</em></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="vineyarddspec">
+<h4>VineyarddSpec<a class="headerlink" href="#vineyarddspec" title="Permalink to this heading">¶</a></h4>
+<p>VineyarddSpec holds all configuration about vineyardd</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#vineyardd"><span class="std std-ref">Vineyardd</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">replicas</span></code> <em>integer</em></p></td>
+<td><p>Replicas is the number of vineyardd pods to deploy</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">etcdReplicas</span></code> <em>integer</em></p></td>
+<td><p>EtcdReplicas describe the etcd replicas</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">service</span></code> <em><a class="reference internal" href="#serviceconfig"><span class="std std-ref">ServiceConfig</span></a></em></p></td>
+<td><p>vineyardd’s service</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vineyard</span></code> <em><a class="reference internal" href="#vineyardconfig"><span class="std std-ref">VineyardConfig</span></a></em></p></td>
+<td><p>vineyard container configuration nolint: lll</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pluginImage</span></code> <em><a class="reference internal" href="#pluginimageconfig"><span class="std std-ref">PluginImageConfig</span></a></em></p></td>
+<td><p>operation container configuration nolint: lll</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">metric</span></code> <em><a class="reference internal" href="#metricconfig"><span class="std std-ref">MetricConfig</span></a></em></p></td>
+<td><p>metric container configuration</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">volume</span></code> <em><a class="reference internal" href="#volumeconfig"><span class="std std-ref">VolumeConfig</span></a></em></p></td>
+<td><p>Volume configuration</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">securityContext</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#securitycontext-v1-core">SecurityContext</a></em></p></td>
+<td><p>SecurityContext holds the security context settings for the vineyardd container.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">volumes</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core">Volume</a> array</em></p></td>
+<td><p>Volumes is the list of Kubernetes volumes that can be mounted by the vineyard deployment.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">volumeMounts</span></code> <em><a class="reference external" href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core">VolumeMount</a> array</em></p></td>
+<td><p>VolumeMounts specifies the volumes listed in “.spec.volumes” to mount into the vineyard deployment.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="volumeconfig">
+<h4>VolumeConfig<a class="headerlink" href="#volumeconfig" title="Permalink to this heading">¶</a></h4>
+<p>VolumeConfig holds all configuration about persistent volume</p>
+<p><em>Appears in:</em></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#sidecarspec"><span class="std std-ref">SidecarSpec</span></a></p></li>
+<li><p><a class="reference internal" href="#vineyarddspec"><span class="std std-ref">VineyarddSpec</span></a></p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pvcName</span></code> <em>string</em></p></td>
+<td><p>the name of pvc</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mountPath</span></code> <em>string</em></p></td>
+<td><p>the mount path of pv</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="../developers.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title">Getting Involved</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="cpp-api.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title">C++ API Reference</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">API Reference</a><ul>
+<li><a class="reference internal" href="#packages">Packages</a></li>
+<li><a class="reference internal" href="#k8s-v6d-io-v1alpha1">k8s.v6d.io/v1alpha1</a><ul>
+<li><a class="reference internal" href="#resource-types">Resource Types</a><ul>
+<li><a class="reference internal" href="#backup">Backup</a></li>
+<li><a class="reference internal" href="#backuplist">BackupList</a></li>
+<li><a class="reference internal" href="#backupspec">BackupSpec</a></li>
+<li><a class="reference internal" href="#csidriver">CSIDriver</a></li>
+<li><a class="reference internal" href="#csidriverlist">CSIDriverList</a></li>
+<li><a class="reference internal" href="#csidriverspec">CSIDriverSpec</a></li>
+<li><a class="reference internal" href="#csisidecar">CSISidecar</a></li>
+<li><a class="reference internal" href="#globalobject">GlobalObject</a></li>
+<li><a class="reference internal" href="#globalobjectlist">GlobalObjectList</a></li>
+<li><a class="reference internal" href="#globalobjectspec">GlobalObjectSpec</a></li>
+<li><a class="reference internal" href="#localobject">LocalObject</a></li>
+<li><a class="reference internal" href="#localobjectlist">LocalObjectList</a></li>
+<li><a class="reference internal" href="#localobjectspec">LocalObjectSpec</a></li>
+<li><a class="reference internal" href="#metricconfig">MetricConfig</a></li>
+<li><a class="reference internal" href="#operation">Operation</a></li>
+<li><a class="reference internal" href="#operationlist">OperationList</a></li>
+<li><a class="reference internal" href="#operationspec">OperationSpec</a></li>
+<li><a class="reference internal" href="#pluginimageconfig">PluginImageConfig</a></li>
+<li><a class="reference internal" href="#recover">Recover</a></li>
+<li><a class="reference internal" href="#recoverlist">RecoverList</a></li>
+<li><a class="reference internal" href="#recoverspec">RecoverSpec</a></li>
+<li><a class="reference internal" href="#serviceconfig">ServiceConfig</a></li>
+<li><a class="reference internal" href="#sidecar">Sidecar</a></li>
+<li><a class="reference internal" href="#sidecarlist">SidecarList</a></li>
+<li><a class="reference internal" href="#sidecarspec">SidecarSpec</a></li>
+<li><a class="reference internal" href="#spillconfig">SpillConfig</a></li>
+<li><a class="reference internal" href="#vineyardclusters">VineyardClusters</a></li>
+<li><a class="reference internal" href="#vineyardconfig">VineyardConfig</a></li>
+<li><a class="reference internal" href="#vineyardd">Vineyardd</a></li>
+<li><a class="reference internal" href="#vineyarddlist">VineyarddList</a></li>
+<li><a class="reference internal" href="#vineyarddspec">VineyarddSpec</a></li>
+<li><a class="reference internal" href="#volumeconfig">VolumeConfig</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

@@ -1,0 +1,85 @@
+title = "Gitleaks for Vineyard"
+
+[extend]
+useDefault = true
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-access-key-id"
+regex = '''(?i)((LTAI)[a-z0-9]+)'''
+keywords = [
+  "ltai",
+]
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-access-id-in-config"
+regex = '''(?i)((access).?id\s*=\s*.+)'''
+keywords = [
+  "access",
+]
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-access-key-in-config"
+regex = '''(?i)((access).?key\s*=\s*.+)'''
+keywords = [
+  "access",
+]
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-access-secret-in-config"
+regex = '''(?i)((access).?secret\s*=\s*.+)'''
+keywords = [
+  "access",
+  "secret",
+]
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-access-key-id-in-config"
+regex = '''(?i)((access).?key.?id\s*=\s*.+)'''
+keywords = [
+  "access",
+]
+
+[rules.allowlist]
+paths = [
+  '''python/vineyard/drivers/io/tests/test_open.py''',
+  '''python/vineyard/drivers/io/tests/test_serialize.py''',
+]
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-access-key-secret-in-config"
+regex = '''(?i)((access).?key.?secret\s*=\s*.+)'''
+keywords = [
+  "access",
+  "secret",
+]
+
+[rules.allowlist]
+paths = [
+  '''python/vineyard/drivers/io/tests/test_open.py''',
+  '''python/vineyard/drivers/io/tests/test_serialize.py''',
+]
+
+[[rules]]
+description = "Alibaba AccessKey ID"
+id = "alibaba-secret-access-key-in-config"
+regex = '''(?i)((secret).?access.?key\s*=\s*.+)'''
+keywords = [
+  "access",
+  "secret",
+]
+
+[allowlist]
+paths = [
+  '''build''',
+  '''docs/_build''',
+  '''docs/_templates/footer.html''',
+  '''thirdparty''',
+  '''modules/graph/thirdparty''',
+]
+
