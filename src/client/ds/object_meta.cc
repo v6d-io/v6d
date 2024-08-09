@@ -158,6 +158,12 @@ void ObjectMeta::AddRemoteBlob(const RemoteBlob& blob) {
   VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(blob.id(), blob.Buffer()));
 }
 
+void ObjectMeta::AddRemoteBlob(ObjectID id,
+                               const std::shared_ptr<Buffer>& buffer) {
+  VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(id));
+  VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(id, buffer));
+}
+
 void ObjectMeta::AddMember(const std::string& name, const ObjectMeta& member) {
   VINEYARD_ASSERT(!meta_.contains(name));
   meta_[name] = member.meta_;

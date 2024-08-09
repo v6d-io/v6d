@@ -217,6 +217,9 @@ class RPCClient final : public ClientBase {
   Status GetObject(const ObjectID id, std::shared_ptr<Object>& object,
                    const bool sync_remote = true);
 
+  Status BatchedGetObjects(const std::vector<ObjectMeta> metas,
+                           std::vector<std::shared_ptr<Object>>& objects);
+
   /**
    * @brief Get multiple objects from vineyard.
    *
@@ -414,10 +417,7 @@ class RPCClient final : public ClientBase {
    * @return Status that indicates whether the lock process succeeds.
    */
   Status TryAcquireLock(std::string key, bool& result,
-                        std::string& actual_key) override {
-    // TBD
-    return Status::NotImplemented("TryAcquireLock is not implemented yet.");
-  }
+                        std::string& actural_key) override;
 
   /**
    * @brief Try to release a distributed lock.
@@ -426,10 +426,7 @@ class RPCClient final : public ClientBase {
    *
    * @return Status that indicates whether the unlock process succeeds.
    */
-  Status TryReleaseLock(std::string key, bool& result) override {
-    // TBD
-    return Status::NotImplemented("TryAcquireLock is not implemented yet.");
-  }
+  Status TryReleaseLock(std::string key, bool& result) override;
 
   /**
    * @brief Get the RDMA endpoint of the connected vineyard server.

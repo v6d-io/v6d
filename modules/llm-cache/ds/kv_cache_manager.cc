@@ -26,6 +26,7 @@ limitations under the License.
 #include "llm-cache/ds/kv_cache_manager.h"
 #include "llm-cache/storage/blob_storage.h"
 #include "llm-cache/storage/local_file_storage.h"
+#include "llm-cache/storage/vineyard_file_storage.h"
 
 namespace vineyard {
 
@@ -79,6 +80,33 @@ Status KVCacheManager::Make(std::shared_ptr<KVCacheManager>& manager,
         config.tensorByte, config.cacheCapacity, config.layer, config.chunkSize,
         config.hashChunkSize, config.root, config.gcInterval, config.ttl,
         config.enbaleGlobalGC, config.globalGCInterval, config.globalTTL);
+  } else {
+    return Status::Invalid("Unsupported filesystem type");
+  }
+  manager = std::make_shared<KVCacheManager>(file_storage);
+  RETURN_ON_ERROR(file_storage->Init());
+  manager->config = std::make_shared<FileCacheConfig>(config);
+  return Status::OK();
+}
+
+Status KVCacheManager::Make(RPCClient& rpc_client, Client& ipc_client,
+                            std::shared_ptr<KVCacheManager>& manager,
+                            FileCacheConfig& config) {
+  if (config.chunkSize <= 0 || config.hashChunkSize <= 0) {
+    return Status::Invalid("Invalid batch size or split number.");
+  }
+  if (config.tensorByte <= 0 || config.cacheCapacity <= 0 ||
+      config.layer <= 0) {
+    return Status::Invalid("Invalid tensor byte, cache capacity or layer.");
+  }
+
+  std::shared_ptr<FileStorage> file_storage;
+  if (config.filesystemType == FilesystemType::VINEYARD) {
+    file_storage = std::make_shared<VineyardFileStorage>(
+        rpc_client, ipc_client, config.tensorByte, config.cacheCapacity,
+        config.layer, config.chunkSize, config.hashChunkSize, config.root,
+        config.gcInterval, config.ttl, config.enbaleGlobalGC,
+        config.globalGCInterval, config.globalTTL);
   } else {
     return Status::Invalid("Unsupported filesystem type");
   }
@@ -250,6 +278,17 @@ Status KVCacheManager::Update(
   return storage->Update(tokenList, nextToken, kvState);
 }
 
+Status KVCacheManager::BatchedUpdate(
+    const std::vector<int>& tokenList,
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& updated) {
+  if (kvCacheList.size() != tokenList.size()) {
+    return Status::Invalid("Token list size not match kv state list size");
+  }
+
+  return storage->BatchedUpdate(tokenList, kvCacheList, updated);
+}
+
 /**
  * @brief Query the kv state with the given token list in the kv state cache
  * manager.
@@ -398,6 +437,13 @@ Status KVCacheManager::Query(
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
     size_t& matched) {
   return storage->Query(prefix, tokenList, kvCacheList, matched);
+}
+
+Status KVCacheManager::BatchedQuery(
+    const std::vector<int>& tokenList,
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+    size_t& matched) {
+  return storage->BatchedQuery(tokenList, kvCacheList, matched);
 }
 
 Status KVCacheManager::ClearGlobalCache(Client& client,

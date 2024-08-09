@@ -21,6 +21,7 @@ import numpy as np
 from vineyard.llm import KVCache
 from vineyard.llm import KVTensor
 from vineyard.llm.cache import FileCacheConfig
+from vineyard.llm.cache import FilesystemType
 from vineyard.llm.cache import VineyardCacheConfig
 
 
@@ -152,6 +153,77 @@ def test_kv_cache_update_and_query_on_fs():
             ]
         )
     matched = cache.query(None, tokens, kv_tensors)
+    assert matched == len(tokens)
+
+    assert len(kv_tensors) == len(kv_tensors_from_cache)
+    for kv, kv_from_cache in zip(original_kv_tensors, kv_tensors_from_cache):
+        assert len(kv) == len(kv_from_cache)
+        for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
+            kv, kv_from_cache
+        ):
+            np.array_equal(k_tensor, queried_k_tensor)
+            np.array_equal(v_tensor, queried_v_tensor)
+
+
+def test_kv_cache_update_and_query_on_vineyard_fs(
+    vineyard_ipc_sockets, vineyard_endpoints
+):
+    print(vineyard_endpoints)
+    file_cache_config = FileCacheConfig(
+        chunk_size=2,
+        hash_chunk_size=2,
+        root="/tmp/vineyard/llm_cache",
+        filesystem_type=FilesystemType.VINEYARD,
+        socket=vineyard_ipc_sockets[0],
+        rpc_endpoint=vineyard_endpoints[0],
+        rdma_endpoint='',
+    )
+    cache = KVCache(
+        cache_config=file_cache_config,
+        tensor_nbytes=16,  # should be the same as the nbytes of the tensor
+        cache_capacity=1024,
+        layer=2,
+    )
+
+    tokens = [1, 2, 3, 4]
+    original_kv_tensors = []
+    kv_tensors_to_update = []
+    for _ in range(0, len(tokens), file_cache_config.chunk_size):
+        k_tensor = np.random.rand(2, 2).astype(np.float32)
+        v_tensor = np.random.rand(2, 2).astype(np.float32)
+        for _ in range(file_cache_config.chunk_size):
+            original_kv_tensors.append(
+                [(k_tensor, v_tensor) for _ in range(cache.layer)]
+            )
+            kv_tensors_to_update.append(
+                [
+                    (
+                        KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                        KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                    )
+                    for _ in range(cache.layer)
+                ]
+            )
+
+    updated = cache.batched_update(tokens, kv_tensors_to_update)
+    assert updated == len(tokens)
+
+    kv_tensors_from_cache = []
+    kv_tensors = []
+    for _ in range(len(tokens)):
+        k_tensor = np.empty((2, 2), dtype=np.float32)
+        v_tensor = np.empty((2, 2), dtype=np.float32)
+        kv_tensors_from_cache.append([(k_tensor, v_tensor) for _ in range(cache.layer)])
+        kv_tensors.append(
+            [
+                (
+                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                )
+                for _ in range(cache.layer)
+            ]
+        )
+    matched = cache.batched_query(tokens, kv_tensors)
     assert matched == len(tokens)
 
     assert len(kv_tensors) == len(kv_tensors_from_cache)

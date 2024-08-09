@@ -599,6 +599,14 @@ class ObjectMeta {
   void AddRemoteBlob(const RemoteBlob& blob);
 
   /**
+   * @brief Add remote blob's buffer to ObjectMeta.
+   *
+   * @param id The object ID of remote blob.
+   * @param buffer The buffer of remote blob.
+   */
+  void AddRemoteBlob(ObjectID id, const std::shared_ptr<Buffer>& buffer);
+
+  /**
    * @brief Add member to ObjectMeta.
    *
    * @param name The name of member object.

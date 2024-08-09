@@ -41,6 +41,10 @@ class KVCacheManager {
   static Status Make(std::shared_ptr<KVCacheManager>& manager,
                      FileCacheConfig& config);
 
+  static Status Make(RPCClient& rpc_client, Client& ipc_client,
+                     std::shared_ptr<KVCacheManager>& manager,
+                     FileCacheConfig& config);
+
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::vector<std::pair<LLMKV, LLMKV>>& kvState);
 
@@ -51,6 +55,11 @@ class KVCacheManager {
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& updated);
+
+  Status BatchedUpdate(
+      const std::vector<int>& tokenList,
       const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated);
 
@@ -65,6 +74,11 @@ class KVCacheManager {
                const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched);
+
+  Status BatchedQuery(
+      const std::vector<int>& tokenList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& matched);
 
   void Close();
 

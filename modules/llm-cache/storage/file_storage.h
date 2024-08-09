@@ -40,6 +40,7 @@ struct FileDescriptor {};
 
 enum FilesystemType {
   LOCAL,
+  VINEYARD,
 };
 
 enum FileOperationType {
@@ -57,6 +58,14 @@ class FileStorage : public IStorage,
 
   virtual Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
                       FileOperationType fileOperationType) = 0;
+
+  virtual Status BatchedOpen(
+      const std::vector<std::string>& pathList,
+      std::vector<std::shared_ptr<FileDescriptor>>& fdList,
+      FileOperationType fileOperationType) {
+    std::runtime_error("Not implemented");
+    return Status::OK();
+  }
 
   virtual Status Seek(std::shared_ptr<FileDescriptor>& fd, size_t offset) = 0;
 
@@ -80,6 +89,12 @@ class FileStorage : public IStorage,
 
   virtual Status Close(std::shared_ptr<FileDescriptor>& fd) = 0;
 
+  virtual Status BatchedClose(
+      std::vector<std::shared_ptr<FileDescriptor>>& fdList) {
+    std::runtime_error("Not implemented");
+    return Status::OK();
+  }
+
   virtual Status Delete(std::string path) = 0;
 
   virtual bool IsFileExist(const std::string& path) = 0;
@@ -90,7 +105,7 @@ class FileStorage : public IStorage,
 
   virtual Status TouchFile(const std::string& path) = 0;
 
-  virtual std::string GetTmpFileDir() = 0;
+  virtual std::string GetTmpFileDir(std::string surfix) = 0;
 
   Status DefaultGCFunc();
 
@@ -103,6 +118,8 @@ class FileStorage : public IStorage,
   static void DefaultGCThread(std::shared_ptr<FileStorage> fileStorage);
 
   static void GlobalGCThread(std::shared_ptr<FileStorage> fileStorage);
+
+  virtual void CloseGCThread();
 
   // for test
   void PrintFileAccessTime(std::string path);
@@ -128,6 +145,11 @@ class FileStorage : public IStorage,
       const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
       size_t& updated) override;
 
+  Status BatchedUpdate(
+      const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& updated) override;
+
   Status Query(const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched) override;
@@ -139,6 +161,10 @@ class FileStorage : public IStorage,
                const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
                size_t& matched) override;
+  Status BatchedQuery(
+      const std::vector<int>& tokenList,
+      std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvCacheList,
+      size_t& matched) override;
 
   void CloseCache() override;
 

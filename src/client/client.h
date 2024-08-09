@@ -658,6 +658,9 @@ class Client final : public BasicIPCClient,
   std::vector<std::shared_ptr<Object>> GetObjects(
       const std::vector<ObjectID>& ids, const bool sync_remote = true);
 
+  std::vector<std::shared_ptr<Object>> GetObjects(
+      const std::vector<ObjectMeta>& metas);
+
   /**
    * @brief List object metadatas in vineyard, using the given typename
    * patterns.
