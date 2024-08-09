@@ -40,14 +40,24 @@ RUN echo "multilib_policy=best" >> /etc/yum.conf && \
 	echo "skip_missing_names_on_install=False" >> /etc/yum.conf \
 	sed -i '/^override_install_langs=/d' /etc/yum.conf \
 	echo "exclude = d36uatko69830t.cloudfront.net" >> /etc/yum/pluginconf.d/fastestmirror.conf \
-    yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
-	yum-config-manager --enable extras && \
-	yum -y update && \
-	yum -y install yum-utils autoconf automake curl centos-release-scl-rh m4 make wget && \
-    yum -y install devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ && \
-    localedef -i en_US -f UTF-8 en_US.UTF-8 && \
-    yum clean all && \
-	rm -rf /var/cache/yum
+    mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup && \
+    if [ "${PLATFORM}" = "x86_64" ]; then \
+        curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo; \
+    elif [ "${PLATFORM}" = "aarch64" ]; then \
+        curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-altarch-7.repo; \
+    fi && \
+    yum-config-manager --enable extras && \
+    yum -y update && \
+    yum -y install yum-utils autoconf automake curl centos-release-scl-rh m4 make wget && \
+    # for centos-scl-rh
+    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-SCLo-* && \
+    if [ "${PLATFORM}" = "x86_64" ]; then \
+        sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://mirrors.aliyun.com|g' /etc/yum.repos.d/CentOS-SCLo-*; \
+    elif [ "${PLATFORM}" = "aarch64" ]; then \
+        sed -i 's|#baseurl=http://mirror.centos.org/centos|baseurl=http://mirrors.aliyun.com/centos-altarch|g' /etc/yum.repos.d/CentOS-SCLo-*; \
+    fi && \
+    yum -y install devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ devtoolset-10-libatomic-devel libtool && \
+    localedef -i en_US -f UTF-8 en_US.UTF-8
 
 ENV BASH_ENV=/opt/rh/devtoolset-10/enable
 ENV ENV=/opt/rh/devtoolset-10/enable
@@ -164,9 +174,9 @@ RUN cd /tmp && \
 #
 # note: remove shared libs
 RUN cd /tmp && \
-    wget -q https://zlib.net/zlib-1.2.13.tar.gz && \
-    tar zxf zlib-1.2.13.tar.gz && \
-    cd zlib-1.2.13 && \
+    wget -q https://zlib.net/zlib-1.3.1.tar.gz && \
+    tar zxf zlib-1.3.1.tar.gz && \
+    cd zlib-1.3.1 && \
     mkdir build && \
     cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
@@ -174,7 +184,7 @@ RUN cd /tmp && \
     make install -j`nproc` && \
     rm -rf /usr/local/lib/libz.so* && \
     cd /tmp && \
-    rm -rf zlib-1.2.13.tar.gz zlib-1.2.13
+    rm -rf zlib-1.3.1.tar.gz zlib-1.3.1
 
 # install openssl: boringssl doesn't bring headers when installing
 RUN cd /tmp && \

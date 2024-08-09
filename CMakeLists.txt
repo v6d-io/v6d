@@ -1011,6 +1011,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         DEPENDS _C vineyard_internal_registry
         COMMENT "Copying python extensions."
         VERBATIM)
+    set_target_properties(_C PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
 endif()
 
 if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
