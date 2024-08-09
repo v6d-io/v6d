@@ -364,6 +364,12 @@ void RPCServer::doRDMARecv() {
         VLOG(100) << "RDMA server stopped!";
         return;
       }
+      if (status.IsConnectionError()) {
+        LOG(ERROR) << "Connection error!" << status.message();
+        VineyardRecvContext* recv_context =
+            reinterpret_cast<VineyardRecvContext*>(context);
+        doVineyardClose(recv_context);
+      }
       VLOG(100) << "Get RX completion failed! Error:" << status.message();
       VLOG(100) << "Retry...";
     } else {
@@ -377,6 +383,12 @@ void RPCServer::doRDMARecv() {
 
       VineyardMsg* recv_msg =
           reinterpret_cast<VineyardMsg*>(recv_context->attr.msg_buffer);
+
+      if (recv_msg->type == VINEYARD_MSG_CLOSE) {
+        doVineyardClose(recv_context);
+        delete recv_context;
+        continue;
+      }
 
       VineyardRecvContext* recv_context_tmp = new VineyardRecvContext();
       VineyardMsg* recv_msg_tmp = new VineyardMsg();
@@ -407,14 +419,6 @@ void RPCServer::doRDMARecv() {
         rdma_server_->Recv(
             recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
             sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
-      } else if (recv_msg->type == VINEYARD_MSG_CLOSE) {
-        boost::asio::post(vs_ptr_->GetIOContext(),
-                          [this, recv_context_tmp, recv_msg_tmp] {
-                            doVineyardClose(recv_context_tmp);
-                            delete recv_context_tmp;
-                            delete recv_msg_tmp;
-                          });
-        delete recv_context;
       } else {
         LOG(ERROR) << "Unknown message type: " << recv_msg->type;
         rdma_server_->Recv(

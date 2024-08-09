@@ -429,7 +429,12 @@ Status RDMAServer::GetRXCompletion(int timeout, void** context) {
         continue;
       }
     } else if (ret < 0) {
-      return Status::Invalid("GetRXCompletion failed");
+      if (ret == -FI_ECANCELED) {
+        // client crashed
+        return Status::ConnectionError("Client crashed.");
+      } else {
+        return Status::Invalid(fi_strerror(-ret));
+      }
     } else {
       return Status::OK();
     }
@@ -449,7 +454,12 @@ Status RDMAServer::GetTXCompletion(int timeout, void** context) {
         continue;
       }
     } else if (ret < 0) {
-      return Status::Invalid("GetTXCompletion failed:" + std::to_string(ret));
+      if (ret == -FI_ECANCELED) {
+        // client crashed
+        return Status::ConnectionError("Client crashed.");
+      } else {
+        return Status::Invalid(fi_strerror(-ret));
+      }
     } else {
       return Status::OK();
     }
