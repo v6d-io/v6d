@@ -1027,6 +1027,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
         DEPENDS _llm_C
         COMMENT "Copying llm kv cache python extensions."
         VERBATIM)
+    set_target_properties(_llm_C PROPERTIES LINK_FLAGS "-Wl,--version-script=${LIBFABRIC_VERSION_SCRIPT}")
     add_dependencies(vineyard_llm_python vineyard_client_python)
 endif()
 
