@@ -42,7 +42,7 @@ void BasicTest() {
   }
   {
     for (int i = 0; i < 1000; i++) {
-      CHECK(lru_.CheckExist(i));
+      CHECK(!lru_.CheckIsSpilled(i));
     }
   }
 }

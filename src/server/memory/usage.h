@@ -24,6 +24,7 @@ limitations under the License.
 #include <string>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "flat_hash_map/flat_hash_map.hpp"
 #include "libcuckoo/cuckoohash_map.hh"
@@ -193,7 +194,7 @@ class ColdObjectTracker
    * - `Unref(ID id)` Remove the designated id from lru.
    * - `PopLeastUsed()` Get the least used blob id. If no object in structure,
    * then status will be Invalids.
-   * - `CheckExist(ID id)` Check the existence of id.
+   * - `CheckIsSpilled(ID id)` Check whether the object is spilled.
    */
   class LRU {
    public:
@@ -218,9 +219,9 @@ class ColdObjectTracker
       }
     }
 
-    bool CheckExist(const ID id) const {
+    bool CheckIsSpilled(const ID id) const {
       std::lock_guard<decltype(mu_)> locked(mu_);
-      return map_.find(id) != map_.end();
+      return spilled_obj_.find(id) != spilled_obj_.end();
     }
 
     /**
@@ -330,6 +331,14 @@ class ColdObjectTracker
       return status;
     }
 
+    Status ReloadObject(const ObjectID& object_id,
+                        const std::shared_ptr<Payload>& payload, const bool pin,
+                        const std::shared_ptr<Der>& bulk_store) {
+      std::lock_guard<decltype(mu_)> locked(mu_);
+      auto status = this->reload(object_id, payload, pin, bulk_store);
+      return status;
+    }
+
     bool CheckSpilled(const ID& id) {
       std::lock_guard<decltype(mu_)> locked(mu_);
       return spilled_obj_.find(id) != spilled_obj_.end();
@@ -427,10 +436,24 @@ class ColdObjectTracker
   }
 
   /**
+   * @brief Add a blob list to the cold object list
+   */
+  Status MarkAsCold(const std::vector<ID>& ids,
+                    const std::vector<std::shared_ptr<P>>& payloads) {
+    for (size_t i = 0; i < payloads.size(); i++) {
+      const std::shared_ptr<P>& payload = payloads[i];
+      if (payload->IsSealed()) {
+        cold_obj_lru_.Ref(ids[i], payload);
+      }
+    }
+    return Status::OK();
+  }
+
+  /**
    * @brief check if a blob is in-use. Return true if it is in-use.
    */
   Status IsInUse(const ID id, bool& is_in_use) {
-    if (cold_obj_lru_.CheckExist(id)) {
+    if (cold_obj_lru_.CheckIsSpilled(id)) {
       is_in_use = false;
     } else {
       is_in_use = true;
@@ -477,6 +500,20 @@ class ColdObjectTracker
       return Status::Invalid("Spill path is not set");
     }
     return cold_obj_lru_.SpillObjects(objects, shared_from_self());
+  }
+
+  /**
+   * @brief Triggered when been requested to spill specified object to disk.
+   * @param object reloaded blob
+   */
+  Status ReloadColdObject(const ObjectID& object_id,
+                          const std::shared_ptr<Payload>& payload,
+                          const bool pin) {
+    if (spill_path_.empty()) {
+      return Status::OK();  // bypass, as spill is not enabled
+    }
+    return cold_obj_lru_.ReloadObject(object_id, payload, pin,
+                                      shared_from_self());
   }
 
   /**
@@ -581,6 +618,7 @@ class ColdObjectTracker
       io::SpillFileReader reader(spill_path_);
       RETURN_ON_ERROR(reader.Read(payload, shared_from_self()));
     }
+    payload->is_spilled = false;
     return this->DeletePayloadFile(id);
   }
 

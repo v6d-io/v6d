@@ -552,7 +552,11 @@ bool SocketConnection::doSealBlob(json const& root) {
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
   RESPONSE_ON_ERROR(bulk_store_->Seal(id));
-  RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
+  Status status;
+  bulk_store_->objects_.find_fn(
+      id, [self, id, &status](const std::shared_ptr<Payload>& object) {
+        status = self->bulk_store_->MarkAsCold(id, object);
+      });
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -568,8 +572,14 @@ bool SocketConnection::doGetBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids, unsafe);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
-  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
-      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(ids, objects));
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->pointer == nullptr) {
+      VINEYARD_CHECK_OK(
+          bulk_store_->ReloadColdObject(ids[i], objects[i], false));
+      VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(ids[i], objects[i]));
+    }
+  }
 
   std::vector<int> fd_to_send;
   for (auto object : objects) {
@@ -679,6 +689,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
+  VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(object_id, object));
 
   if (use_rdma) {
     std::string message_out;
@@ -734,6 +745,7 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
   }
+  VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(object_ids, objects));
 
   if (use_rdma) {
     std::string message_out;
