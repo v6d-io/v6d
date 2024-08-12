@@ -786,10 +786,22 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress,
                    use_rdma);
-  server_ptr_->LockTransmissionObjects(ids);
-  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
-  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
-      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  this->LockTransmissionObjects(ids);
+  if (!bulk_store_->GetUnsafe(ids, unsafe, objects).ok()) {
+    this->UnlockTransmissionObjects(ids);
+    WriteErrorReply(Status::KeyError("Failed to get objects"), message_out);
+    this->doWrite(message_out);
+    return false;
+  }
+  if (!bulk_store_
+           ->AddDependency(std::unordered_set<ObjectID>(ids.begin(), ids.end()),
+                           this->getConnId())
+           .ok()) {
+    this->UnlockTransmissionObjects(ids);
+    WriteErrorReply(Status::KeyError("Failed to add dependency"), message_out);
+    this->doWrite(message_out);
+    return false;
+  }
   WriteGetBuffersReply(objects, {}, compress, message_out);
 
   if (!use_rdma) {
@@ -802,7 +814,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
                                 << "Failed to send buffers to remote client: "
                                 << status.ToString();
                           }
-                          self->server_ptr_->UnlockTransmissionObjects(ids);
+                          self->UnlockTransmissionObjects(ids);
                           return Status::OK();
                         });
       return Status::OK();
@@ -1846,12 +1858,10 @@ bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
   std::vector<ObjectID> ids;
   TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
 
-  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
-    self->server_ptr_->UnlockTransmissionObjects(ids);
-    std::string message_out;
-    WriteReleaseBlobsWithRDMAReply(message_out);
-    self->doWrite(message_out);
-  });
+  this->UnlockTransmissionObjects(ids);
+  std::string message_out;
+  WriteReleaseBlobsWithRDMAReply(message_out);
+  this->doWrite(message_out);
 
   return false;
 }
@@ -1884,6 +1894,7 @@ void SocketConnection::doWrite(std::string&& buf) {
 }
 
 void SocketConnection::doStop() {
+  this->ClearLockedObjects();
   if (this->Stop()) {
     // drop connection
     socket_server_ptr_->RemoveConnection(conn_id_);
@@ -1926,6 +1937,50 @@ void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback,
                         doStop();
                       }
                     });
+}
+
+void SocketConnection::LockTransmissionObjects(
+    const std::vector<ObjectID>& ids) {
+  {
+    std::lock_guard<std::mutex> lock(locked_objects_mutex_);
+    for (auto const& id : ids) {
+      if (locked_objects_.find(id) == locked_objects_.end()) {
+        locked_objects_[id] = 1;
+      } else {
+        ++locked_objects_[id];
+      }
+    }
+  }
+  server_ptr_->LockTransmissionObjects(ids);
+}
+
+void SocketConnection::UnlockTransmissionObjects(
+    const std::vector<ObjectID>& ids) {
+  {
+    std::lock_guard<std::mutex> lock(locked_objects_mutex_);
+    for (auto const& id : ids) {
+      if (locked_objects_.find(id) != locked_objects_.end()) {
+        if (--locked_objects_[id] == 0) {
+          locked_objects_.erase(id);
+        }
+      }
+    }
+  }
+  server_ptr_->UnlockTransmissionObjects(ids);
+}
+
+void SocketConnection::ClearLockedObjects() {
+  std::vector<ObjectID> ids;
+  {
+    std::lock_guard<std::mutex> lock(locked_objects_mutex_);
+    for (auto const& kv : locked_objects_) {
+      for (int i = 0; i < kv.second; ++i) {
+        ids.push_back(kv.first);
+      }
+    }
+    locked_objects_.clear();
+  }
+  server_ptr_->UnlockTransmissionObjects(ids);
 }
 
 SocketServer::SocketServer(std::shared_ptr<VineyardServer> vs_ptr)

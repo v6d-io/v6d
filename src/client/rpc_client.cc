@@ -776,7 +776,6 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
   std::vector<int> fd_sent;
 
   std::string message_out;
-  RDMABlobScopeGuard rdmaBlobScopeGuard;
   if (rdma_connected_) {
     WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, false, true,
                                  message_out);
@@ -788,13 +787,16 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
-  RETURN_ON_ASSERT(payloads.size() == 1, "Expects only one payload");
+
+  RDMABlobScopeGuard rdmaBlobScopeGuard;
   if (rdma_connected_) {
-    std::unordered_set<ObjectID> ids{payloads[0].object_id};
+    std::unordered_set<ObjectID> ids{id};
     std::function<void(std::unordered_set<ObjectID>)> func = std::bind(
         &RPCClient::doReleaseBlobsWithRDMARequest, this, std::placeholders::_1);
     rdmaBlobScopeGuard.set(func, ids);
   }
+
+  RETURN_ON_ASSERT(payloads.size() == 1, "Expects only one payload");
 
   buffer = std::shared_ptr<RemoteBlob>(new RemoteBlob(
       payloads[0].object_id, remote_instance_id_, payloads[0].data_size));
@@ -892,7 +894,6 @@ Status RPCClient::GetRemoteBlobs(
   std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
   std::vector<Payload> payloads;
   std::vector<int> fd_sent;
-  RDMABlobScopeGuard rdmaBlobScopeGuard;
 
   std::string message_out;
   if (rdma_connected_) {
@@ -905,15 +906,18 @@ Status RPCClient::GetRemoteBlobs(
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
-  RETURN_ON_ASSERT(payloads.size() == id_set.size(),
-                   "The result size doesn't match with the requested sizes: " +
-                       std::to_string(payloads.size()) + " vs. " +
-                       std::to_string(id_set.size()));
+
+  RDMABlobScopeGuard rdmaBlobScopeGuard;
   if (rdma_connected_) {
     std::function<void(std::unordered_set<ObjectID>)> func = std::bind(
         &RPCClient::doReleaseBlobsWithRDMARequest, this, std::placeholders::_1);
     rdmaBlobScopeGuard.set(func, id_set);
   }
+
+  RETURN_ON_ASSERT(payloads.size() == id_set.size(),
+                   "The result size doesn't match with the requested sizes: " +
+                       std::to_string(payloads.size()) + " vs. " +
+                       std::to_string(id_set.size()));
 
   std::unordered_map<ObjectID, std::shared_ptr<RemoteBlob>> id_payload_map;
   if (rdma_connected_) {
@@ -982,6 +986,14 @@ Status RPCClient::GetRemoteBlobs(
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
+
+  RDMABlobScopeGuard rdmaBlobScopeGuard;
+  if (rdma_connected_) {
+    std::function<void(std::unordered_set<ObjectID>)> func = std::bind(
+        &RPCClient::doReleaseBlobsWithRDMARequest, this, std::placeholders::_1);
+    rdmaBlobScopeGuard.set(func, id_set);
+  }
+
   RETURN_ON_ASSERT(payloads.size() == id_set.size(),
                    "The result size doesn't match with the requested sizes: " +
                        std::to_string(payloads.size()) + " vs. " +

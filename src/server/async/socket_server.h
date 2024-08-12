@@ -24,6 +24,7 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "common/memory/payload.h"
 #include "common/util/asio.h"  // IWYU pragma: keep
@@ -193,6 +194,12 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
     this->server_ptr_ = session;
   }
 
+  void LockTransmissionObjects(const std::vector<ObjectID>& ids);
+
+  void UnlockTransmissionObjects(const std::vector<ObjectID>& ids);
+
+  void ClearLockedObjects();
+
   // whether the connection has been correctly "registered"
   std::atomic_bool registered_;
 
@@ -215,6 +222,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   size_t read_msg_header_;
   std::string read_msg_body_;
+
+  std::unordered_map<ObjectID, int> locked_objects_;
+  std::mutex locked_objects_mutex_;
 
   friend class IPCServer;
   friend class RPCServer;
