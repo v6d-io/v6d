@@ -444,12 +444,12 @@ void RPCServer::doRDMARecv() {
             recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
             sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
       } else if (recv_msg->type == VINEYARD_MSG_EMPTY) {
-        boost::asio::post(
-            vs_ptr_->GetIOContext(), [this, recv_context_tmp, recv_msg_tmp] {
-              doNothing(recv_context_tmp);
-              delete recv_msg_tmp;
-              delete recv_context_tmp;
-            });
+        boost::asio::post(vs_ptr_->GetIOContext(),
+                          [this, recv_context_tmp, recv_msg_tmp] {
+                            doNothing(recv_context_tmp);
+                            delete recv_msg_tmp;
+                            delete recv_context_tmp;
+                          });
         rdma_server_->Recv(
             recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
             sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));

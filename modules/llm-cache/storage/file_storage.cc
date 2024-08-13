@@ -96,8 +96,9 @@ Status FileStorage::Update(
                            std::to_string(chunkSize) + "!");
   }
   if (tokenList.size() > MAX_CACHE_TOKEN_LENGTH) {
-    LOG(WARNING) << "The token list size is larger than the maximum cache token "
-                 "length. This token list will be ignored!";
+    LOG(WARNING)
+        << "The token list size is larger than the maximum cache token "
+           "length. This token list will be ignored!";
     return Status::OK();
   }
 
@@ -287,8 +288,9 @@ Status FileStorage::Update(
                            std::to_string(chunkSize) + "!");
   }
   if (tokenList.size() > MAX_CACHE_TOKEN_LENGTH) {
-    LOG(WARNING) << "The token list size is larger than the maximum cache token "
-                 "length. This token list will be ignored!";
+    LOG(WARNING)
+        << "The token list size is larger than the maximum cache token "
+           "length. This token list will be ignored!";
     return Status::OK();
   }
 
@@ -438,8 +440,9 @@ Status FileStorage::BatchedUpdate(
                            std::to_string(chunkSize) + "!");
   }
   if (tokenList.size() > MAX_CACHE_TOKEN_LENGTH) {
-    LOG(WARNING) << "The token list size is larger than the maximum cache token "
-                 "length. This token list will be ignored!";
+    LOG(WARNING)
+        << "The token list size is larger than the maximum cache token "
+           "length. This token list will be ignored!";
     return Status::OK();
   }
 
