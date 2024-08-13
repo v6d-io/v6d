@@ -245,11 +245,11 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
     send_msg->remoteMemInfo.len = 0;
 
     VineyardSendContext* send_context = new VineyardSendContext();
-    memset(&send_context->attr, 0, sizeof(send_context->attr));
+    memset(send_context, 0, sizeof(VineyardSendContext));
     send_context->attr.msg_buffer = msg;
     rdma_server_->Send(recv_context->rdma_conn_id,
                        recv_context->attr.msg_buffer, sizeof(VineyardMsg),
-                       recv_context);
+                       send_context);
     return;
   }
 
@@ -272,7 +272,7 @@ void RPCServer::doVineyardRequestMemory(VineyardRecvContext* recv_context,
   send_msg->remoteMemInfo.mr_desc = remote_request_mem_info.mr_desc;
 
   VineyardSendContext* send_context = new VineyardSendContext();
-  memset(&send_context->attr, 0, sizeof(send_context->attr));
+  memset(send_context, 0, sizeof(VineyardSendContext));
   send_context->attr.msg_buffer = msg;
 
   std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
@@ -358,6 +358,24 @@ void RPCServer::doPrepareRecv(uint64_t rdma_conn_id) {
   rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
 }
 
+void RPCServer::doNothing(VineyardRecvContext* recv_context) {
+  void* msg = nullptr;
+  rdma_server_->GetTXFreeMsgBuffer(msg);
+  VineyardMsg* send_msg = reinterpret_cast<VineyardMsg*>(msg);
+  send_msg->type = VINEYARD_MSG_REQUEST_MEM;
+
+  send_msg->remoteMemInfo.remote_address = 0;
+  send_msg->remoteMemInfo.key = 0;
+  send_msg->remoteMemInfo.len = 0;
+  send_msg->remoteMemInfo.mr_desc = 0;
+
+  VineyardSendContext* send_context = new VineyardSendContext();
+  memset(send_context, 0, sizeof(VineyardSendContext));
+  send_context->attr.msg_buffer = msg;
+  rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg),
+                     send_context);
+}
+
 void RPCServer::doRDMARecv() {
   while (1) {
     void* context = nullptr;
@@ -415,10 +433,20 @@ void RPCServer::doRDMARecv() {
         rdma_server_->Recv(
             recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
             sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
-      } else if (recv_msg->type == VINEYARD_RELEASE_MEM) {
+      } else if (recv_msg->type == VINEYARD_MSG_RELEASE_MEM) {
         boost::asio::post(
             vs_ptr_->GetIOContext(), [this, recv_context_tmp, recv_msg_tmp] {
               doVineyardReleaseMemory(recv_context_tmp, recv_msg_tmp);
+              delete recv_msg_tmp;
+              delete recv_context_tmp;
+            });
+        rdma_server_->Recv(
+            recv_context->rdma_conn_id, reinterpret_cast<void*>(recv_msg),
+            sizeof(VineyardMsg), reinterpret_cast<void*>(recv_context));
+      } else if (recv_msg->type == VINEYARD_MSG_EMPTY) {
+        boost::asio::post(
+            vs_ptr_->GetIOContext(), [this, recv_context_tmp, recv_msg_tmp] {
+              doNothing(recv_context_tmp);
               delete recv_msg_tmp;
               delete recv_context_tmp;
             });
