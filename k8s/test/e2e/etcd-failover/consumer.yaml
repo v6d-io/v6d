@@ -12,12 +12,12 @@ spec:
       restartPolicy: Never
       containers:
       - name: consumer
-        image: python:3.10
+        image: localhost:5001/vineyard-python-dev:latest
+        imagePullPolicy: IfNotPresent
         command:
         - bash
         - -c
         - |
-          pip install vineyard numpy pandas --index-url https://pypi.tuna.tsinghua.edu.cn/simple;
           cat << EOF >> consumer.py
           import vineyard
           client = vineyard.connect(host="vineyardd-svc.default.svc.cluster.local",port=9600)

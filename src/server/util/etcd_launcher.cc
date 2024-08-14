@@ -351,7 +351,6 @@ Status EtcdLauncher::LaunchEtcdServer(
       etcd_client.reset(new etcd::Client(etcd_endpoints_));
       if (probeEtcdServer(etcd_client, sync_lock)) {
         etcd_member_id_ = findMemberID(etcd_client, peer_endpoint);
-        std::cout << "%%%%%%%%%%%%%%%%%set " << etcd_member_id_ << std::endl;
         // reset the etcd watcher
         break;
       }

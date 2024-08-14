@@ -57,11 +57,7 @@ class EtcdLauncher {
   std::string generateMemberName(
       const std::vector<std::string>& existing_members_name);
 
-  const uint64_t GetMemberID() {
-    std::cout << "LLLLLLLLLLLLLLl etcd_member_id_: " << etcd_member_id_
-              << std::endl;
-    return etcd_member_id_;
-  }
+  const uint64_t GetMemberID() { return etcd_member_id_; }
 
   Status RemoveMember(std::unique_ptr<etcd::Client>& etcd_client,
                       const uint64_t& member_id) {

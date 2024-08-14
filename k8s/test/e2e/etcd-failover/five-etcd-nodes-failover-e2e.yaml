@@ -36,8 +36,9 @@ setup:
           done
           kubectl delete pod "vineyardd-$num1" -n default --force
           kubectl delete pod "vineyardd-$num2" -n default --force
+          kubectl rollout status statefulset/vineyardd
           # wait for the instance quit messages to be propagated
-          sleep 240
+          sleep 360
           kubectl rollout status statefulset/vineyardd
         done
     - name: install consumer
