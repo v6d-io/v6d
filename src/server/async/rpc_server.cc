@@ -329,6 +329,9 @@ void RPCServer::doVineyardReleaseMemory(VineyardRecvContext* recv_context,
 
 void RPCServer::doVineyardClose(VineyardRecvContext* recv_context) {
   VLOG(100) << "Receive close msg!";
+  if (recv_context == nullptr) {
+    return;
+  }
   rdma_server_->CloseConnection(recv_context->rdma_conn_id);
 
   std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
@@ -369,6 +372,9 @@ void RPCServer::doRDMARecv() {
         VineyardRecvContext* recv_context =
             reinterpret_cast<VineyardRecvContext*>(context);
         doVineyardClose(recv_context);
+        if (recv_context) {
+          delete recv_context;
+        }
       }
       VLOG(100) << "Get RX completion failed! Error:" << status.message();
       VLOG(100) << "Retry...";
