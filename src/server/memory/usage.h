@@ -574,7 +574,7 @@ class ColdObjectTracker
     //  2. memory usage is above upper bound
     if (pointer == nullptr ||
         BulkAllocator::Allocated() >= self().mem_spill_upper_bound_) {
-      std::unique_lock<std::mutex> locked(spill_mu_);
+      //std::unique_lock<std::mutex> locked(spill_mu_);
 
       int64_t min_spill_size = 0;
       if (pointer == nullptr) {
