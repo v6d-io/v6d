@@ -350,6 +350,9 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Connected to RPCServer: " << rpc_endpoint;
 
   LRUTest(client, rpc_client);
+  VINEYARD_CHECK_OK(client.Clear());
+  VINEYARD_CHECK_OK(rpc_client.Clear());
+
   client.Disconnect();
   rpc_client.Disconnect();
 
