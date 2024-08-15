@@ -29,7 +29,7 @@ limitations under the License.
 #include "etcd/Client.hpp"
 
 #include "common/util/status.h"
-#include "server/util/etcdctl.h"
+#include "server/util/etcd_member.h"
 
 namespace vineyard {
 
@@ -48,7 +48,8 @@ class EtcdLauncher {
                               std::string const& key);
 
  private:
-  Status handleEtcdFailure(const std::string& member_name,
+  Status handleEtcdFailure(std::unique_ptr<etcd::Client>& etcd_client,
+                           const std::string& member_name,
                            const std::string& errMessage);
 
   Status parseEndpoint();
@@ -56,13 +57,14 @@ class EtcdLauncher {
   std::string generateMemberName(
       const std::vector<std::string>& existing_members_name);
 
-  std::string GetMemberID() { return etcd_member_id_; }
+  const uint64_t GetMemberID() { return etcd_member_id_; }
 
-  Status RemoveMember(const std::string member_id) {
-    return etcdctl_->removeMember(member_id, etcd_endpoints_);
+  Status RemoveMember(std::unique_ptr<etcd::Client>& etcd_client,
+                      const uint64_t& member_id) {
+    return removeMember(etcd_client, member_id);
   }
 
-  Status UpdateEndpoint();
+  Status UpdateEndpoint(std::unique_ptr<etcd::Client>& etcd_client);
 
   Status initHostInfo();
 
@@ -75,10 +77,8 @@ class EtcdLauncher {
   std::set<std::string> local_hostnames_;
   std::set<std::string> local_ip_addresses_;
 
-  std::string etcd_member_id_;
+  uint64_t etcd_member_id_;
   std::string etcd_endpoints_;
-
-  std::shared_ptr<Etcdctl> etcdctl_;
 
   std::unique_ptr<boost::process::child> etcd_proc_;
 

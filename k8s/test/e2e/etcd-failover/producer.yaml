@@ -27,12 +27,12 @@ spec:
       restartPolicy: Never
       containers:
       - name: producer
-        image: python:3.10
+        image: localhost:5001/vineyard-python-dev:latest
+        imagePullPolicy: IfNotPresent
         command:
         - bash
         - -c
         - |
-          pip install vineyard numpy pandas --index-url https://pypi.tuna.tsinghua.edu.cn/simple;
           cat << EOF >> producer.py
           import vineyard
           import numpy as np

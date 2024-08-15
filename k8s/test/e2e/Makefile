@@ -29,6 +29,10 @@ load-vineyardd-image:
 	@docker push localhost:5001/vineyardd:latest
 .PHONY: load-vineyardd-image
 
+load-vineyard-python-dev-image:
+	@docker tag ghcr.io/v6d-io/v6d/vineyard-python-dev:latest localhost:5001/vineyard-python-dev:latest
+	@docker push localhost:5001/vineyard-python-dev:latest
+
 load-vineyard-operator-image:
 	@docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
 	@docker push localhost:5001/vineyard-operator:latest
@@ -248,13 +252,13 @@ e2e-tests-failover: prepare-e2e-test install-vineyard-cluster
 
 ############# etcd failover testing #############################################
 
-e2e-tests-three-etcd-nodes-failover: prepare-e2e-test build-local-cluster load-vineyardd-image
+e2e-tests-three-etcd-nodes-failover: prepare-e2e-test build-local-cluster load-vineyardd-image load-vineyard-python-dev-image
 	@echo "Running three etcd nodes failover e2e test..."
 	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/etcd-failover/three-etcd-nodes-failover-e2e.yaml
 	@echo "three etcd nodes failover e2e test passed."
 	@make delete-local-cluster
 
-e2e-tests-five-etcd-nodes-failover: prepare-e2e-test build-local-cluster load-vineyardd-image
+e2e-tests-five-etcd-nodes-failover: prepare-e2e-test build-local-cluster load-vineyardd-image load-vineyard-python-dev-image
 	@echo "Running five etcd nodes failover e2e test..."
 	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/etcd-failover/five-etcd-nodes-failover-e2e.yaml
 	@echo "five etcd nodes failover e2e test passed."

@@ -555,11 +555,12 @@ void IMetaService::registerToEtcd() {
           self->meta_["my_nodename"] = nodename;
 
           self->instances_list_.emplace(rank);
-          auto etcd_member_id = self->GetEtcdMemberID();
+          uint64_t etcd_member_id = self->GetEtcdMemberID();
           std::string key = "/instances/" + self->server_ptr_->instance_name();
           ops.emplace_back(op_t::Put(key + "/hostid", self_host_id));
-          if (etcd_member_id != "") {
-            ops.emplace_back(op_t::Put(key + "/member_id", etcd_member_id));
+          if (etcd_member_id != 0) {
+            ops.emplace_back(
+                op_t::Put(key + "/member_id", std::to_string(etcd_member_id)));
           }
           ops.emplace_back(op_t::Put(key + "/hostname", hostname));
           ops.emplace_back(op_t::Put(key + "/nodename", nodename));
@@ -1218,7 +1219,8 @@ void IMetaService::instanceUpdate(const op_t& op, const bool from_remote) {
       }
       // reset the etcd client
       VINEYARD_CHECK_OK(this->probe());
-      instance_to_member_id_[instance_id] = member_id;
+      uint64_t member_id_ = std::stoull(member_id);
+      instance_to_member_id_[instance_id] = member_id_;
     } else if (op.op != op_t::op_type_t::kDel) {
       if (from_remote) {
         LOG(ERROR) << "Unknown op type: " << op.ToString();
@@ -1265,7 +1267,7 @@ Status IMetaService::daemonWatchHandler(
   return callback_after_update(Status::OK(), rev);
 }
 
-Status IMetaService::RemoveEtcdMember(const std::string& member_id) {
+Status IMetaService::RemoveEtcdMember(const uint64_t& member_id) {
   return callIfEtcdMetaService(
       [&member_id](std::shared_ptr<EtcdMetaService> etcd_meta_service) {
         return etcd_meta_service->RemoveMember(member_id);
@@ -1273,12 +1275,12 @@ Status IMetaService::RemoveEtcdMember(const std::string& member_id) {
       Status::OK());
 }
 
-std::string IMetaService::GetEtcdMemberID() {
+const uint64_t IMetaService::GetEtcdMemberID() {
   return callIfEtcdMetaService(
       [](std::shared_ptr<EtcdMetaService> etcd_meta_service) {
         return etcd_meta_service->GetMemberID();
       },
-      std::string());
+      (uint64_t) 0);
 }
 
 Status IMetaService::UpdateEtcdEndpoint() {
