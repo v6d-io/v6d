@@ -273,6 +273,7 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(
   ObjectMeta blob_meta;
   if (ipc_client.Connected()) {
     std::shared_ptr<Object> object;
+    writer_->Shrink(ipc_client, writer_->size());
     writer_->Seal(ipc_client, object);
     blob_meta = object->meta();
     ipc_client.Persist(blob_meta.GetId());
@@ -282,6 +283,7 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(
   }
   vineyardFile->meta_.AddMember("buffer", blob_meta);
   vineyardFile->meta_.AddKeyValue("path", path_);
+  vineyardFile->meta_.AddKeyValue("size", Size());
   vineyardFile->meta_.SetTypeName(type_name<VineyardFile>());
 
   auto access_time = std::chrono::system_clock::now().time_since_epoch();
@@ -312,6 +314,7 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
   if (ipc_client.Connected()) {
     for (auto builder : builders) {
       std::shared_ptr<Object> object;
+      builder->writer_->Shrink(ipc_client, builder->writer_->size());
       builder->writer_->Seal(ipc_client, object);
       blob_metas.push_back(object->meta());
     }
@@ -334,6 +337,7 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
     }
     vineyard_file->meta_.AddMember("buffer", blob_metas[i]);
     vineyard_file->meta_.AddKeyValue("path", builders[i]->path_);
+    vineyard_file->meta_.AddKeyValue("size", builders[i]->Size());
     vineyard_file->meta_.SetTypeName(type_name<VineyardFile>());
 
     auto access_time = std::chrono::system_clock::now().time_since_epoch();

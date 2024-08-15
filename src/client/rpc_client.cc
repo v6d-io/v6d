@@ -258,7 +258,7 @@ Status RPCClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
   RETURN_ON_ERROR(this->rdma_client_->GetTXFreeMsgBuffer(buffer));
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
-  msg->type = VINEYARD_RELEASE_MEM;
+  msg->type = VINEYARD_MSG_RELEASE_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
   msg->remoteMemInfo.len = remote_info.size;
   msg->remoteMemInfo.mr_desc = remote_info.mr_desc;

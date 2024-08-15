@@ -144,7 +144,7 @@ Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
-  msg->type = VINEYARD_RELEASE_MEM;
+  msg->type = VINEYARD_MSG_RELEASE_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
   msg->remoteMemInfo.len = remote_info.size;
   VLOG(100) << "Send remote addr: "

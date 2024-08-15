@@ -34,6 +34,8 @@ limitations under the License.
 #define SECOND_TO_MICROSECOND 1000000
 #define SECOND_TO_NANOSECOND 1000000000
 
+#define MAX_CACHE_TOKEN_LENGTH 65536
+
 namespace vineyard {
 
 struct FileDescriptor {};

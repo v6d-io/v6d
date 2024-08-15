@@ -85,6 +85,8 @@ class RPCServer : public SocketServer,
 
   void doPrepareRecv(uint64_t rdma_conn_id);
 
+  void doNothing(VineyardRecvContext* recv_context);
+
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;

@@ -62,8 +62,8 @@ class VineyardFileStorage : public FileStorage {
     this->globalGCInterval = std::chrono::seconds(globalGCInterval);
     this->globalFileTTL = std::chrono::seconds(globalTTL);
     this->enableGlobalGC = enableGlobalGC;
-    this->max_file_size_ =
-        tensorNBytes * 2 * layer * chunkSize + 65536 * sizeof(int);
+    this->max_file_size_ = tensorNBytes * 2 * layer * chunkSize +
+                           MAX_CACHE_TOKEN_LENGTH * sizeof(int);
   }
 
   ~VineyardFileStorage() = default;
