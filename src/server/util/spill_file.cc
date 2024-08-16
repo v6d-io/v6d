@@ -39,8 +39,6 @@ Status SpillFileWriter::Init(const ObjectID object_id) {
 }
 
 Status SpillFileWriter::Write(const std::shared_ptr<Payload>& payload) {
-  //FileLocker::getInstance().lockForWrite(payload->object_id);
-  //std::lock_guard<std::mutex> lock(io_mutex_);
   RETURN_ON_ERROR(Init(payload->object_id));
   if (io_adaptor_ == nullptr) {
     return Status::IOError("Can't open io_adaptor");
@@ -57,12 +55,10 @@ Status SpillFileWriter::Write(const std::shared_ptr<Payload>& payload) {
   std::cout << "Thread " << std::this_thread::get_id() << " writing content: " << payload->pointer << std::endl;
   auto status = io_adaptor_->Write(reinterpret_cast<const char*>(payload->pointer),
                             payload->data_size);
-  //FileLocker::getInstance().unlockForWrite(payload->object_id);
   return status;
 }
 
 Status SpillFileWriter::Sync() {
-  //std::lock_guard<std::mutex> lock(io_mutex_);
   RETURN_ON_ERROR(io_adaptor_->Flush());
   io_adaptor_ = nullptr;
   return Status::OK();
@@ -80,8 +76,6 @@ Status SpillFileReader::Init(const ObjectID object_id) {
 
 Status SpillFileReader::Read(const std::shared_ptr<Payload>& payload,
                              const std::shared_ptr<BulkStore>& bulk_store) {
-  //FileLocker::getInstance().lockForRead(payload->object_id);
-  //std::lock_guard<std::mutex> lock(io_mutex_);
   RETURN_ON_ERROR(Init(payload->object_id));
   // reload 1. object_id 2. data_size 3. content
   if (io_adaptor_ == nullptr) {
@@ -108,31 +102,19 @@ Status SpillFileReader::Read(const std::shared_ptr<Payload>& payload,
           ObjectIDToString(payload->object_id));
     }
   }
-  payload->pointer = bulk_store->AllocateMemoryWithSpill(
-      payload->data_size, &(payload->store_fd), &(payload->map_size),
-      &(payload->data_offset));
-  if (payload->pointer == nullptr) {
-    return Status::NotEnoughMemory("Failed to allocate memory of size " +
-                                   std::to_string(payload->data_size) +
-                                   " while reload spilling file");
-  }
   std::cout << "Thread " << std::this_thread::get_id() << " reading content: " << payload->pointer << std::endl;
   RETURN_ON_ERROR(io_adaptor_->Read(payload->pointer, payload->data_size));
   std::cout << "Thread " << std::this_thread::get_id() << " is deleting object_id: " << payload->object_id << std::endl;
   RETURN_ON_ERROR(Delete_(payload->object_id));
   io_adaptor_ = nullptr;
-  //FileLocker::getInstance().unlockForRead(payload->object_id);
   return Status::OK();
 }
 
 Status SpillFileReader::Delete_(const ObjectID id) {
-  //FileLocker::getInstance().lockForRead(id);
-  //std::lock_guard<std::mutex> lock(io_mutex_);
   if (!io_adaptor_) {
     return Status::Invalid("I/O adaptor is not initialized");
   }
   RETURN_ON_ERROR(io_adaptor_->RemoveFile(spill_path_ + std::to_string(id)));
-  //FileLocker::getInstance().unlockForRead(id);
   return Status::OK();
 }
 

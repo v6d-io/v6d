@@ -121,7 +121,6 @@ class SpillFileReader {
   Status Delete_(const ObjectID id);
 
   std::string spill_path_;
-  std::mutex io_mutex_;
   std::unique_ptr<FileIOAdaptor> io_adaptor_ = nullptr;
 };
 
