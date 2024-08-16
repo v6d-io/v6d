@@ -396,6 +396,7 @@ class ColdObjectTracker
     lru_map_t map_;
     lru_list_t list_;
     ska::flat_hash_map<ID, std::shared_ptr<P>> spilled_obj_;
+    friend class ColdObjectTracker;
   };
 
  public:
@@ -556,7 +557,8 @@ class ColdObjectTracker
    */
   uint8_t* AllocateMemoryWithSpill(const size_t size, int* fd,
                                    int64_t* map_size, ptrdiff_t* offset) {
-    std::lock_guard<std::mutex> locked(allocate_memory_mu_);
+    // std::lock_guard<std::mutex> locked(allocate_memory_mu_);
+    std::lock_guard<decltype(cold_obj_lru_.mu_)> locked(cold_obj_lru_.mu_);
     uint8_t* pointer = nullptr;
     std::cout << "Thread " << std::this_thread::get_id()
               << " before AllocateMemoryWithSpill;" << "size:" << size
@@ -574,7 +576,7 @@ class ColdObjectTracker
     //  2. memory usage is above upper bound
     if (pointer == nullptr ||
         BulkAllocator::Allocated() >= self().mem_spill_upper_bound_) {
-      //std::unique_lock<std::mutex> locked(spill_mu_);
+      // std::unique_lock<std::mutex> locked(spill_mu_);
 
       int64_t min_spill_size = 0;
       if (pointer == nullptr) {
