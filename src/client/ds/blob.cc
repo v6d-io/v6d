@@ -380,6 +380,7 @@ Status BufferSet::EmplaceBuffer(ObjectID const id,
 void BufferSet::Extend(BufferSet const& others) {
   for (auto const& kv : others.buffers_) {
     buffers_.emplace(kv.first, kv.second);
+    buffer_ids_.emplace(kv.first);
   }
 }
 

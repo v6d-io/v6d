@@ -447,7 +447,13 @@ bool SocketConnection::doCreateBuffers(const json& root) {
   for (auto const& size : sizes) {
     ObjectID object_id;
     std::shared_ptr<Payload> object;
-    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+    Status status = bulk_store_->Create(size, object_id, object);
+    if (!status.ok()) {
+      for (auto const& object : objects) {
+        bulk_store_->Delete(object->id());
+      }
+      RESPONSE_ON_ERROR(status);
+    }
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
   }
@@ -552,11 +558,7 @@ bool SocketConnection::doSealBlob(json const& root) {
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
   RESPONSE_ON_ERROR(bulk_store_->Seal(id));
-  Status status;
-  bulk_store_->objects_.find_fn(
-      id, [self, id, &status](const std::shared_ptr<Payload>& object) {
-        status = self->bulk_store_->MarkAsCold(id, object);
-      });
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
   this->doWrite(message_out);
@@ -572,12 +574,12 @@ bool SocketConnection::doGetBuffers(const json& root) {
 
   TRY_READ_REQUEST(ReadGetBuffersRequest, root, ids, unsafe);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
-  VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(ids, objects));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   for (size_t i = 0; i < objects.size(); ++i) {
     if (objects[i]->pointer == nullptr) {
-      VINEYARD_CHECK_OK(
+      RESPONSE_ON_ERROR(
           bulk_store_->ReloadColdObject(ids[i], objects[i], false));
-      VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(ids[i], objects[i]));
     }
   }
 
@@ -689,7 +691,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
-  VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(object_id, object));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(object_id, this->getConnId()));
 
   if (use_rdma) {
     std::string message_out;
@@ -701,6 +703,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
       ReceiveRemoteBuffers(
           socket_, {object}, compress,
           [self, object](const Status& status) -> Status {
+            self->bulk_store_->RemoveDependency(object->object_id,
+                                                self->getConnId());
             std::string message_out;
             if (status.ok()) {
               WriteCreateBufferReply(object->object_id, object, -1,
@@ -742,10 +746,10 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
     std::shared_ptr<Payload> object;
     RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
     RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
+    RESPONSE_ON_ERROR(bulk_store_->AddDependency(object_id, this->getConnId()));
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
   }
-  VINEYARD_CHECK_OK(bulk_store_->MarkAsCold(object_ids, objects));
 
   if (use_rdma) {
     std::string message_out;
@@ -758,6 +762,10 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
       ReceiveRemoteBuffers(
           socket_, objects, compress,
           [self, object_ids, objects](const Status& status) -> Status {
+            self->bulk_store_->RemoveDependency(
+                std::unordered_set<ObjectID>(object_ids.begin(),
+                                             object_ids.end()),
+                self->getConnId());
             std::string message_out;
             if (status.ok()) {
               WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
@@ -829,6 +837,8 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
                           self->UnlockTransmissionObjects(ids);
                           return Status::OK();
                         });
+      std::unordered_set<ObjectID> ids_set(ids.begin(), ids.end());
+      self->bulk_store_->RemoveDependency(ids_set, self->getConnId());
       return Status::OK();
     });
   } else {
@@ -1870,10 +1880,28 @@ bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
   std::vector<ObjectID> ids;
   TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
 
+<<<<<<< HEAD
   this->UnlockTransmissionObjects(ids);
   std::string message_out;
   WriteReleaseBlobsWithRDMAReply(message_out);
   this->doWrite(message_out);
+||||||| constructed merge base
+  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
+    self->server_ptr_->UnlockTransmissionObjects(ids);
+    std::string message_out;
+    WriteReleaseBlobsWithRDMAReply(message_out);
+    self->doWrite(message_out);
+  });
+=======
+  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
+    self->server_ptr_->UnlockTransmissionObjects(ids);
+    std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
+    self->bulk_store_->RemoveDependency(id_set, self->getConnId());
+    std::string message_out;
+    WriteReleaseBlobsWithRDMAReply(message_out);
+    self->doWrite(message_out);
+  });
+>>>>>>> Prevent spilling object from migrating or ipc accessing.
 
   return false;
 }

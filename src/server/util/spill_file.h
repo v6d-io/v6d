@@ -17,10 +17,10 @@ limitations under the License.
 #define SRC_SERVER_UTIL_SPILL_FILE_H_
 
 #include <memory>
-#include <shared_mutex>
 #include <mutex>
-#include <unordered_map>
+#include <shared_mutex>
 #include <string>
+#include <unordered_map>
 
 #include "common/memory/payload.h"
 #include "common/util/arrow.h"
@@ -32,36 +32,36 @@ namespace vineyard {
 namespace io {
 
 class FileLocker {
-public:
-    static FileLocker& getInstance() {
-        static FileLocker instance;
-        return instance;
-    }
+ public:
+  static FileLocker& getInstance() {
+    static FileLocker instance;
+    return instance;
+  }
 
-    void lockForWrite(const ObjectID& id) {
-        std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-        fileLocks_[id].lock();
-    }
+  void lockForWrite(const ObjectID& id) {
+    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
+    fileLocks_[id].lock();
+  }
 
-    void unlockForWrite(const ObjectID& id) {
-        std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-        fileLocks_[id].unlock();
-    }
+  void unlockForWrite(const ObjectID& id) {
+    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
+    fileLocks_[id].unlock();
+  }
 
-    void lockForRead(const ObjectID& id) {
-        std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-        fileLocks_[id].lock_shared();
-    }
+  void lockForRead(const ObjectID& id) {
+    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
+    fileLocks_[id].lock_shared();
+  }
 
-    void unlockForRead(const ObjectID& id) {
-        std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-        fileLocks_[id].unlock_shared();
-    }
+  void unlockForRead(const ObjectID& id) {
+    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
+    fileLocks_[id].unlock_shared();
+  }
 
-private:
-    FileLocker() = default;
-    std::shared_mutex mapMutex_;
-    std::unordered_map<ObjectID, std::shared_mutex> fileLocks_;
+ private:
+  FileLocker() = default;
+  std::shared_mutex mapMutex_;
+  std::unordered_map<ObjectID, std::shared_mutex> fileLocks_;
 };
 
 /*

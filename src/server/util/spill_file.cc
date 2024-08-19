@@ -44,17 +44,20 @@ Status SpillFileWriter::Write(const std::shared_ptr<Payload>& payload) {
     return Status::IOError("Can't open io_adaptor");
   }
   RETURN_ON_ERROR(io_adaptor_->Open("w"));
-  std::cout << "Thread " << std::this_thread::get_id() << " writing object_id: " << payload->object_id << std::endl;
+  std::cout << "Thread " << std::this_thread::get_id()
+            << " writing object_id: " << payload->object_id << std::endl;
   RETURN_ON_ERROR(
       io_adaptor_->Write(reinterpret_cast<char*>(&(payload->object_id)),
                          sizeof(payload->object_id)));
-  std::cout << "Thread " << std::this_thread::get_id() << " writing data_size: " << payload->data_size << std::endl;
+  std::cout << "Thread " << std::this_thread::get_id()
+            << " writing data_size: " << payload->data_size << std::endl;
   RETURN_ON_ERROR(
       io_adaptor_->Write(reinterpret_cast<char*>(&(payload->data_size)),
                          sizeof(payload->data_size)));
-  std::cout << "Thread " << std::this_thread::get_id() << " writing content: " << payload->pointer << std::endl;
-  auto status = io_adaptor_->Write(reinterpret_cast<const char*>(payload->pointer),
-                            payload->data_size);
+  std::cout << "Thread " << std::this_thread::get_id()
+            << " writing content: " << payload->pointer << std::endl;
+  auto status = io_adaptor_->Write(
+      reinterpret_cast<const char*>(payload->pointer), payload->data_size);
   return status;
 }
 
@@ -84,7 +87,8 @@ Status SpillFileReader::Read(const std::shared_ptr<Payload>& payload,
   RETURN_ON_ERROR(io_adaptor_->Open());
   {
     ObjectID object_id = InvalidObjectID();
-    std::cout << "Thread " << std::this_thread::get_id() << " reading object_id: " << payload->object_id << std::endl;
+    std::cout << "Thread " << std::this_thread::get_id()
+              << " reading object_id: " << payload->object_id << std::endl;
     RETURN_ON_ERROR(io_adaptor_->Read(&object_id, sizeof(object_id)));
     if (payload->object_id != object_id) {
       return Status::IOError(
@@ -94,7 +98,8 @@ Status SpillFileReader::Read(const std::shared_ptr<Payload>& payload,
   }
   {
     int64_t data_size = std::numeric_limits<int64_t>::min();
-    std::cout << "Thread " << std::this_thread::get_id() << " reading data_size: " << data_size << std::endl;
+    std::cout << "Thread " << std::this_thread::get_id()
+              << " reading data_size: " << data_size << std::endl;
     RETURN_ON_ERROR(io_adaptor_->Read(&data_size, sizeof(data_size)));
     if (payload->data_size != data_size) {
       return Status::IOError(
@@ -102,9 +107,11 @@ Status SpillFileReader::Read(const std::shared_ptr<Payload>& payload,
           ObjectIDToString(payload->object_id));
     }
   }
-  std::cout << "Thread " << std::this_thread::get_id() << " reading content: " << payload->pointer << std::endl;
+  std::cout << "Thread " << std::this_thread::get_id()
+            << " reading content: " << payload->pointer << std::endl;
   RETURN_ON_ERROR(io_adaptor_->Read(payload->pointer, payload->data_size));
-  std::cout << "Thread " << std::this_thread::get_id() << " is deleting object_id: " << payload->object_id << std::endl;
+  std::cout << "Thread " << std::this_thread::get_id()
+            << " is deleting object_id: " << payload->object_id << std::endl;
   RETURN_ON_ERROR(Delete_(payload->object_id));
   io_adaptor_ = nullptr;
   return Status::OK();
