@@ -297,7 +297,6 @@ We thank the following excellent open-source projects:
 - `skywalking-infra-e2e <https://github.com/apache/skywalking-infra-e2e>`_ A generation End-to-End Testing framework.
 - `skywalking-swck <https://github.com/apache/skywalking-swck>`_ A kubernetes operator for the Apache Skywalking.
 - `wyhash <https://github.com/alainesp/wy>`_, C++ wrapper around wyhash and wyrand.
-- `BBHash <https://github.com/rizkg/BBHash>`_, a fast, minimal-memory perfect hash function.
 - `rax <https://github.com/antirez/rax>`_, an ANSI C radix tree implementation.
 - `MurmurHash3 <https://github.com/aappleby/smhasher>`_, a fast non-cryptographic hash function.
 
