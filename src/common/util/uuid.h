@@ -196,12 +196,12 @@ inline SessionID GenerateSessionID() {
   return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
 }
 
-inline ObjectID GenerateObjectID(InstanceID instance_id) {
+inline ObjectID GenerateObjectID(InstanceID instance_id = 0) {
   static IDGenerator& idGenerator = IDGenerator::getInstance();
   return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID(instance_id);
 }
 
-inline ObjectID GenerateSignature(InstanceID instance_id) {
+inline ObjectID GenerateSignature(InstanceID instance_id = 0) {
   static IDGenerator& idGenerator = IDGenerator::getInstance();
   return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID(instance_id);
 }
