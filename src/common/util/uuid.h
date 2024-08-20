@@ -23,6 +23,8 @@ limitations under the License.
 #include <mach/mach.h>
 #endif
 
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
@@ -141,31 +143,65 @@ using SessionID = int64_t;
  */
 using PlasmaID = std::string;
 
+class IDGenerator {
+ public:
+  static IDGenerator& getInstance() {
+    static IDGenerator instance;
+    return instance;
+  }
+
+  ObjectID GenerateID() {
+    auto timestamp = GetCurrentTimestamp();
+    uint64_t sequence = sequence_.fetch_add(1) & sequence_mask;
+
+    return ((timestamp << timestamp_shift) | sequence);
+  }
+
+ private:
+  const uint64_t timestamp_shift = 22;
+  const uint64_t sequence_mask = 0x3FFFFFUL;  // 22 bits for sequence number
+
+  std::atomic<uint64_t> sequence_{0};
+
+  IDGenerator() = default;
+
+  uint64_t GetCurrentTimestamp() {
+    auto now = std::chrono::high_resolution_clock::now();
+    auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  now.time_since_epoch())
+                  .count();
+    // 41 bits for timestamp
+    return (ts & 0x1FFFFFFFFFF);
+  }
+};
+
 /*
  *  @brief Make empty blob and preallocate blob always mapping to the same place
  *         Others will be mapped randomly between
  * (0x8000000000000000UL,0xFFFFFFFFFFFFFFFFUL) exclusively.
  */
 inline ObjectID GenerateBlobID(const uintptr_t ptr) {
+  static IDGenerator& idGenerator = IDGenerator::getInstance();
   if (ptr == 0x8000000000000000UL ||
       ptr == std::numeric_limits<uintptr_t>::max()) {
     return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
-  auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
-  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(ts)) |
-         0x8000000000000000UL;
+  return (idGenerator.GenerateID() | 0x8000000000000000UL);
 }
 
 inline SessionID GenerateSessionID() {
-  return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
+  static IDGenerator& idGenerator = IDGenerator::getInstance();
+  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
 }
 
 inline ObjectID GenerateObjectID() {
-  return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
+  static IDGenerator& idGenerator = IDGenerator::getInstance();
+  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
 }
 
 inline ObjectID GenerateSignature() {
-  return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
+  static IDGenerator& idGenerator = IDGenerator::getInstance();
+  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
 }
 
 const std::string ObjectIDToString(const ObjectID id);
