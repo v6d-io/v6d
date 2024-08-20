@@ -150,16 +150,19 @@ class IDGenerator {
     return instance;
   }
 
-  ObjectID GenerateID() {
+  ObjectID GenerateID(InstanceID id = 0) {
     auto timestamp = GetCurrentTimestamp();
+    auto instance_id = id & 0x3FFUL;
     uint64_t sequence = sequence_.fetch_add(1) & sequence_mask;
 
-    return ((timestamp << timestamp_shift) | sequence);
+    return ((timestamp << timestamp_shift) |
+            (instance_id << instance_id_shift) | sequence);
   }
 
  private:
-  const uint64_t timestamp_shift = 22;
-  const uint64_t sequence_mask = 0x3FFFFFUL;  // 22 bits for sequence number
+  const uint64_t timestamp_shift = 22;     // 41 bits for timestamp
+  const uint64_t instance_id_shift = 12;   // 10 bits for instance id
+  const uint64_t sequence_mask = 0xFFFUL;  // 12 bits for sequence number
 
   std::atomic<uint64_t> sequence_{0};
 
@@ -170,7 +173,6 @@ class IDGenerator {
     auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(
                   now.time_since_epoch())
                   .count();
-    // 41 bits for timestamp
     return (ts & 0x1FFFFFFFFFF);
   }
 };
@@ -194,14 +196,14 @@ inline SessionID GenerateSessionID() {
   return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
 }
 
-inline ObjectID GenerateObjectID() {
+inline ObjectID GenerateObjectID(InstanceID instance_id) {
   static IDGenerator& idGenerator = IDGenerator::getInstance();
-  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
+  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID(instance_id);
 }
 
-inline ObjectID GenerateSignature() {
+inline ObjectID GenerateSignature(InstanceID instance_id) {
   static IDGenerator& idGenerator = IDGenerator::getInstance();
-  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID();
+  return 0x7FFFFFFFFFFFFFFFUL & idGenerator.GenerateID(instance_id);
 }
 
 const std::string ObjectIDToString(const ObjectID id);
