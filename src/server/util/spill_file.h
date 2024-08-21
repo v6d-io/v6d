@@ -31,39 +31,6 @@ limitations under the License.
 namespace vineyard {
 namespace io {
 
-class FileLocker {
- public:
-  static FileLocker& getInstance() {
-    static FileLocker instance;
-    return instance;
-  }
-
-  void lockForWrite(const ObjectID& id) {
-    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-    fileLocks_[id].lock();
-  }
-
-  void unlockForWrite(const ObjectID& id) {
-    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-    fileLocks_[id].unlock();
-  }
-
-  void lockForRead(const ObjectID& id) {
-    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-    fileLocks_[id].lock_shared();
-  }
-
-  void unlockForRead(const ObjectID& id) {
-    std::unique_lock<std::shared_mutex> mapLock(mapMutex_);
-    fileLocks_[id].unlock_shared();
-  }
-
- private:
-  FileLocker() = default;
-  std::shared_mutex mapMutex_;
-  std::unordered_map<ObjectID, std::shared_mutex> fileLocks_;
-};
-
 /*
   For each spilled file, the disk-format is:
     - object_id: uint64
@@ -94,7 +61,6 @@ class SpillFileWriter {
   Status Init(const ObjectID object_id);
 
   std::string spill_path_;
-  std::mutex io_mutex_;
   std::unique_ptr<FileIOAdaptor> io_adaptor_ = nullptr;
 };
 

@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "client/client.h"
 #include "client/client_base.h"
+#include "client/ds/blob.h"
 
 namespace vineyard {
 
@@ -70,7 +71,12 @@ std::shared_ptr<Object> ObjectBuilder::Seal(Client& client) {
 
 Status ObjectBuilder::Seal(Client& client, std::shared_ptr<Object>& object) {
   RETURN_ON_ERROR(this->_Seal(client, object));
-  return client.PostSeal(object->meta());
+  auto const& meta = object->meta();
+  RETURN_ON_ERROR(client.PostSeal(object->meta()));
+  for (auto const& buffer_id : meta.GetBufferSet()->AllBufferIds()) {
+    RETURN_ON_ERROR(client.Release(buffer_id));
+  }
+  return Status::OK();
 }
 
 std::shared_ptr<Object> ObjectBuilder::_Seal(Client& client) {

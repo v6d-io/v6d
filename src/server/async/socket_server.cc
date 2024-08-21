@@ -703,8 +703,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
       ReceiveRemoteBuffers(
           socket_, {object}, compress,
           [self, object](const Status& status) -> Status {
-            self->bulk_store_->RemoveDependency(object->object_id,
-                                                self->getConnId());
+            VINEYARD_DISCARD(self->bulk_store_->RemoveDependency(
+                object->object_id, self->getConnId()));
             std::string message_out;
             if (status.ok()) {
               WriteCreateBufferReply(object->object_id, object, -1,
@@ -762,10 +762,10 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
       ReceiveRemoteBuffers(
           socket_, objects, compress,
           [self, object_ids, objects](const Status& status) -> Status {
-            self->bulk_store_->RemoveDependency(
+            VINEYARD_DISCARD(self->bulk_store_->RemoveDependency(
                 std::unordered_set<ObjectID>(object_ids.begin(),
                                              object_ids.end()),
-                self->getConnId());
+                self->getConnId()));
             std::string message_out;
             if (status.ok()) {
               WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
@@ -838,7 +838,8 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
                           return Status::OK();
                         });
       std::unordered_set<ObjectID> ids_set(ids.begin(), ids.end());
-      self->bulk_store_->RemoveDependency(ids_set, self->getConnId());
+      VINEYARD_DISCARD(
+          self->bulk_store_->RemoveDependency(ids_set, self->getConnId()));
       return Status::OK();
     });
   } else {
@@ -1880,28 +1881,15 @@ bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
   std::vector<ObjectID> ids;
   TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
 
-<<<<<<< HEAD
-  this->UnlockTransmissionObjects(ids);
-  std::string message_out;
-  WriteReleaseBlobsWithRDMAReply(message_out);
-  this->doWrite(message_out);
-||||||| constructed merge base
-  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
-    self->server_ptr_->UnlockTransmissionObjects(ids);
-    std::string message_out;
-    WriteReleaseBlobsWithRDMAReply(message_out);
-    self->doWrite(message_out);
-  });
-=======
   boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
     self->server_ptr_->UnlockTransmissionObjects(ids);
     std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
-    self->bulk_store_->RemoveDependency(id_set, self->getConnId());
+    VINEYARD_DISCARD(
+        self->bulk_store_->RemoveDependency(id_set, self->getConnId()));
     std::string message_out;
     WriteReleaseBlobsWithRDMAReply(message_out);
     self->doWrite(message_out);
   });
->>>>>>> Prevent spilling object from migrating or ipc accessing.
 
   return false;
 }

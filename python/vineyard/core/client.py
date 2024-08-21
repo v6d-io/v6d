@@ -622,6 +622,16 @@ class Client:
             metas.append(self.get_meta(object_id, sync_remote))
         return metas
 
+    @_apply_docstring(IPCClient.release_object)
+    def release_object(self, object_id: ObjectID) -> None:
+        if self.has_ipc_client():
+            self._ipc_client.release_object(object_id)
+
+    @_apply_docstring(IPCClient.release_objects)
+    def release_objects(self, object_ids: List[ObjectID]) -> None:
+        if self.has_ipc_client():
+            self._ipc_client.release_objects(object_ids)
+
     @_apply_docstring(IPCClient.list_objects)
     def list_objects(
         self, pattern: str, regex: bool = False, limit: int = 5

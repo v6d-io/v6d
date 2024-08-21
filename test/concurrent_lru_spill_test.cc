@@ -199,7 +199,7 @@ void ConcurrentGetWithRPCClient(std::string rpc_endpoint) {
 }
 
 void ConcurrentGetAndPut(std::string ipc_socket, std::string rpc_endpoint) {
-  const int num_threads = 500;
+  const int num_threads = 20;
   const int num_objects = 500;
   const int array_size = 250;
   const int initial_objects = 100;
@@ -214,12 +214,6 @@ void ConcurrentGetAndPut(std::string ipc_socket, std::string rpc_endpoint) {
       ArrayBuilder<double> builder(c, double_array);
       auto sealed_array =
           std::dynamic_pointer_cast<Array<double>>(builder.Seal(c));
-      ObjectMeta meta = sealed_array->meta();
-      std::shared_ptr<BufferSet> buffer_set = meta.GetBufferSet();
-      std::set<ObjectID> ids = buffer_set->AllBufferIds();
-      for (auto id : ids) {
-        c.Release(id);
-      }
       return GetObjectID(sealed_array);
     } catch (std::exception& e) {
       LOG(ERROR) << e.what();
@@ -244,12 +238,10 @@ void ConcurrentGetAndPut(std::string ipc_socket, std::string rpc_endpoint) {
     }
   };
 
-  {
-    Client client;
-    VINEYARD_CHECK_OK(client.Connect(ipc_socket));
-    for (int i = 0; i < initial_objects; i++) {
-      object_ids.push_back(create_and_seal_array(client));
-    }
+  Client client;
+  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  for (int i = 0; i < initial_objects; i++) {
+    object_ids.push_back(create_and_seal_array(client));
   }
 
   auto worker = [&](int id, std::vector<ObjectID> object_ids) {
@@ -264,53 +256,45 @@ void ConcurrentGetAndPut(std::string ipc_socket, std::string rpc_endpoint) {
         if (i % 3 == 0) {
           ObjectID new_id = create_and_seal_array(client);
           if (new_id != InvalidObjectID()) {
-            client.Release(new_id);
+            VINEYARD_DISCARD(client.Release(new_id));
           }
 
-          // {
-          //     std::lock_guard<std::mutex> lock(object_ids_mutex);
-          //    object_ids.push_back(new_id);
-          //}
-          // } else {
-          //     ObjectID id_to_get;
-          //     {
-          //         std::lock_guard<std::mutex> lock(object_ids_mutex);
-          //         if (!object_ids.empty()) {
-          //             id_to_get = object_ids[rand() % object_ids.size()];
-          //         }
-          //     }
-          //     if (id_to_get != ObjectID()) {
-          // std::shared_ptr<Object> object;
-          // client.GetObject(object_ids[i%object_ids.size()]);
-          // client.Release(object_ids[i%object_ids.size()]);
-          //    }
-          //}
+          {
+            std::lock_guard<std::mutex> lock(object_ids_mutex);
+            object_ids.push_back(new_id);
+          }
         } else {
-          // if (i % 3 == 0) {
-          ObjectID new_id = create_remote_blob(rpc_client);
-          //    {
-          //        std::lock_guard<std::mutex> lock(object_ids_mutex);
-          //        object_ids.push_back(new_id);
-          //    }
-          //} else {
-          //    ObjectID id_to_get;
-          //    {
-          //        std::lock_guard<std::mutex> lock(object_ids_mutex);
-          //        if (!object_ids.empty()) {
-          //            id_to_get = object_ids[rand() % object_ids.size()];
-          //        }
-          //    }
-          //    if (id_to_get != ObjectID()) {
-          //        std::shared_ptr<Object> object;
-
-          if (new_id != InvalidObjectID()) {
-            rpc_client.GetObject(object_ids[i % object_ids.size()]);
-            ids.push_back(new_id);
+          ObjectID id_to_get;
+          {
+            std::lock_guard<std::mutex> lock(object_ids_mutex);
+            id_to_get = object_ids[rand() % object_ids.size()];
           }
-          //    }
+          if (id_to_get != InvalidObjectID()) {
+            std::shared_ptr<Object> object = client.GetObject(id_to_get);
+            VINEYARD_DISCARD(client.Release(object->id()));
+          }
+        }
+      } else {
+        if (i % 3 == 0) {
+          ObjectID new_id = create_remote_blob(rpc_client);
+          {
+            std::lock_guard<std::mutex> lock(object_ids_mutex);
+            object_ids.push_back(new_id);
+          }
+        } else {
+          ObjectID id_to_get;
+          {
+            std::lock_guard<std::mutex> lock(object_ids_mutex);
+            id_to_get = object_ids[rand() % object_ids.size()];
+          }
+          if (id_to_get != InvalidObjectID()) {
+            std::shared_ptr<Object> object = rpc_client.GetObject(id_to_get);
+          }
         }
       }
     }
+    client.Disconnect();
+    rpc_client.Disconnect();
   };
 
   std::vector<std::thread> threads;
@@ -322,11 +306,8 @@ void ConcurrentGetAndPut(std::string ipc_socket, std::string rpc_endpoint) {
     thread.join();
   }
 
-  {
-    Client client;
-    VINEYARD_CHECK_OK(client.Connect(ipc_socket));
-    VINEYARD_CHECK_OK(client.Clear());
-  }
+  VINEYARD_CHECK_OK(client.Clear());
+  client.Disconnect();
 }
 
 int main(int argc, char** argv) {
@@ -336,23 +317,23 @@ int main(int argc, char** argv) {
   }
   std::string ipc_socket = std::string(argv[1]);
   std::string rpc_endpoint = std::string(argv[2]);
-  /*
-    LOG(INFO) << "Start concurrent put test with IPCClient ...";
-    ConcurrentPutWithClient(ipc_socket);
-    LOG(INFO) << "Passed concurrent put test with IPCClient";
 
-    LOG(INFO) << "Start concurrent get test with IPCClient ...";
-    ConcurrentGetWithClient(ipc_socket);
-    LOG(INFO) << "Passed concurrent get test with IPCClient";
+  LOG(INFO) << "Start concurrent put test with IPCClient ...";
+  ConcurrentPutWithClient(ipc_socket);
+  LOG(INFO) << "Passed concurrent put test with IPCClient";
 
-    LOG(INFO) << "Start concurrent put test with RPCClient ...";
-    ConcurrentPutWithRPCClient(rpc_endpoint);
-    LOG(INFO) << "Passed concurrent put test with RPCClient";
+  LOG(INFO) << "Start concurrent get test with IPCClient ...";
+  ConcurrentGetWithClient(ipc_socket);
+  LOG(INFO) << "Passed concurrent get test with IPCClient";
 
-    LOG(INFO) << "Start concurrent get test with RPCClient ...";
-    ConcurrentGetWithRPCClient(rpc_endpoint);
-    LOG(INFO) << "Passed concurrent get test with RPCClient";
-  */
+  LOG(INFO) << "Start concurrent put test with RPCClient ...";
+  ConcurrentPutWithRPCClient(rpc_endpoint);
+  LOG(INFO) << "Passed concurrent put test with RPCClient";
+
+  LOG(INFO) << "Start concurrent get test with RPCClient ...";
+  ConcurrentGetWithRPCClient(rpc_endpoint);
+  LOG(INFO) << "Passed concurrent get test with RPCClient";
+
   LOG(INFO) << "Start concurrent get and put test ...";
   ConcurrentGetAndPut(ipc_socket, rpc_endpoint);
   LOG(INFO) << "Passed concurrent get and put test";

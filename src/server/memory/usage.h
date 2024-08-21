@@ -21,7 +21,6 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -209,8 +208,6 @@ class ColdObjectTracker
 
     void Ref(const ID id, const std::shared_ptr<P>& payload) {
       std::lock_guard<decltype(lru_field_mu_)> locked(lru_field_mu_);
-      std::cout << "Thread " << std::this_thread::get_id()
-                << " in Ref, RefPayload:" << id << std::endl;
       auto it = ref_list_iter_map_.find(id);
       if (it == ref_list_iter_map_.end()) {
         ref_list_.emplace_front(id, payload);
@@ -277,9 +274,6 @@ class ColdObjectTracker
       auto status = Status::OK();
       auto it = ref_list_.rbegin();
       std::map<ObjectID, std::shared_ptr<Payload>> pinned_objects;
-      std::cout << "Thread " << std::this_thread::get_id()
-                << " in SpillFor, ref_list_ size:" << ref_list_.size()
-                << std::endl;
       while (it != ref_list_.rend()) {
         if (it->second->IsPinned()) {
           // bypass pinned
@@ -288,19 +282,11 @@ class ColdObjectTracker
           continue;
         }
 
-        std::cout << "Thread " << std::this_thread::get_id()
-                  << " in SpillFor, SpillPayload:" << it->first << std::endl;
         auto s = this->spill(it->first, it->second, bulk_store);
         if (s.ok()) {
-          std::cout << "Thread " << std::this_thread::get_id()
-                    << ", SpillPayload :" << it->first << " success"
-                    << std::endl;
           spilled_sz += it->second->data_size;
           ref_list_iter_map_.erase(it->first);
         } else if (s.IsObjectSpilled()) {
-          std::cout << "Thread " << std::this_thread::get_id()
-                    << ", SpillPayload :" << it->first << " already spilled"
-                    << std::endl;
           ref_list_iter_map_.erase(it->first);
         } else {
           status += s;
@@ -376,8 +362,6 @@ class ColdObjectTracker
         return Status::ObjectSpilled(object_id);
       }
       spilled_obj_.emplace(object_id, payload);
-      std::cout << "Thread " << std::this_thread::get_id()
-                << " in spill, SpillPayload:" << object_id << std::endl;
       return bulk_store->SpillPayload(payload);
     }
 
@@ -397,8 +381,6 @@ class ColdObjectTracker
           spilled_obj_.erase(loc);
         }
       }
-      std::cout << "Thread " << std::this_thread::get_id()
-                << " in reload, ReloadPayload:" << object_id << std::endl;
       return bulk_store->ReloadPayload(object_id, payload);
     }
 
@@ -590,12 +572,6 @@ class ColdObjectTracker
     std::lock_guard<decltype(this->cold_obj_lru_.lru_field_mu_)> locked(
         this->cold_obj_lru_.lru_field_mu_);
     uint8_t* pointer = nullptr;
-    std::cout << "Thread " << std::this_thread::get_id()
-              << " before AllocateMemoryWithSpill;"
-              << "size:" << size << "BulkAllocator::GetFootprintLimit():"
-              << BulkAllocator::GetFootprintLimit()
-              << "BulkAllocator::Allocated():" << BulkAllocator::Allocated()
-              << std::endl;
     pointer = self().AllocateMemory(size, fd, map_size, offset);
     // no spill will be conducted
     if (spill_path_.empty()) {
@@ -610,12 +586,6 @@ class ColdObjectTracker
         BulkAllocator::Allocated() >= self().mem_spill_upper_bound_) {
       int64_t min_spill_size = 0;
       if (pointer == nullptr) {
-        std::cout << "Thread " << std::this_thread::get_id()
-                  << "pointer is nullptr;"
-                  << "size:" << size << "BulkAllocator::GetFootprintLimit():"
-                  << BulkAllocator::GetFootprintLimit()
-                  << "BulkAllocator::Allocated():" << BulkAllocator::Allocated()
-                  << std::endl;
         min_spill_size = size - (BulkAllocator::GetFootprintLimit() -
                                  BulkAllocator::Allocated());
       }
@@ -625,13 +595,8 @@ class ColdObjectTracker
             std::max(min_spill_size, BulkAllocator::Allocated() -
                                          self().mem_spill_lower_bound_);
       }
-      std::cout << "Thread " << std::this_thread::get_id()
-                << "min_spill_size:" << min_spill_size << std::endl;
       auto s = SpillColdObjectFor(min_spill_size);
       if (!s.ok()) {
-        std::cout << "Thread " << std::this_thread::get_id()
-                  << " Error during spilling cold object: " << s.ToString()
-                  << std::endl;
         DLOG(ERROR) << "Error during spilling cold object: " << s.ToString();
       }
 
@@ -719,7 +684,6 @@ class ColdObjectTracker
 
   lru_t cold_obj_lru_;
   std::string spill_path_;
-  std::mutex spill_mu_;
 };
 
 }  // namespace detail

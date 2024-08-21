@@ -129,6 +129,8 @@ extern const char* IPCClient_list_metadatas;
 extern const char* IPCClient_allocated_size;
 extern const char* IPCClient_is_shared_memory;
 extern const char* IPCClient_find_shared_memory;
+extern const char* IPCClient_release_object;
+extern const char* IPCClient_release_objects;
 extern const char* IPCClient_close;
 
 extern const char* RPCClient;

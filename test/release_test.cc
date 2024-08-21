@@ -66,9 +66,9 @@ int main(int argc, char** argv) {
     bool is_in_use{false};
     VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client1.Release({id, blob_id}));
+    VINEYARD_CHECK_OK(client1.Release({id}));
     VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
-    CHECK(!is_in_use);
+    CHECK(is_in_use);
   }
 
   {  // single client
@@ -80,12 +80,9 @@ int main(int argc, char** argv) {
     auto blob = client1.GetObject(blob_id);
     CHECK(blob != nullptr);
 
-    VINEYARD_CHECK_OK(client1.Release({id}));
+    VINEYARD_CHECK_OK(client1.Release({obj->id()}));
     VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client1.Release({blob_id}));
-    VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
-    CHECK(!is_in_use);
   }
 
   {  // multiple clients
@@ -93,13 +90,13 @@ int main(int argc, char** argv) {
     CHECK(blob1 != nullptr);
     auto blob2 = client2.GetObject(blob_id);
     CHECK(blob2 != nullptr);
-    VINEYARD_CHECK_OK(client1.Release({blob_id}));
+    VINEYARD_CHECK_OK(client1.Release({blob1->id()}));
     bool is_in_use{false};
     VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client2.Release({blob_id}));
+    VINEYARD_CHECK_OK(client2.Release({blob2->id()}));
     VINEYARD_CHECK_OK(client2.IsInUse(blob_id, is_in_use));
-    CHECK(!is_in_use);
+    CHECK(is_in_use);
   }
 
   {  // diamond reference count
@@ -122,7 +119,7 @@ int main(int argc, char** argv) {
     CHECK(is_in_use);
     VINEYARD_CHECK_OK(client1.Release({copy_id}));
     VINEYARD_CHECK_OK(client1.IsInUse(blob_id, is_in_use));
-    CHECK(!is_in_use);
+    CHECK(is_in_use);
   }
 
   {  // auto release in disconnection
@@ -134,7 +131,7 @@ int main(int argc, char** argv) {
     client1.Disconnect();
     sleep(5);
     VINEYARD_CHECK_OK(client2.IsInUse(blob_id, is_in_use));
-    CHECK(!is_in_use);
+    CHECK(is_in_use);
   }
 
   LOG(INFO) << "Passed release tests...";

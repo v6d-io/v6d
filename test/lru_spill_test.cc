@@ -90,10 +90,12 @@ void LRUTest(Client& client, RPCClient& rpc_client) {
   ArrayBuilder<double> builder1(client, double_array);
   auto sealed_double_array1 =
       std::dynamic_pointer_cast<Array<double>>(builder1.Seal(client));
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array1->id()));
 
   ArrayBuilder<double> builder2(client, double_array);
   auto sealed_double_array2 =
       std::dynamic_pointer_cast<Array<double>>(builder2.Seal(client));
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array2->id()));
 
   /* step2: RPCClient create: Array3, Array4 */
   auto remote_blob_writer3 =
@@ -132,6 +134,7 @@ void LRUTest(Client& client, RPCClient& rpc_client) {
   ArrayBuilder<double> builder5(client, double_array);
   auto sealed_double_array5 =
       std::dynamic_pointer_cast<Array<double>>(builder5.Seal(client));
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array5->id()));
 
   // (Array3, Array4, Array2, Array5) => Spill Array3, Array4. => (Array2,
   // Array5)
@@ -155,10 +158,12 @@ void LRUTest(Client& client, RPCClient& rpc_client) {
 
   /* step5: IPCClient get: Array2 => (Array5, Array2) */
   auto obj = client.GetObject(sealed_double_array2->id());
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array2->id()));
   CHECK(obj != nullptr);
 
   /* step6: IPCClient get: Array4 => (Array5, Array2, Array4) */
   obj = client.GetObject(blob_meta4.GetId());
+  VINEYARD_CHECK_OK(client.Release(blob_meta4.GetId()));
   CHECK(obj != nullptr);
 
   /* step7: RPCClient create: Array6 */
@@ -211,9 +216,11 @@ void LRUTest(Client& client, RPCClient& rpc_client) {
 
   /* step11: IPCClient get: Array3, Array4 */
   obj = client.GetObject(blob_meta3.GetId());
+  VINEYARD_CHECK_OK(client.Release(blob_meta3.GetId()));
   CHECK(obj != nullptr);
 
   obj = client.GetObject(blob_meta4.GetId());
+  VINEYARD_CHECK_OK(client.Release(blob_meta4.GetId()));
   CHECK(obj != nullptr);
 
   // (Array1, Array6, Array3, Array4) => Spill Array1, Array6. => (Array3,
@@ -253,14 +260,17 @@ void LRUTest(Client& client, RPCClient& rpc_client) {
   ArrayBuilder<double> builder8(client, double_array);
   auto sealed_double_array8 =
       std::dynamic_pointer_cast<Array<double>>(builder8.Seal(client));
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array8->id()));
 
   ArrayBuilder<double> builder9(client, double_array);
   auto sealed_double_array9 =
       std::dynamic_pointer_cast<Array<double>>(builder9.Seal(client));
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array9->id()));
 
   ArrayBuilder<double> builder10(client, double_array);
   auto sealed_double_array10 =
       std::dynamic_pointer_cast<Array<double>>(builder10.Seal(client));
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array10->id()));
   // (Array3, Array4, Array7, Array8) => Spill Array3, Array4. => (Array7,
   // Array8) (Array7, Array8, Array9, Array10) => Spill Array7, Array8. =>
   // (Array9, Array10)
@@ -301,12 +311,15 @@ void LRUTest(Client& client, RPCClient& rpc_client) {
 
   /* step15: IPCClient get: Array2, Array4, Array6 */
   obj = client.GetObject(sealed_double_array2->id());
+  VINEYARD_CHECK_OK(client.Release(sealed_double_array2->id()));
   CHECK(obj != nullptr);
 
   obj = client.GetObject(blob_meta4.GetId());
+  VINEYARD_CHECK_OK(client.Release(blob_meta4.GetId()));
   CHECK(obj != nullptr);
 
   obj = client.GetObject(blob_meta6.GetId());
+  VINEYARD_CHECK_OK(client.Release(blob_meta6.GetId()));
   CHECK(obj != nullptr);
 
   // (Array5, Array3, Array1, Array2) => Spill Array5, Array3. => (Array1,
