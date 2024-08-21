@@ -454,7 +454,8 @@ Status VineyardServer::ListName(
 
 namespace detail {
 
-Status validate_metadata(const json& tree, json& result, Signature& signature) {
+Status validate_metadata(const json& tree, json& result, Signature& signature,
+                         InstanceID instance_id) {
   // validate typename
   auto type_name_node = tree.value("typename", json(nullptr));
   if (type_name_node.is_null() || !type_name_node.is_string()) {
@@ -468,7 +469,7 @@ Status validate_metadata(const json& tree, json& result, Signature& signature) {
   RETURN_ON_ASSERT(tree.contains("instance_id"),
                    "The instance_id filed must be presented");
   result = tree;
-  signature = GenerateSignature();
+  signature = GenerateSignature(instance_id);
   if (result.find("signature") != result.end()) {
     signature = result["signature"].get<Signature>();
   } else {
@@ -485,20 +486,21 @@ Status validate_metadata(const json& tree, json& result, Signature& signature) {
 
 Status put_members_recursively(
     std::shared_ptr<IMetaService> metadata_service_ptr, const json& meta,
-    json& tree, std::string const& instance_name) {
+    json& tree, std::string const& instance_name, InstanceID instance_id) {
   for (auto& item : tree.items()) {
     if (item.value().is_object()) {
       auto& sub_tree = item.value();
       if (!sub_tree.contains("id")) {
         Signature signature;
-        RETURN_ON_ERROR(validate_metadata(sub_tree, sub_tree, signature));
+        RETURN_ON_ERROR(
+            validate_metadata(sub_tree, sub_tree, signature, instance_id));
 
         // recursively create members
-        RETURN_ON_ERROR(put_members_recursively(metadata_service_ptr, meta,
-                                                sub_tree, instance_name));
+        RETURN_ON_ERROR(put_members_recursively(
+            metadata_service_ptr, meta, sub_tree, instance_name, instance_id));
 
         Status s;
-        ObjectID id = GenerateObjectID();
+        ObjectID id = GenerateObjectID(instance_id);
         InstanceID computed_instance_id = 0;
         std::vector<meta_tree::op_t> ops;
         VCATCH_JSON_ERROR(
@@ -545,18 +547,18 @@ Status VineyardServer::CreateData(
                               InstanceID& computed_instance_id) {
         if (status.ok()) {
           auto decorated_tree = json::object();
-          RETURN_ON_ERROR(
-              detail::validate_metadata(tree, decorated_tree, signature));
+          RETURN_ON_ERROR(detail::validate_metadata(
+              tree, decorated_tree, signature, self->instance_id()));
 
           // expand trees: for putting many metadatas in a single call
           if (recursive) {
             RETURN_ON_ERROR(detail::put_members_recursively(
                 self->meta_service_ptr_, meta, decorated_tree,
-                self->instance_name_));
+                self->instance_name_, self->instance_id()));
           }
 
           Status s;
-          id = GenerateObjectID();
+          id = GenerateObjectID(self->instance_id());
           VCATCH_JSON_ERROR(
               meta, s,
               meta_tree::PutDataOps(meta, self->instance_name(), id,
@@ -590,8 +592,8 @@ Status VineyardServer::CreateData(
           for (auto const& tree : trees) {
             Signature signature;
             auto decorated_tree = json::object();
-            RETURN_ON_ERROR(
-                detail::validate_metadata(tree, decorated_tree, signature));
+            RETURN_ON_ERROR(detail::validate_metadata(
+                tree, decorated_tree, signature, self->instance_id()));
             signatures.emplace_back(signature);
             decorated_trees.emplace_back(decorated_tree);
           }
@@ -601,12 +603,12 @@ Status VineyardServer::CreateData(
             for (auto& decorated_tree : decorated_trees) {
               RETURN_ON_ERROR(detail::put_members_recursively(
                   self->meta_service_ptr_, meta, decorated_tree,
-                  self->instance_name_));
+                  self->instance_name_, self->instance_id()));
             }
           }
 
           for (auto& decorated_tree : decorated_trees) {
-            ObjectID id = GenerateObjectID();
+            ObjectID id = GenerateObjectID(self->instance_id());
             InstanceID computed_instance_id = UnspecifiedInstanceID();
             Status s;
             VCATCH_JSON_ERROR(meta, s,
@@ -726,7 +728,7 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
   ENSURE_VINEYARDD_READY();
   auto self(shared_from_this());
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be shallow copied");
-  ObjectID target_id = GenerateObjectID();
+  ObjectID target_id = GenerateObjectID(self->instance_id());
   meta_service_ptr_->RequestToShallowCopy(
       [id, extra_metadata, target_id](const Status& status, const json& meta,
                                       std::vector<meta_tree::op_t>& ops,

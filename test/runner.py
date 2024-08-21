@@ -483,7 +483,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'hashmap_test')
         run_test(tests, 'hashmap_mvcc_test')
         # run_test(tests, 'hosseinmoein_dataframe_test')
-        run_test(tests, 'id_test')
+        run_test(tests, 'concurrent_id_test')
         run_test(tests, 'invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test(tests, 'large_meta_test')
         run_test(tests, 'list_object_test')
