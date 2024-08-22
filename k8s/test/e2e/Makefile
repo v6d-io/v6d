@@ -384,6 +384,16 @@ e2e-tests-vineyardctl: prepare-e2e-test build-local-cluster load-vineyardd-image
 	@make delete-local-cluster
 .PHONY: e2e-tests-vineyardctl
 
+############# vineyardctl python api testing ################################################
+
+e2e-tests-vineyardctl-python-api: prepare-e2e-test build-local-cluster load-vineyardd-image load-vineyard-python-dev-image
+	@make -C ${E2E_DIR} install-vineyard-operator
+	@echo "Running vineyardctl python api e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/vineyardctl-python-api/e2e.yaml
+	@echo "vineyardctl python api e2e test passed."
+	@make delete-local-cluster
+.PHONY: e2e-tests-vineyardctl-python-api
+
 ############# backup and recover testing ################################################
 
 e2e-tests-deploy-raw-backup-and-recover: prepare-e2e-test build-local-cluster load-vineyardd-image
