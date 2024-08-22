@@ -59,10 +59,14 @@ func CobraUsage(cmd *cobra.Command) (Command, error) {
 		c.Children = append(c.Children, childUsage)
 	}
 	cmd.LocalFlags().VisitAll(func(flag *pflag.Flag) {
-		c.Flags = append(c.Flags, FlagUsage(flag))
+		if flag.Name != "log-flush-frequency" {
+			c.Flags = append(c.Flags, FlagUsage(flag))
+		}
 	})
 	cmd.InheritedFlags().VisitAll(func(flag *pflag.Flag) {
-		c.GlobalFlags = append(c.GlobalFlags, FlagUsage(flag))
+		if flag.Name != "log-flush-frequency" {
+			c.GlobalFlags = append(c.GlobalFlags, FlagUsage(flag))
+		}
 	})
 	return c, nil
 }
