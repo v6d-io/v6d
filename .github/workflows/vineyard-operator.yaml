@@ -74,6 +74,7 @@ jobs:
           - e2e-tests-workflow
           - e2e-tests-mars-examples
           - e2e-tests-vineyardctl
+          - e2e-tests-vineyardctl-python-api
           - e2e-tests-deploy-raw-backup-and-recover
           - e2e-tests-three-etcd-nodes-failover
           - e2e-tests-five-etcd-nodes-failover
@@ -161,6 +162,7 @@ jobs:
 
       - name: Generate the python and vineyardd image for tests
         run: |
+          go build -a -o python/vineyard/bdist/vineyardctl k8s/cmd/main.go && \
           make -C k8s/test/e2e build-base-images
 
       - name: unit-tests
@@ -278,6 +280,11 @@ jobs:
         if: ${{ matrix.job == 'e2e-tests-vineyardctl' }}
         run: |
           make -C k8s/test/e2e e2e-tests-vineyardctl
+      
+      - name: e2e-tests-vineyardctl-python-api
+        if: ${{ matrix.job == 'e2e-tests-vineyardctl-python-api' }}
+        run: |
+          make -C k8s/test/e2e e2e-tests-vineyardctl-python-api
 
       - name: e2e-tests-deploy-raw-backup-and-recover
         if: ${{ matrix.job == 'e2e-tests-deploy-raw-backup-and-recover' }}

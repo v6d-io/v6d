@@ -1,0 +1,70 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+setup:
+  env: kind
+  kubeconfig: /tmp/e2e-k8s.config
+  steps:
+    - name: download all workflow images into kind cluster
+      command: |
+        make -C k8s/test/e2e publish-workflow-images REGISTRY=localhost:5001
+    - name: install vineyardd
+      command: |
+        docker run --net=host -v /tmp/e2e-k8s.config:/root/.kube/config:ro localhost:5001/vineyard-python-dev:latest \
+          "python -c \"import vineyard; vineyard.deploy.vineyardctl.deploy.vineyardd(vineyardd_image='localhost:5001/vineyardd:latest', kubeconfig='/root/.kube/config')\""
+    - name: install job1
+      command: |
+        kubectl create namespace vineyard-job
+        kubectl apply -f k8s/test/e2e/workflow-demo/workflow-job1.yaml
+      wait:
+        - namespace: vineyard-job
+          resource: job/v6d-workflow-demo-job1
+          for: condition=Complete
+    - name: install job2
+      command: |
+        kubectl apply -f k8s/test/e2e/workflow-demo/workflow-job2.yaml
+      wait:
+        - namespace: vineyard-job
+          resource: job/v6d-workflow-demo-job2
+          for: condition=Complete
+  timeout: 20m
+
+cleanup:
+  # always never success failure
+  on: never
+
+verify:
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 10
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
+  cases:
+    - query: |
+        kubectl get pod -l app=v6d-workflow-demo-job2 -n vineyard-job -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -n vineyard-job | \
+          yq e '{"sum": .}' - | \
+          yq e 'to_entries' -
+      expected: ../verify/values.yaml
+    # test the job can only be scheduled on the nodes with the vineyardd
+    - query: |
+        export job1_nodes=$(kubectl get pod -l app=v6d-workflow-demo-job1 -nvineyard-job -o=custom-columns=NODE:.spec.nodeName | awk 'NR != 1' | sort | tr '\n' ' ')
+        export job2_nodes=$(kubectl get pod -l app=v6d-workflow-demo-job2 -nvineyard-job -o=custom-columns=NODE:.spec.nodeName | awk 'NR != 1' | sort | tr '\n' ' ')
+        export vineyardd_nodes=$(kubectl get pod -l app.kubernetes.io/instance=vineyardd -n vineyard-system -o=custom-columns=NODE:.spec.nodeName | awk 'NR != 1' | sort | tr '\n' ' ')
+        if [[ $job1_nodes = $vineyardd_nodes ]] && [[ $job2_nodes = $vineyardd_nodes ]]; then echo '{"AllJobInVineyarddNodes":"true"}' | yq e 'to_entries' -; fi
+      expected: ../verify/nodes.yaml

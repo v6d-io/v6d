@@ -63,6 +63,11 @@ func init() {
 
 	flags.ApplyGlobalFlags(cmd)
 
+	if cmd.Flags().Lookup("log-flush-frequency") != nil {
+		if err := cmd.Flags().MarkHidden("log-flush-frequency"); err != nil {
+			log.Fatal(err, "Failed to mark hidden flag")
+		}
+	}
 	// disable completion command
 	cmd.CompletionOptions.DisableDefaultCmd = true
 
