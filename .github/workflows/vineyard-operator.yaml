@@ -283,6 +283,7 @@ jobs:
       - name: e2e-tests-vineyardctl-python-api
         if: ${{ matrix.job == 'e2e-tests-vineyardctl-python-api' }}
         run: |
+          go build -a -o python/vineyard/bdist/vineyardctl k8s/cmd/main.go
           make -C k8s/test/e2e e2e-tests-vineyardctl-python-api
 
       - name: e2e-tests-deploy-raw-backup-and-recover
