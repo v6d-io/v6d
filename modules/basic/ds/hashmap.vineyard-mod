@@ -34,7 +34,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
-#include "grape/graph/perfect_hash_indexer.h"
+#include "grape/vertex_map/idxers/pthash_idxer.h"
 
 namespace vineyard {
 
@@ -325,8 +325,8 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   }
 };
 
-using grape::ImmPHIdxer;
-using grape::PHIdxerViewBuilder;
+using grape::PTHashIdxer;
+using grape::PTHashIdxerBuilder;
 
 namespace detail {
 namespace perfect_hash {
@@ -385,7 +385,7 @@ struct arrow_array_iterator {
 
 template <typename K, typename V>
 Status build_values(
-    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
+    PTHashIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
     const V* begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
@@ -402,7 +402,7 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ImmPHIdxer<K, uint64_t>& idxer_,
+    PTHashIdxer<K, uint64_t>& idxer_,
     const std::shared_ptr<ArrowArrayType<K>>& keys, const V* begin_value,
     V* values, const size_t concurrency = std::thread::hardware_concurrency()) {
   parallel_for(
@@ -418,7 +418,7 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
+    PTHashIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
     const V begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
@@ -435,7 +435,7 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ImmPHIdxer<K, uint64_t>& idxer_,
+    PTHashIdxer<K, uint64_t>& idxer_,
     const std::shared_ptr<ArrowArrayType<K>>& keys, const V begin_value,
     V* values, const size_t concurrency = std::thread::hardware_concurrency()) {
   parallel_for(
@@ -487,7 +487,8 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   void PostConstruct(const ObjectMeta& meta) override {
     ph_values_ptr_ = reinterpret_cast<const V*>(ph_values_->data());
-    idxer_.Init(ph_->data(), ph_->size());
+    idxer_.Init(const_cast<void*>(static_cast<const void*>(ph_->data())),
+                ph_->size());
   }
 
  private:
@@ -497,7 +498,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   [[shared]] std::shared_ptr<Blob> ph_;  // state
 
   const V* ph_values_ptr_ = nullptr;
-  mutable ImmPHIdxer<K, uint64_t> idxer_;
+  mutable PTHashIdxer<K, uint64_t> idxer_;
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;

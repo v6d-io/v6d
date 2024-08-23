@@ -29,7 +29,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"  // IWYU pragma: keep
-#include "grape/graph/perfect_hash_indexer.h"
+#include "grape/vertex_map/idxers/pthash_idxer.h"
 
 namespace vineyard {
 
@@ -245,7 +245,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     std::unique_ptr<BlobWriter> writer;
     size_t serialize_size = this->builder_.getSerializeSize();
     RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
-    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    this->builder_.finishInplace(writer->data(), serialize_size, this->idxer_);
     writer->Seal(client, buf);
 
     return this->allocateValues(
@@ -278,7 +278,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     std::unique_ptr<BlobWriter> writer;
     size_t serialize_size = this->builder_.getSerializeSize();
     RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
-    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    this->builder_.finishInplace(writer->data(), serialize_size, this->idxer_);
     writer->Seal(client, buf);
 
     return this->allocateValues(
@@ -311,7 +311,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     std::unique_ptr<BlobWriter> writer;
     size_t serialize_size = this->builder_.getSerializeSize();
     RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
-    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    this->builder_.finishInplace(writer->data(), serialize_size, this->idxer_);
     writer->Seal(client, buf);
 
     return this->allocateValues(
@@ -344,7 +344,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     std::unique_ptr<BlobWriter> writer;
     size_t serialize_size = this->builder_.getSerializeSize();
     RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
-    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    this->builder_.finishInplace(writer->data(), serialize_size, this->idxer_);
     writer->Seal(client, buf);
 
     return this->allocateValues(
@@ -390,8 +390,8 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     return Status::OK();
   }
 
-  PHIdxerViewBuilder<K, uint64_t> builder_;
-  ImmPHIdxer<K, uint64_t> idxer_;
+  grape::PTHashIdxerBuilder<K, uint64_t> builder_;
+  grape::PTHashIdxer<K, uint64_t> idxer_;
   std::shared_ptr<Object> buf;
 
   const int concurrency_ = std::thread::hardware_concurrency();

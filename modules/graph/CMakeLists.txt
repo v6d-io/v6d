@@ -101,7 +101,7 @@ else()
     )
 endif()
 
-find_package(libgrapelite 0.2.5 QUIET)
+find_package(libgrapelite 0.3.4 QUIET)
 if(LIBGRAPELITE_INCLUDE_DIRS)
     message(STATUS "-- Found libgrape-lite: ${LIBGRAPELITE_INCLUDE_DIRS}")
     target_include_directories(vineyard_graph PUBLIC ${LIBGRAPELITE_INCLUDE_DIRS})

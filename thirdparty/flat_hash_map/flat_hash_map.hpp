@@ -917,6 +917,11 @@ public:
         deallocate_data(entries, num_slots_minus_one, max_lookups);
     }
 
+    size_t memory_usage() const 
+    {
+        return (num_slots_minus_one + max_lookups + 1) * sizeof(Entry);
+    }
+
     const allocator_type & get_allocator() const
     {
         return static_cast<const allocator_type &>(*this);
@@ -980,6 +985,9 @@ public:
             return std::addressof(current->value);
         }
 
+        // the template automatically disables the operator when value_type is already
+        // const, because that would cause a lot of compiler warnings otherwise.
+        template<class target_type = const value_type, class = typename std::enable_if<std::is_same<target_type, const value_type>::value && !std::is_same<target_type, value_type>::value>::type>
         operator templated_iterator<const value_type>() const
         {
             return { current };
