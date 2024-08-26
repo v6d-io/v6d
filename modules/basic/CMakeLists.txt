@@ -45,8 +45,9 @@ target_add_debuginfo(vineyard_basic)
 target_link_libraries(vineyard_basic PUBLIC vineyard_client
                                             ${ARROW_SHARED_LIB}
                                             ${GLOG_LIBRARIES}
+                                            ${MPI_CXX_LIBRARIES}
 )
-target_include_directories(vineyard_basic PUBLIC ${ARROW_INCLUDE_DIR})
+target_include_directories(vineyard_basic PUBLIC ${ARROW_INCLUDE_DIR} ${MPI_CXX_INCLUDE_PATH})
 
 find_package(libgrapelite 0.3.4 QUIET)
 if(LIBGRAPELITE_INCLUDE_DIRS)
