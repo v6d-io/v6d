@@ -42,6 +42,7 @@ file(GLOB_RECURSE BASIC_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "*.cc")
 
 add_library(vineyard_basic ${BASIC_SRC_FILES})
 target_add_debuginfo(vineyard_basic)
+find_package(MPI REQUIRED)
 target_link_libraries(vineyard_basic PUBLIC vineyard_client
                                             ${ARROW_SHARED_LIB}
                                             ${GLOG_LIBRARIES}
