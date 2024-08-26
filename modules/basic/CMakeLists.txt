@@ -48,6 +48,27 @@ target_link_libraries(vineyard_basic PUBLIC vineyard_client
 )
 target_include_directories(vineyard_basic PUBLIC ${ARROW_INCLUDE_DIR})
 
+find_package(libgrapelite 0.3.4 QUIET)
+if(LIBGRAPELITE_INCLUDE_DIRS)
+    message(STATUS "-- Found libgrape-lite: ${LIBGRAPELITE_INCLUDE_DIRS}")
+    target_include_directories(vineyard_basic PUBLIC ${LIBGRAPELITE_INCLUDE_DIRS})
+else()
+    # use bundled libgrape-lite
+    message(STATUS "-- Building libgrape-lite from submodule: ${CMAKE_SOURCE_DIR}/thirdparty/libgrape-lite")
+    set(BUILD_LIBGRAPELITE_DOCS OFF CACHE BOOL "no libgrape-lite docs")
+    set(BUILD_LIBGRAPELITE_TESTS OFF CACHE BOOL "no libgrape-lite tests")
+    # use `add_subdirectory` to use the same CMAKE_BUILD_TYPE with vineyard itself and
+    # ensure the libgrapelite-targets-{debug/release}.cmake been generated during installation.
+    add_subdirectory("${CMAKE_SOURCE_DIR}/thirdparty/libgrape-lite"
+                     "${CMAKE_SOURCE_DIR}/thirdparty/libgrape-lite"
+    )
+    target_include_directories(vineyard_basic PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/thirdparty/libgrape-lite>
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/thirdparty/libgrape-lite/thirdparty>
+        $<INSTALL_INTERFACE:include>
+    )
+endif()
+
 # install bundled thirdparty: flat_hash_map
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
         DESTINATION include/vineyard/contrib    # target directory
