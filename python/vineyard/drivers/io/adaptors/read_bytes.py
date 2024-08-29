@@ -180,6 +180,12 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     try:
         for index, file_path in enumerate(files):
             with fs.open(file_path, mode="rb") as fp:
+                try:
+                    total_size = fp.size()
+                except TypeError:
+                    total_size = fp.size
+                if total_size == 0:
+                    continue
                 offset = 0
                 offset_adjustment = 0
                 # Only process header line when processing first file
