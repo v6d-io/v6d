@@ -41,9 +41,9 @@ void VineyardFile::Construct(const ObjectMeta& meta) {
   this->path_ = meta_.GetKeyValue("path");
   this->access_time_ = meta_.GetKeyValue<uint64_t>("access_time");
   ObjectMeta blob_meta;
-  meta_.GetMemberMeta("buffer", blob_meta);
+  VINEYARD_CHECK_OK(meta_.GetMemberMeta("buffer", blob_meta));
   ObjectID blob_id = blob_meta.GetId();
-  meta.GetBuffer(blob_id, buffer_);
+  VINEYARD_CHECK_OK(meta.GetBuffer(blob_id, buffer_));
 }
 
 Status VineyardFile::Read(void* buffer, size_t size, size_t offset) {
@@ -69,7 +69,7 @@ Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
     if (!ipc_client.GetName(origin_path, file_id, false).ok()) {
       return Status::IOError("File " + path + " is not exist.");
     }
-    ipc_client.GetMetaData(file_id, meta, true);
+    RETURN_ON_ERROR(ipc_client.GetMetaData(file_id, meta, true));
     if (meta.GetInstanceId() == ipc_client.instance_id()) {
       object = ipc_client.GetObject(file_id);
       file = std::dynamic_pointer_cast<VineyardFile>(object);
@@ -88,7 +88,7 @@ Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
   }
 
   std::map<InstanceID, json> cluster_info;
-  rpc_client.ClusterInfo(cluster_info);
+  RETURN_ON_ERROR(rpc_client.ClusterInfo(cluster_info));
   if (object_meta.GetInstanceId() == rpc_client.remote_instance_id()) {
     object = rpc_client.GetObject(file_id);
   } else {
@@ -104,7 +104,7 @@ Status VineyardFile::Make(std::shared_ptr<VineyardFile>& file,
     object = remote_rpc_client.GetObject(file_id);
     ObjectID buffer_id = object_meta.GetMember("buffer")->id();
     std::shared_ptr<RemoteBlob> blob;
-    remote_rpc_client.GetRemoteBlob(buffer_id, blob);
+    RETURN_ON_ERROR(remote_rpc_client.GetRemoteBlob(buffer_id, blob));
     std::dynamic_pointer_cast<VineyardFile>(object)->buffer_ = blob->Buffer();
   }
 
@@ -120,7 +120,7 @@ Status VineyardFile::BatchedGetObjects(
     std::map<InstanceID, std::vector<ObjectMeta>>& instance_to_metas,
     std::unordered_map<ObjectID, std::shared_ptr<VineyardFile>>& id_to_files) {
   std::map<InstanceID, json> cluster_info;
-  rpc_client.ClusterInfo(cluster_info);
+  RETURN_ON_ERROR(rpc_client.ClusterInfo(cluster_info));
   auto fn = [&](std::pair<const InstanceID, std::vector<ObjectMeta>>&
                     instance_to_meta) -> Status {
     std::vector<std::shared_ptr<Object>> file_objects;
@@ -130,7 +130,7 @@ Status VineyardFile::BatchedGetObjects(
         ids[i] = instance_to_meta.second[i].GetId();
       }
       instance_to_meta.second.clear();
-      client.GetMetaData(ids, instance_to_meta.second, false);
+      RETURN_ON_ERROR(client.GetMetaData(ids, instance_to_meta.second, false));
       file_objects = client.GetObjects(instance_to_meta.second);
     } else {
       if (rpc_client.remote_instance_id() == instance_to_meta.first) {
@@ -139,7 +139,8 @@ Status VineyardFile::BatchedGetObjects(
           ids[i] = instance_to_meta.second[i].GetId();
         }
         instance_to_meta.second.clear();
-        rpc_client.GetMetaData(ids, instance_to_meta.second, false);
+        RETURN_ON_ERROR(
+            rpc_client.GetMetaData(ids, instance_to_meta.second, false));
         RETURN_ON_ERROR(rpc_client.BatchedGetObjects(instance_to_meta.second,
                                                      file_objects));
       } else {
@@ -162,7 +163,8 @@ Status VineyardFile::BatchedGetObjects(
          * caller rpc_client, so we need to get meta again.
          */
         instance_to_meta.second.clear();
-        remote_rpc_client.GetMetaData(ids, instance_to_meta.second, false);
+        RETURN_ON_ERROR(
+            remote_rpc_client.GetMetaData(ids, instance_to_meta.second, false));
         RETURN_ON_ERROR(remote_rpc_client.BatchedGetObjects(
             instance_to_meta.second, file_objects));
       }
@@ -204,7 +206,7 @@ Status VineyardFile::BatchedMake(
 
   std::vector<ObjectMeta> file_metas;
   std::map<InstanceID, vineyard::json> clusterInfo;
-  rpc_client.ClusterInfo(clusterInfo);
+  RETURN_ON_ERROR(rpc_client.ClusterInfo(clusterInfo));
   std::map<InstanceID, std::vector<ObjectMeta>> instance_to_metas;
   if (ipc_client.Connected()) {
     for (auto const& path : origin_paths) {
@@ -214,7 +216,7 @@ Status VineyardFile::BatchedMake(
       } else {
         break;
       }
-      ipc_client.GetMetaData(file_ids, file_metas, true);
+      RETURN_ON_ERROR(ipc_client.GetMetaData(file_ids, file_metas, true));
     }
   } else {
     // RPC
@@ -226,7 +228,7 @@ Status VineyardFile::BatchedMake(
         break;
       }
     }
-    rpc_client.GetMetaData(file_ids, file_metas, true);
+    RETURN_ON_ERROR(rpc_client.GetMetaData(file_ids, file_metas, true));
   }
   for (const auto& meta : file_metas) {
     instance_to_metas[meta.GetInstanceId()].push_back(meta);
@@ -273,13 +275,13 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(
   ObjectMeta blob_meta;
   if (ipc_client.Connected()) {
     std::shared_ptr<Object> object;
-    writer_->Shrink(ipc_client, writer_->size());
-    writer_->Seal(ipc_client, object);
+    VINEYARD_DISCARD(writer_->Shrink(ipc_client, writer_->size()));
+    VINEYARD_CHECK_OK(writer_->Seal(ipc_client, object));
     blob_meta = object->meta();
-    ipc_client.Persist(blob_meta.GetId());
+    VINEYARD_CHECK_OK(ipc_client.Persist(blob_meta.GetId()));
   } else {
-    rpc_client.CreateRemoteBlob(remote_writer_, blob_meta);
-    rpc_client.Persist(blob_meta.GetId());
+    VINEYARD_CHECK_OK(rpc_client.CreateRemoteBlob(remote_writer_, blob_meta));
+    VINEYARD_CHECK_OK(rpc_client.Persist(blob_meta.GetId()));
   }
   vineyardFile->meta_.AddMember("buffer", blob_meta);
   vineyardFile->meta_.AddKeyValue("path", path_);
@@ -299,7 +301,7 @@ std::shared_ptr<Object> VineyardFileBuilder::SealAndPersist(
   } else {
     VINEYARD_CHECK_OK(
         rpc_client.CreateMetaData(vineyardFile->meta_, vineyardFile->id_));
-    rpc_client.Persist(vineyardFile->id_);
+    VINEYARD_CHECK_OK(rpc_client.Persist(vineyardFile->id_));
     Status status = rpc_client.PutName(vineyardFile->id_, path_);
   }
 
@@ -314,8 +316,9 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
   if (ipc_client.Connected()) {
     for (auto builder : builders) {
       std::shared_ptr<Object> object;
-      builder->writer_->Shrink(ipc_client, builder->writer_->size());
-      builder->writer_->Seal(ipc_client, object);
+      VINEYARD_DISCARD(
+          builder->writer_->Shrink(ipc_client, builder->writer_->size()));
+      VINEYARD_CHECK_OK(builder->writer_->Seal(ipc_client, object));
       blob_metas.push_back(object->meta());
     }
   } else {
@@ -324,17 +327,12 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
       VINEYARD_CHECK_OK(builder->Build(rpc_client, ipc_client));
       remote_writers.push_back(builder->remote_writer_);
     }
-    rpc_client.CreateRemoteBlobs(remote_writers, blob_metas);
+    VINEYARD_CHECK_OK(rpc_client.CreateRemoteBlobs(remote_writers, blob_metas));
   }
 
   for (size_t i = 0; i < blob_metas.size(); i++) {
     std::shared_ptr<VineyardFile> vineyard_file =
         std::make_shared<VineyardFile>();
-    if (ipc_client.Connected()) {
-      ipc_client.Persist(blob_metas[i].GetId());
-    } else {
-      rpc_client.Persist(blob_metas[i].GetId());
-    }
     vineyard_file->meta_.AddMember("buffer", blob_metas[i]);
     vineyard_file->meta_.AddKeyValue("path", builders[i]->path_);
     vineyard_file->meta_.AddKeyValue("size", builders[i]->Size());

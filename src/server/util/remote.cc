@@ -108,7 +108,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 
 Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
-  this->rdma_client_->GetTXFreeMsgBuffer(buffer);
+  VINEYARD_DISCARD(this->rdma_client_->GetTXFreeMsgBuffer(buffer));
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
   msg->type = VINEYARD_MSG_REQUEST_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
@@ -116,11 +116,12 @@ Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
   VLOG(100) << "Request remote addr: "
             << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address);
   void* remoteMsg;
-  this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
+  VINEYARD_DISCARD(this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg));
   memset(remoteMsg, 0, 64);
   VINEYARD_CHECK_OK(
       this->rdma_client_->Recv(remoteMsg, sizeof(VineyardMsg), nullptr));
-  this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
+  VINEYARD_CHECK_OK(
+      this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr));
   VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
 
   VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
@@ -142,7 +143,7 @@ Status RemoteClient::RDMARequestMemInfo(RegisterMemInfo& remote_info) {
 
 Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
   void* buffer;
-  this->rdma_client_->GetTXFreeMsgBuffer(buffer);
+  VINEYARD_DISCARD(this->rdma_client_->GetTXFreeMsgBuffer(buffer));
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
   msg->type = VINEYARD_MSG_RELEASE_MEM;
   msg->remoteMemInfo.remote_address = (uint64_t) remote_info.address;
@@ -151,7 +152,8 @@ Status RemoteClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
             << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address)
             << ", rkey: " << msg->remoteMemInfo.key;
 
-  this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
+  RETURN_ON_ERROR(
+      this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr));
   VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
 
   return Status::OK();
@@ -465,12 +467,12 @@ Status RemoteClient::migrateBuffers(
                            reinterpret_cast<uint64_t>(server_pointer) +
                            blob_data_offset + read_data_offset)
                     << ", rkey: " << remote_info.rkey;
-          VINEYARD_CHECK_OK(rdma_client_->Read(
+          RETURN_ON_ERROR(rdma_client_->Read(
               local_blob_data + blob_data_offset + read_data_offset, read_bytes,
               reinterpret_cast<uint64_t>(server_pointer) + blob_data_offset +
                   read_data_offset,
               remote_info.rkey, local_info.mr_desc, nullptr));
-          VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
+          RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
           remain_bytes -= read_bytes;
         } while (remain_bytes > 0);
 
@@ -481,7 +483,8 @@ Status RemoteClient::migrateBuffers(
     }
     std::map<ObjectID, ObjectID> result_blobs;
     for (size_t i = 0; i < payloads.size(); i++) {
-      self->server_ptr_->GetBulkStore()->Seal(results[i]->object_id);
+      RETURN_ON_ERROR(
+          self->server_ptr_->GetBulkStore()->Seal(results[i]->object_id));
       result_blobs.emplace(payloads[i].object_id, results[i]->object_id);
     }
     return callback(Status::OK(), result_blobs);

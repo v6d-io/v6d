@@ -316,8 +316,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
       }
       pendding_to_delete_objects_.clear();
     }
-    this->DelData(ids, false, false, false, false,
-                  [](const Status& status) { return Status::OK(); });
+    VINEYARD_DISCARD(
+        this->DelData(ids, false, false, false, false,
+                      [](const Status& status) { return Status::OK(); }));
   }
 
   void AddPendingObjects(std::vector<ObjectID> const& ids) {

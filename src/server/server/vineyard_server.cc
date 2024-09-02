@@ -1473,7 +1473,7 @@ void VineyardServer::Stop() {
   this->bulk_store_.reset();
   this->plasma_bulk_store_.reset();
 
-  RDMAClientCreator::Clear();
+  VINEYARD_DISCARD(RDMAClientCreator::Clear());
 }
 
 bool VineyardServer::Running() const { return !stopped_.load(); }

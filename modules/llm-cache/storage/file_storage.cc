@@ -499,7 +499,7 @@ Status FileStorage::BatchedUpdate(
     }
   }
 
-  BatchedClose(read_fd_list);
+  VINEYARD_DISCARD(BatchedClose(read_fd_list));
 
   std::vector<std::shared_ptr<FileDescriptor>> write_fd_list;
   std::vector<std::string> left_path(pathList.begin() + lower_bound,
