@@ -34,16 +34,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
-
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include "BBHash/BooPHF.h"
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+#include "grape/vertex_map/idxers/pthash_idxer.h"
 
 namespace vineyard {
 
@@ -334,209 +325,11 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   }
 };
 
-}  // namespace vineyard
-
-namespace boomphf {
-
-// wrapper around HashFunctors to return only one value instead of 7
-template <>
-class SingleHashFunctor<std::string> {
- public:
-  uint64_t operator()(const std::string& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  std::hash<std::string> hashFunctors;
-};
-
-#if __cpp_lib_string_view
-template <>
-class SingleHashFunctor<std::string_view> {
- public:
-  uint64_t operator()(const std::string_view& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  wy::hash<std::string_view> hashFunctors;
-};
-#endif  // __cpp_lib_string_view
-
-#if !nssv_USES_STD_STRING_VIEW && \
-    ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
-template <>
-class SingleHashFunctor<vineyard::arrow_string_view> {
- public:
-  uint64_t operator()(const vineyard::arrow_string_view& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  wy::hash<vineyard::arrow_string_view> hashFunctors;
-};
-#endif
-
-}  // namespace boomphf
-
-namespace vineyard {
+using grape::PTHashIdxer;
+using grape::PTHashIdxerBuilder;
 
 namespace detail {
-
-namespace boomphf {
-
-template <typename K>
-using hasher_t = ::boomphf::SingleHashFunctor<K>;
-
-template <typename K>
-using hashmap_t = ::boomphf::mphf<K, hasher_t<K>>;
-
-class bphf_serde {
- public:
-  template <typename K>
-  static size_t compute_size(const hashmap_t<K>& bphf) {
-    size_t size = 0;
-    size += sizeof(bphf._gamma);
-    size += sizeof(bphf._nb_levels);
-    size += sizeof(bphf._lastbitsetrank);
-    size += sizeof(bphf._nelem);
-    for (int ii = 0; ii < bphf._nb_levels; ii++) {
-      size += compute_size(bphf._levels[ii].bitset);
-    }
-    size += sizeof(size_t);
-    size_t final_hash_size = bphf._final_hash.size();
-    size += final_hash_size * (sizeof(K) + sizeof(uint64_t));
-    return size;
-  }
-
-  static size_t compute_size(const ::boomphf::bitVector& bitset) {
-    size_t size = 0;
-    size += sizeof(bitset._size);
-    size += sizeof(bitset._nchar);
-    size += sizeof(uint64_t) * bitset._nchar;
-    size += sizeof(size_t);
-    size += sizeof(bitset._ranks[0]) * bitset._ranks.size();
-    return size;
-  }
-
-  template <typename K>
-  static char* ser(char* dst, const hashmap_t<K>& bphf) {
-    memcpy(dst, &bphf._gamma, sizeof(bphf._gamma));
-    dst += sizeof(bphf._gamma);
-    memcpy(dst, &bphf._nb_levels, sizeof(bphf._nb_levels));
-    dst += sizeof(bphf._nb_levels);
-    memcpy(dst, &bphf._lastbitsetrank, sizeof(bphf._lastbitsetrank));
-    dst += sizeof(bphf._lastbitsetrank);
-    memcpy(dst, &bphf._nelem, sizeof(bphf._nelem));
-    dst += sizeof(bphf._nelem);
-    for (int ii = 0; ii < bphf._nb_levels; ii++) {
-      dst = ser(dst, bphf._levels[ii].bitset);
-    }
-    size_t final_hash_size = bphf._final_hash.size();
-    memcpy(dst, &final_hash_size, sizeof(size_t));
-    dst += sizeof(size_t);
-    for (auto it = bphf._final_hash.begin(); it != bphf._final_hash.end();
-         ++it) {
-      memcpy(dst, &it->first, sizeof(K));
-      dst += sizeof(K);
-      memcpy(dst, &it->second, sizeof(uint64_t));
-      dst += sizeof(uint64_t);
-    }
-    return dst;
-  }
-
-  static char* ser(char* dst, const ::boomphf::bitVector& bitset) {
-    memcpy(dst, &bitset._size, sizeof(bitset._size));
-    dst += sizeof(bitset._size);
-    memcpy(dst, &bitset._nchar, sizeof(bitset._nchar));
-    dst += sizeof(bitset._nchar);
-    memcpy(dst, bitset._bitArray, sizeof(uint64_t) * bitset._nchar);
-    dst += sizeof(uint64_t) * bitset._nchar;
-    size_t sizer = bitset._ranks.size();
-    memcpy(dst, &sizer, sizeof(size_t));
-    dst += sizeof(size_t);
-    memcpy(dst, bitset._ranks.data(),
-           sizeof(bitset._ranks[0]) * bitset._ranks.size());
-    dst += sizeof(bitset._ranks[0]) * bitset._ranks.size();
-    return dst;
-  }
-
-  template <typename K>
-  static const char* deser(const char* src, hashmap_t<K>& bphf) {
-    memcpy(&bphf._gamma, src, sizeof(bphf._gamma));
-    src += sizeof(bphf._gamma);
-    memcpy(&bphf._nb_levels, src, sizeof(bphf._nb_levels));
-    src += sizeof(bphf._nb_levels);
-    memcpy(&bphf._lastbitsetrank, src, sizeof(bphf._lastbitsetrank));
-    src += sizeof(bphf._lastbitsetrank);
-    memcpy(&bphf._nelem, src, sizeof(bphf._nelem));
-    src += sizeof(bphf._nelem);
-    bphf._levels.resize(bphf._nb_levels);
-    for (int ii = 0; ii < bphf._nb_levels; ii++) {
-      src = deser(src, bphf._levels[ii].bitset);
-    }
-
-    // mini setup, recompute size of each level
-    bphf._proba_collision =
-        1.0 - pow(((bphf._gamma * static_cast<double>(bphf._nelem) - 1) /
-                   (bphf._gamma * static_cast<double>(bphf._nelem))),
-                  bphf._nelem - 1);
-    uint64_t previous_idx = 0;
-    bphf._hash_domain = static_cast<size_t>(
-        (ceil(static_cast<double>(bphf._nelem) * bphf._gamma)));
-    for (int ii = 0; ii < bphf._nb_levels; ii++) {
-      // _levels[ii] = new level();
-      bphf._levels[ii].idx_begin = previous_idx;
-      bphf._levels[ii].hash_domain =
-          (((uint64_t)(bphf._hash_domain * pow(bphf._proba_collision, ii)) +
-            63) /
-           64) *
-          64;
-      if (bphf._levels[ii].hash_domain == 0)
-        bphf._levels[ii].hash_domain = 64;
-      previous_idx += bphf._levels[ii].hash_domain;
-    }
-
-    // restore final hash
-    bphf._final_hash.clear();
-    size_t final_hash_size;
-    memcpy(&final_hash_size, src, sizeof(size_t));
-    src += sizeof(size_t);
-
-    for (unsigned int ii = 0; ii < final_hash_size; ii++) {
-      K key;
-      uint64_t value;
-      memcpy(&key, src, sizeof(K));
-      src += sizeof(K);
-      memcpy(&value, src, sizeof(uint64_t));
-      src += sizeof(uint64_t);
-      bphf._final_hash[key] = value;
-    }
-    bphf._built = true;
-    return src;
-  }
-
-  static const char* deser(const char* src, ::boomphf::bitVector& bitset) {
-    memcpy(&bitset._size, src, sizeof(bitset._size));
-    src += sizeof(bitset._size);
-    memcpy(&bitset._nchar, src, sizeof(bitset._nchar));
-    src += sizeof(bitset._nchar);
-    bitset.resize(bitset._size);
-    memcpy(bitset._bitArray, src, sizeof(uint64_t) * bitset._nchar);
-    src += sizeof(uint64_t) * bitset._nchar;
-    size_t sizer;
-    memcpy(&sizer, src, sizeof(size_t));
-    src += sizeof(size_t);
-    bitset._ranks.resize(sizer);
-    memcpy(bitset._ranks.data(), src,
-           sizeof(bitset._ranks[0]) * bitset._ranks.size());
-    src += sizeof(bitset._ranks[0]) * bitset._ranks.size();
-    return src;
-  }
-};
+namespace perfect_hash {
 
 template <typename Value, typename Array>
 struct arrow_array_iterator {
@@ -590,43 +383,18 @@ struct arrow_array_iterator {
   typename Array::IteratorType iterator_;
 };
 
-template <typename K>
-Status build_keys(
-    hashmap_t<K>& bphf, const K* keys, const size_t n_elements,
-    const size_t concurrency = std::thread::hardware_concurrency(),
-    const double gamma = 2.5f) {
-  RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
-  auto data_iterator = ::boomphf::range(keys, keys + n_elements);
-  bphf = ::boomphf::mphf<K, hasher_t<K>>(n_elements, data_iterator, concurrency,
-                                         gamma, false /* writeEach */,
-                                         false /* progress */);
-  return Status::OK();
-}
-
-template <typename K>
-Status build_keys(
-    hashmap_t<K>& bphf, const std::shared_ptr<ArrowArrayType<K>>& keys,
-    const size_t concurrency = std::thread::hardware_concurrency(),
-    const double gamma = 2.5f) {
-  auto data_iterator = ::boomphf::range(
-      arrow_array_iterator<K, ArrowArrayType<K>>(keys->begin()),
-      arrow_array_iterator<K, ArrowArrayType<K>>(keys->end()));
-  bphf = ::boomphf::mphf<K, hasher_t<K>>(
-      keys->length(), data_iterator, concurrency, gamma, false /* writeEach */,
-      false /* progress */);
-  return Status::OK();
-}
-
 template <typename K, typename V>
 Status build_values(
-    hashmap_t<K>& bphf, const K* keys, const size_t n_elements,
+    PTHashIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
     const V* begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
   parallel_for(
       static_cast<size_t>(0), n_elements,
       [&](const size_t index) {
-        values[bphf.lookup(keys[index])] = begin_value[index];
+        uint64_t v_index_ = 0;
+        idxer_.get_index(keys[index], v_index_);
+        values[v_index_] = begin_value[index];
       },
       concurrency);
   return Status::OK();
@@ -634,13 +402,15 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    hashmap_t<K>& bphf, const std::shared_ptr<ArrowArrayType<K>>& keys,
-    const V* begin_value, V* values,
-    const size_t concurrency = std::thread::hardware_concurrency()) {
+    PTHashIdxer<K, uint64_t>& idxer_,
+    const std::shared_ptr<ArrowArrayType<K>>& keys, const V* begin_value,
+    V* values, const size_t concurrency = std::thread::hardware_concurrency()) {
   parallel_for(
       static_cast<size_t>(0), static_cast<size_t>(keys->length()),
       [&](const size_t index) {
-        values[bphf.lookup(keys->GetView(index))] = begin_value[index];
+        uint64_t v_index_ = 0;
+        idxer_.get_index(keys->GetView(index), v_index_);
+        values[v_index_] = begin_value[index];
       },
       concurrency);
   return Status::OK();
@@ -648,14 +418,16 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    hashmap_t<K>& bphf, const K* keys, const size_t n_elements,
+    PTHashIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
     const V begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
   parallel_for(
       static_cast<size_t>(0), n_elements,
       [&](const size_t index) {
-        values[bphf.lookup(keys[index])] = begin_value + index;
+        uint64_t v_index_ = 0;
+        idxer_.get_index(keys->GetView(index), v_index_);
+        values[v_index_] = begin_value + index;
       },
       concurrency);
   return Status::OK();
@@ -663,34 +435,34 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    hashmap_t<K>& bphf, const std::shared_ptr<ArrowArrayType<K>>& keys,
-    const V begin_value, V* values,
-    const size_t concurrency = std::thread::hardware_concurrency()) {
+    PTHashIdxer<K, uint64_t>& idxer_,
+    const std::shared_ptr<ArrowArrayType<K>>& keys, const V begin_value,
+    V* values, const size_t concurrency = std::thread::hardware_concurrency()) {
   parallel_for(
       static_cast<size_t>(0), static_cast<size_t>(keys->length()),
       [&](const size_t index) {
-        values[bphf.lookup(keys->GetView(index))] = begin_value + index;
+        uint64_t v_index_ = 0;
+        idxer_.get_index(keys->GetView(index), v_index_);
+        values[v_index_] = begin_value + index;
       },
       concurrency);
   return Status::OK();
 }
 
-}  // namespace boomphf
+}  // namespace perfect_hash
 }  // namespace detail
 
 template <typename K, typename V>
 class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
  public:
   using value_type = V;
-  typedef boomphf::SingleHashFunctor<K> hasher_t;
 
   const V* find(const K& key) const {
-    // check if the key not exists.
-    const size_t index = bphf_.lookup(key);
-    if (index >= num_elements_) {
-      return nullptr;
+    uint64_t value_index = 0;
+    if (this->idxer_.get_index(key, value_index)) {
+      return &ph_values_ptr_[value_index];
     }
-    return &ph_values_ptr_[index];
+    return nullptr;
   }
 
   size_t count(const K& key) const {
@@ -715,7 +487,8 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   void PostConstruct(const ObjectMeta& meta) override {
     ph_values_ptr_ = reinterpret_cast<const V*>(ph_values_->data());
-    detail::boomphf::bphf_serde::deser(ph_->data(), bphf_);
+    idxer_.Init(const_cast<void*>(static_cast<const void*>(ph_->data())),
+                ph_->size());
   }
 
  private:
@@ -725,7 +498,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   [[shared]] std::shared_ptr<Blob> ph_;  // state
 
   const V* ph_values_ptr_ = nullptr;
-  mutable boomphf::mphf<K, hasher_t> bphf_;
+  mutable PTHashIdxer<K, uint64_t> idxer_;
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;

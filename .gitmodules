@@ -42,8 +42,8 @@
 	path = modules/graph/thirdparty/GraphAr
 	url = https://github.com/alibaba/GraphAr.git
 	shallow = true
-[submodule "modules/graph/thirdparty/libgrape-lite"]
-	path = modules/graph/thirdparty/libgrape-lite
+[submodule "thirdparty/libgrape-lite"]
+	path = thirdparty/libgrape-lite
 	url = https://github.com/alibaba/libgrape-lite.git
 	shallow = true
 [submodule "modules/graph/thirdparty/powturbo"]
