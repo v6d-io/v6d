@@ -826,6 +826,22 @@ void bind_client(py::module& mod) {
              throw_on_error(self->Fork(*client));
              return client;
            })
+      .def(
+          "release_object",
+          [](Client* self, ObjectIDWrapper const& object_id) {
+            self->Release(object_id);
+          },
+          "object_id"_a, doc::IPCClient_release_object)
+      .def(
+          "release_objects",
+          [](Client* self, std::vector<ObjectID> const& object_ids) {
+            std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
+            for (size_t idx = 0; idx < object_ids.size(); ++idx) {
+              unwrapped_object_ids[idx] = object_ids[idx];
+            }
+            return self->Release(object_ids);
+          },
+          "object_ids"_a, doc::IPCClient_release_objects)
       .def("__enter__", [](Client* self) { return self; })
       .def("__exit__", [](Client* self, py::object, py::object, py::object) {
         // DO NOTHING

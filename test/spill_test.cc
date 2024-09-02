@@ -73,9 +73,9 @@ void BasicTest(Client& client) {
 
   bool is_spilled{false};
   bool is_in_use{false};
-  VINEYARD_CHECK_OK(client.Release({id1, blob_id}));
+  VINEYARD_CHECK_OK(client.Release({id1}));
   VINEYARD_CHECK_OK(client.IsInUse(blob_id, is_in_use));
-  CHECK(!is_in_use);
+  CHECK(is_in_use);
 
   ArrayBuilder<double> builder2(client, double_array);
   auto sealed_double_array2 =
@@ -86,7 +86,7 @@ void BasicTest(Client& client) {
   CHECK(is_spilled);
   VINEYARD_CHECK_OK(client.IsInUse(blob_id2, is_in_use));
   CHECK(is_in_use);
-  VINEYARD_CHECK_OK(client.Release({id2, blob_id2}));
+  VINEYARD_CHECK_OK(client.Release({id2}));
 
   LOG(INFO) << "Finish basic test ...";
 }
@@ -111,7 +111,7 @@ void ReloadTest(Client& client) {
     bool is_in_use{false};
     VINEYARD_CHECK_OK(client.IsInUse(bid, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client.Release({id, bid}));
+    VINEYARD_CHECK_OK(client.Release({id}));
     LOG(INFO) << "Finish reload test, case 1 ...";
   }
   {
@@ -124,7 +124,7 @@ void ReloadTest(Client& client) {
     bool is_in_use{false};
     VINEYARD_CHECK_OK(client.IsInUse(bid1, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client.Release({id1, bid1}));
+    VINEYARD_CHECK_OK(client.Release({id1}));
     LOG(INFO) << "Finish reload test, case 2 ...";
   }
   {
@@ -137,7 +137,7 @@ void ReloadTest(Client& client) {
     bool is_in_use{false};
     VINEYARD_CHECK_OK(client.IsInUse(bid2, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client.Release({id2, bid2}));
+    VINEYARD_CHECK_OK(client.Release({id2}));
     LOG(INFO) << "Finish reload test, case 3 ...";
   }
   {
@@ -150,7 +150,7 @@ void ReloadTest(Client& client) {
     bool is_in_use{false};
     VINEYARD_CHECK_OK(client.IsInUse(bid3, is_in_use));
     CHECK(is_in_use);
-    VINEYARD_CHECK_OK(client.Release({id3, bid3}));
+    VINEYARD_CHECK_OK(client.Release({id3}));
     LOG(INFO) << "Finish reload test, case 4 ...";
   }
 

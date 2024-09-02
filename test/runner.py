@@ -538,6 +538,36 @@ def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'spill_test')
 
 
+def run_vineyard_lru_spill_tests(meta, allocator, endpoints, tests):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+    with start_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        size=8000,
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+        spill_path='/tmp/spill_path',
+        spill_upper_rate=0.8,
+        spill_lower_rate=0.5,
+    ) as (_, rpc_socket_port):
+        run_test(tests, 'lru_spill_test', '127.0.0.1:%d' % rpc_socket_port)
+
+
+def run_vineyard_concurrent_lru_spill_tests(meta, allocator, endpoints, tests):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+    with start_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        size="10Mi",
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+        spill_path='/tmp/spill_path',
+        spill_upper_rate=0.8,
+        spill_lower_rate=0.5,
+    ) as (_, rpc_socket_port):
+        run_test(tests, 'concurrent_lru_spill_test', '127.0.0.1:%d' % rpc_socket_port)
+
+
 def run_etcd_member_tests(meta, allocator, endpoints, tests):
     """
     Here we start 2 vineyard instances,
@@ -1180,6 +1210,10 @@ def execute_tests(args):
     if args.with_cpp:
         run_vineyard_cpp_tests(args.meta, args.allocator, endpoints, args.tests)
         run_vineyard_spill_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_vineyard_lru_spill_tests(args.meta, args.allocator, endpoints, args.tests)
+        run_vineyard_concurrent_lru_spill_tests(
+            args.meta, args.allocator, endpoints, args.tests
+        )
 
     if args.with_graph:
         run_graph_tests(args.meta, args.allocator, endpoints, args.tests)

@@ -17,7 +17,10 @@ limitations under the License.
 #define SRC_SERVER_UTIL_SPILL_FILE_H_
 
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <string>
+#include <unordered_map>
 
 #include "common/memory/payload.h"
 #include "common/util/arrow.h"

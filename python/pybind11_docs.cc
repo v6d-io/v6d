@@ -1102,6 +1102,32 @@ Returns:
     ObjectID
 )doc";
 
+const char* IPCClient_release_object = R"doc(
+.. method:: release_object(object_id: ObjectID) -> None
+    :noindex:
+
+Release the object's ref count in the client side, which means the object can be
+spilled to the disk from the server.
+
+Parameters:
+    object_id: ObjectID
+        The object id to release.
+
+)doc";
+
+const char* IPCClient_release_objects = R"doc(
+.. method:: release_objects(object_ids: List[ObjectID]) -> None
+    :noindex:
+
+Release the objects' ref count in the client side, which means these objects can be
+spilled to the disk from the server.
+
+Parameters:
+    object_ids: List[ObjectID]
+        The object id list to release.
+
+)doc";
+
 const char* IPCClient_close = R"doc(
 Close the client.
 )doc";

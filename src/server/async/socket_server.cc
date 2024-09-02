@@ -447,7 +447,13 @@ bool SocketConnection::doCreateBuffers(const json& root) {
   for (auto const& size : sizes) {
     ObjectID object_id;
     std::shared_ptr<Payload> object;
-    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+    Status status = bulk_store_->Create(size, object_id, object);
+    if (!status.ok()) {
+      for (auto const& object : objects) {
+        bulk_store_->Delete(object->id());
+      }
+      RESPONSE_ON_ERROR(status);
+    }
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
   }
@@ -570,6 +576,12 @@ bool SocketConnection::doGetBuffers(const json& root) {
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->pointer == nullptr) {
+      RESPONSE_ON_ERROR(
+          bulk_store_->ReloadColdObject(ids[i], objects[i], false));
+    }
+  }
 
   std::vector<int> fd_to_send;
   for (auto object : objects) {
@@ -679,6 +691,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(object_id, this->getConnId()));
 
   if (use_rdma) {
     std::string message_out;
@@ -690,6 +703,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
       ReceiveRemoteBuffers(
           socket_, {object}, compress,
           [self, object](const Status& status) -> Status {
+            VINEYARD_DISCARD(self->bulk_store_->RemoveDependency(
+                object->object_id, self->getConnId()));
             std::string message_out;
             if (status.ok()) {
               WriteCreateBufferReply(object->object_id, object, -1,
@@ -731,6 +746,7 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
     std::shared_ptr<Payload> object;
     RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
     RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
+    RESPONSE_ON_ERROR(bulk_store_->AddDependency(object_id, this->getConnId()));
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
   }
@@ -746,6 +762,10 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
       ReceiveRemoteBuffers(
           socket_, objects, compress,
           [self, object_ids, objects](const Status& status) -> Status {
+            VINEYARD_DISCARD(self->bulk_store_->RemoveDependency(
+                std::unordered_set<ObjectID>(object_ids.begin(),
+                                             object_ids.end()),
+                self->getConnId()));
             std::string message_out;
             if (status.ok()) {
               WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
@@ -817,6 +837,9 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
                           self->UnlockTransmissionObjects(ids);
                           return Status::OK();
                         });
+      std::unordered_set<ObjectID> ids_set(ids.begin(), ids.end());
+      VINEYARD_DISCARD(
+          self->bulk_store_->RemoveDependency(ids_set, self->getConnId()));
       return Status::OK();
     });
   } else {
@@ -1858,10 +1881,15 @@ bool SocketConnection::doReleaseBlobsWithRDMA(const json& root) {
   std::vector<ObjectID> ids;
   TRY_READ_REQUEST(ReadReleaseBlobsWithRDMARequest, root, ids);
 
-  this->UnlockTransmissionObjects(ids);
-  std::string message_out;
-  WriteReleaseBlobsWithRDMAReply(message_out);
-  this->doWrite(message_out);
+  boost::asio::post(server_ptr_->GetIOContext(), [self, ids]() {
+    self->server_ptr_->UnlockTransmissionObjects(ids);
+    std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
+    VINEYARD_DISCARD(
+        self->bulk_store_->RemoveDependency(id_set, self->getConnId()));
+    std::string message_out;
+    WriteReleaseBlobsWithRDMAReply(message_out);
+    self->doWrite(message_out);
+  });
 
   return false;
 }

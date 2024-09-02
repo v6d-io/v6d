@@ -96,14 +96,6 @@ Status SpillFileReader::Read(const std::shared_ptr<Payload>& payload,
           ObjectIDToString(payload->object_id));
     }
   }
-  payload->pointer = bulk_store->AllocateMemoryWithSpill(
-      payload->data_size, &(payload->store_fd), &(payload->map_size),
-      &(payload->data_offset));
-  if (payload->pointer == nullptr) {
-    return Status::NotEnoughMemory("Failed to allocate memory of size " +
-                                   std::to_string(payload->data_size) +
-                                   " while reload spilling file");
-  }
   RETURN_ON_ERROR(io_adaptor_->Read(payload->pointer, payload->data_size));
   RETURN_ON_ERROR(Delete_(payload->object_id));
   io_adaptor_ = nullptr;
