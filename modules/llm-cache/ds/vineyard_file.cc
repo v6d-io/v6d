@@ -333,11 +333,6 @@ std::vector<std::shared_ptr<Object>> VineyardFileBuilder::BatchedSealAndPersist(
   for (size_t i = 0; i < blob_metas.size(); i++) {
     std::shared_ptr<VineyardFile> vineyard_file =
         std::make_shared<VineyardFile>();
-    if (ipc_client.Connected()) {
-      VINEYARD_CHECK_OK(ipc_client.Persist(blob_metas[i].GetId()));
-    } else {
-      VINEYARD_CHECK_OK(rpc_client.Persist(blob_metas[i].GetId()));
-    }
     vineyard_file->meta_.AddMember("buffer", blob_metas[i]);
     vineyard_file->meta_.AddKeyValue("path", builders[i]->path_);
     vineyard_file->meta_.AddKeyValue("size", builders[i]->Size());
