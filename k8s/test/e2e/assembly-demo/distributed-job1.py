@@ -39,7 +39,7 @@ print(flush=True)
 
 sys.stdout = sys.__stdout__
 print(meta.id, flush=True)
-writer = stream.writer
+writer = stream.open_writer(vineyard_client)
 total_chunks = 10
 for idx in range(total_chunks):
     time.sleep(idx)

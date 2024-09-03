@@ -1044,6 +1044,39 @@ def run_io_adaptor_tests(meta, allocator, endpoints, test_args):
         )
 
 
+def run_stream_test(meta, allocator, endpoints, test_args):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
+    with start_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ) as (_, rpc_socket_port):
+        start_time = time.time()
+        subprocess.check_call(
+            [
+                'pytest',
+                '-s',
+                '-vvv',
+                '--exitfirst',
+                '--durations=0',
+                '--log-cli-level',
+                'DEBUG',
+                'python/vineyard/io/tests',
+                *test_args,
+                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
+            ],
+            cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        )
+        print(
+            'running python stream %s tests use %s seconds'
+            % (time.time() - start_time),
+            flush=True,
+        )
+
+
 def run_fuse_test(meta, allocator, endpoints, test_args):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
@@ -1257,6 +1290,7 @@ def execute_tests(args):
 
     if args.with_io:
         run_io_adaptor_tests(args.meta, args.allocator, endpoints, python_test_args)
+        run_stream_test(args.meta, args.allocator, endpoints, python_test_args)
 
     if args.with_fuse:
         run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
