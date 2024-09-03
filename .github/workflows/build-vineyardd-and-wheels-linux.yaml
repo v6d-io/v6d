@@ -309,12 +309,12 @@ jobs:
           submodules: false
 
       - name: Download vineyardd artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
 
       - name: Download vineyardctl artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: vineyardctl.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
 
