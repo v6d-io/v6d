@@ -24,7 +24,7 @@ env_dist = os.environ
 
 stream_id = env_dist['STREAM_ID']
 stream = vineyard_client.get(stream_id)
-reader = stream.reader
+reader = stream.open_reader(vineyard_client)
 
 index = 0
 global_meta = vineyard.ObjectMeta()

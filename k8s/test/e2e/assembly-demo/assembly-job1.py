@@ -31,7 +31,7 @@ vineyard_client = vineyard.connect('/var/run/vineyard.sock')
 stream = RecordBatchStream.new(vineyard_client)
 vineyard_client.persist(stream.id)
 print(stream.id)
-writer = stream.writer
+writer = stream.open_writer(vineyard_client)
 total_chunks = 10
 for idx in range(total_chunks):
     time.sleep(idx)
