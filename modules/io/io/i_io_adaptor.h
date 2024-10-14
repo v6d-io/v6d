@@ -80,7 +80,8 @@ class IIOAdaptor {
     return Status::OK();
   }
 
-  virtual Status ReadTable(std::function<void(std::shared_ptr<arrow::RecordBatch>)> callback) {
+  virtual Status ReadTable(
+      std::function<void(std::shared_ptr<arrow::RecordBatch>)> callback) {
     return Status::OK();
   }
 
