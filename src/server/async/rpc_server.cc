@@ -83,9 +83,10 @@ Status RPCServer::InitRDMA() {
   if (pos == std::string::npos) {
     return Status::Invalid("Invalid RDMA endpoint: " + rdma_endpoint);
   }
+  std::string rdma_host = rdma_endpoint.substr(0, pos);
   uint32_t rdma_port = std::stoi(rdma_endpoint.substr(pos + 1));
 
-  Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
+  Status status = RDMAServer::Make(this->rdma_server_, rdma_port, rdma_host);
   if (status.ok()) {
     rdma_stop_ = false;
     rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
