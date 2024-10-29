@@ -561,6 +561,9 @@ void printStats(const std::string& op_name, int requests_num, int num_threads,
   std::cout << std::fixed << std::setprecision(2);
   std::cout << "  " << requests_num << " requests completed in "
             << (total_time / 1e6) << " seconds" << std::endl;
+  std::cout << "  average bandwidth is: "
+            << (data_size * requests_num * 8 / (total_time / 1e6)) / 1e9
+            << " Gbps" << std::endl;
   std::cout << "  " << clients_num << " clients parallel in " << num_threads
             << " threads." << std::endl;
   std::cout << "  " << data_size << " bytes payload" << std::endl;
@@ -748,7 +751,11 @@ int main(int argc, char* argv[]) {
     case OperationType::PUT_REMOTE_BLOB:
       rpc_clients = generateClientsForThreads<RPCClient>(
           ipc_socket, rpc_endpoint, clients_num, num_threads, rdma_endpoint);
-
+      for (auto& clients : rpc_clients) {
+        for (auto& client : clients) {
+          client->set_compression_enabled(false);
+        }
+      }
       generateRemoteBlobWriters(remote_blob_writers, data_size, random_data);
 
       MEASURE_AND_PRINT_STATS(
@@ -765,6 +772,7 @@ int main(int argc, char* argv[]) {
 
       VINEYARD_CHECK_OK(
           rpc_client->Connect(rpc_endpoint, "", "", rdma_endpoint));
+      rpc_client->set_compression_enabled(false);
       // only create `num_thread` blobs
       put_remote_blob_ids =
           PutRemoteBlobs(rpc_client, num_threads, data_size, num_threads);
@@ -782,8 +790,12 @@ int main(int argc, char* argv[]) {
       rpc_clients = generateClientsForThreads<RPCClient>(
           ipc_socket, rpc_endpoint, clients_num, num_threads, rdma_endpoint);
 
-      VINEYARD_CHECK_OK(
-          rpc_client->Connect(rpc_endpoint, "", "", rdma_endpoint));
+      for (auto& clients : rpc_clients) {
+        for (auto& client : clients) {
+          client->set_compression_enabled(false);
+        }
+      }
+
       generateRemoteBlobWriters(remote_blob_writers, data_size, random_data);
 
       MEASURE_AND_PRINT_STATS(
@@ -800,6 +812,7 @@ int main(int argc, char* argv[]) {
 
       VINEYARD_CHECK_OK(
           rpc_client->Connect(rpc_endpoint, "", "", rdma_endpoint));
+      rpc_client->set_compression_enabled(false);
       put_remote_blob_ids =
           PutRemoteBlobs(rpc_client, requests_num, data_size, num_threads);
 
