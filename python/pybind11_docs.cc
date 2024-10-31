@@ -743,6 +743,20 @@ Return:
     ObjectID: The associated object id with the name.
 )doc";
 
+const char* ClientBase_name_exists = R"doc(
+.. method:: name_exists(name: str or ObjectName) -> bool
+    :noindex:
+
+Check if the given name exists in the vineyard server.
+
+Parameters:
+    name: str
+        The name that will be checked.
+
+Returns:
+    bool: :code:`True` if the name exists in the vineyard server.
+)doc";
+
 const char* ClientBase_list_names = R"doc(
 .. method:: list_names(pattern: str, regex: bool = False, limit: int = 5)
                        -> Dict[str, ObjectID]

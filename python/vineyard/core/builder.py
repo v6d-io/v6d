@@ -156,7 +156,7 @@ def put(
     builder: Optional[BuilderContext] = None,
     persist: bool = False,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """Put python value to vineyard.
 
@@ -191,6 +191,9 @@ def put(
     Returns:
         ObjectID: The result object id will be returned.
     """
+    if name is not None and client.name_exists(name):
+        raise ValueError(f"Name {name} already exists in the vineyard")
+
     if builder is not None:
         return builder(client, value, **kwargs)
 
