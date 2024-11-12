@@ -488,6 +488,18 @@ void bind_client(py::module& mod) {
           "object_id"_a, py::arg("wait") = false,
           py::call_guard<py::gil_scoped_release>())
       .def(
+          "name_exists",
+          [](ClientBase* self, std::string const& name) -> bool {
+            ObjectID object_id;
+            auto status = self->GetName(name, object_id, false);
+            if (status.ok()) {
+              return true;
+            } else {
+              return false;
+            }
+          },
+          "name"_a)
+      .def(
           "drop_name",
           [](ClientBase* self, std::string const& name) {
             throw_on_error(self->DropName(name));
