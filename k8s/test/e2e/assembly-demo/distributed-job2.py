@@ -46,7 +46,7 @@ meta.add_member('__elements_-1', meta2)
 tup = vineyard_client.create_metadata(meta)
 vineyard_client.persist(tup)
 
-writer = stream.writer
+writer = stream.open_writer(vineyard_client)
 total_chunks = 10
 for idx in range(total_chunks):
     time.sleep(idx)
