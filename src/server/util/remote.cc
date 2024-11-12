@@ -64,7 +64,8 @@ Status RemoteClient::StopRDMA() {
 
   RETURN_ON_ERROR(rdma_client_->Stop());
   RETURN_ON_ERROR(rdma_client_->Close());
-  RETURN_ON_ERROR(RDMAClientCreator::Release(rdma_endpoint_));
+  RETURN_ON_ERROR(RDMAClientCreator::Release(
+      RDMAClientCreator::buildConnectionKey(rdma_endpoint_)));
   return Status::OK();
 }
 

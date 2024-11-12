@@ -209,7 +209,8 @@ void StartClient(std::string server_address) {
   HelloToServer();
   VINEYARD_CHECK_OK(client->Stop());
   VINEYARD_CHECK_OK(client->Close());
-  RDMAClientCreator::Release(server_address + ":" + std::to_string(port));
+  RDMAClientCreator::Release(RDMAClientCreator::buildConnectionKey(
+      server_address + ":" + std::to_string(port)));
 }
 
 int main(int argc, char** argv) {

@@ -108,7 +108,7 @@ Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
     return Status::IOError("Failed to register memory region:" +
                            std::to_string(ret));
   }
-  CHECK_ERROR(!ret, "Failed to register memory region:" + std::to_string(ret));
+  CHECK_ERROR(ret, "Failed to register memory region:" + std::to_string(ret));
 
   mr_desc = fi_mr_desc(*mr);
 
@@ -177,10 +177,25 @@ int IRDMA::GetCompletion(fid_cq* cq, int timeout, void** context) {
   return ret < 0 ? ret : 0;
 }
 
-void IRDMA::FreeInfo(fi_info* info) {
-  if (info) {
-    fi_freeinfo(info);
+void IRDMA::FreeInfo(fi_info* info, bool is_hints) {
+  if (!info) {
+    return;
   }
+
+  if (is_hints) {
+    if (info->src_addr) {
+      free(info->src_addr);
+      info->src_addr = nullptr;
+      info->src_addrlen = 0;
+    }
+    if (info->dest_addr) {
+      free(info->dest_addr);
+      info->dest_addr = nullptr;
+      info->dest_addrlen = 0;
+    }
+  }
+
+  fi_freeinfo(info);
 }
 
 }  // namespace vineyard

@@ -519,6 +519,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
             'rdma_blob_perf_test',
             '127.0.0.1:%d' % rpc_socket_port,
             '127.0.0.1:%d' % rdma_port,
+            "",
             64,
             64,
             1,

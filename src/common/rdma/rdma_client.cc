@@ -45,7 +45,7 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
 
   fi_eq_attr eq_attr = {0};
   eq_attr.wait_obj = FI_WAIT_UNSPEC;
-  CHECK_ERROR(!fi_eq_open(ptr->fabric, &eq_attr, &ptr->eq, NULL),
+  CHECK_ERROR(fi_eq_open(ptr->fabric, &eq_attr, &ptr->eq, NULL),
               "fi_eq_open failed.");
 
   fi_cq_attr cq_attr = {0};
@@ -54,25 +54,25 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
   cq_attr.wait_obj = FI_WAIT_NONE;
   cq_attr.wait_cond = FI_CQ_COND_NONE;
   cq_attr.size = ptr->fi->rx_attr->size;
-  CHECK_ERROR(!fi_cq_open(ptr->domain, &cq_attr, &ptr->rxcq, NULL),
+  CHECK_ERROR(fi_cq_open(ptr->domain, &cq_attr, &ptr->rxcq, NULL),
               "fi_cq_open failed.");
 
   cq_attr.size = ptr->fi->tx_attr->size;
-  CHECK_ERROR(!fi_cq_open(ptr->domain, &cq_attr, &ptr->txcq, NULL),
+  CHECK_ERROR(fi_cq_open(ptr->domain, &cq_attr, &ptr->txcq, NULL),
               "fi_cq_open failed.");
 
-  CHECK_ERROR(!fi_endpoint(ptr->domain, ptr->fi, &ptr->ep, NULL),
+  CHECK_ERROR(fi_endpoint(ptr->domain, ptr->fi, &ptr->ep, NULL),
               "fi_endpoint failed.");
 
-  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->eq->fid, 0), "fi_ep_bind eq failed.");
+  CHECK_ERROR(fi_ep_bind(ptr->ep, &ptr->eq->fid, 0), "fi_ep_bind eq failed.");
 
-  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->rxcq->fid, FI_RECV),
+  CHECK_ERROR(fi_ep_bind(ptr->ep, &ptr->rxcq->fid, FI_RECV),
               "fi_ep_bind rxcq failed.");
 
-  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->txcq->fid, FI_SEND),
+  CHECK_ERROR(fi_ep_bind(ptr->ep, &ptr->txcq->fid, FI_SEND),
               "fi_ep_bind txcq failed.");
 
-  CHECK_ERROR(!fi_enable(ptr->ep), "fi_enable failed.");
+  CHECK_ERROR(fi_enable(ptr->ep), "fi_enable failed.");
 
   ptr->rx_msg_buffer = new char[ptr->fi->rx_attr->size];
   if (!ptr->rx_msg_buffer) {
@@ -93,13 +93,13 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
 }
 
 Status RDMAClient::Connect() {
-  CHECK_ERROR(!fi_connect(ep, fi->dest_addr, NULL, 0), "fi_connect failed.");
+  CHECK_ERROR(fi_connect(ep, fi->dest_addr, NULL, 0), "fi_connect failed.");
 
   fi_eq_cm_entry entry;
   uint32_t event;
 
   CHECK_ERROR(
-      fi_eq_sread(eq, &event, &entry, sizeof(entry), -1, 0) == sizeof(entry),
+      fi_eq_sread(eq, &event, &entry, sizeof(entry), -1, 0) != sizeof(entry),
       "fi_eq_sread failed.");
 
   if (event != FI_CONNECTED || entry.fid != &ep->fid) {
@@ -226,8 +226,14 @@ Status RDMAClient::Close() {
   RETURN_ON_ERROR(CloseResource(rxcq, "receive comeple queue"));
   RETURN_ON_ERROR(CloseResource(eq, "event queue"));
 
-  delete rx_msg_buffer;
-  delete tx_msg_buffer;
+  if (rx_msg_buffer) {
+    delete rx_msg_buffer;
+    rx_msg_buffer = nullptr;
+  }
+  if (tx_msg_buffer) {
+    delete tx_msg_buffer;
+    tx_msg_buffer = nullptr;
+  }
 
   return Status::OK();
 }
@@ -237,33 +243,38 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
                                  int port) {
   std::string server_endpoint = server_address + ":" + std::to_string(port);
   std::lock_guard<std::mutex> lock(servers_mtx_);
-  if (servers_.find(server_endpoint) == servers_.end()) {
+  std::string connection_key = buildConnectionKey(server_endpoint);
+  if (servers_.find(connection_key) == servers_.end()) {
     RDMARemoteNodeInfo node_info;
     RETURN_ON_ERROR(
         CreateRDMARemoteNodeInfo(node_info, hints, server_address, port));
     RETURN_ON_ERROR(RDMAClient::Make(ptr, node_info));
 
-    servers_[server_endpoint] = node_info;
+    servers_[connection_key] = node_info;
   } else {
-    RETURN_ON_ERROR(RDMAClient::Make(ptr, servers_[server_endpoint]));
+    RETURN_ON_ERROR(RDMAClient::Make(ptr, servers_[connection_key]));
   }
   return Status::OK();
 }
 
 Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
-                                 std::string server_address, int port) {
+                                 std::string server_address, int port,
+                                 std::string src_endpoint) {
   std::string server_endpoint = server_address + ":" + std::to_string(port);
   std::lock_guard<std::mutex> lock(servers_mtx_);
-  if (servers_.find(server_endpoint) == servers_.end()) {
+  std::string connection_key =
+      buildConnectionKey(server_endpoint, src_endpoint);
+  if (servers_.find(connection_key) == servers_.end()) {
     RDMARemoteNodeInfo node_info;
-    RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(node_info, server_address, port));
+    RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(node_info, server_address, port,
+                                             src_endpoint));
     RETURN_ON_ERROR(RDMAClient::Make(ptr, node_info));
     node_info.refcnt++;
 
-    servers_[server_endpoint] = node_info;
+    servers_[connection_key] = node_info;
   } else {
-    RETURN_ON_ERROR(RDMAClient::Make(ptr, servers_[server_endpoint]));
-    servers_[server_endpoint].refcnt++;
+    RETURN_ON_ERROR(RDMAClient::Make(ptr, servers_[connection_key]));
+    servers_[connection_key].refcnt++;
   }
   return Status::OK();
 }
@@ -271,30 +282,54 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
 Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
                                                    fi_info* hints,
                                                    std::string server_address,
-                                                   int port) {
+                                                   int port,
+                                                   std::string src_endpoint) {
   if (!hints) {
     return Status::Invalid("Invalid fabric hints info.");
   }
 
-  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(),
-                          std::to_string(port).c_str(), 0, hints,
-                          reinterpret_cast<fi_info**>(&(info.fi))),
-              "fi_getinfo failed")
+  if (!src_endpoint.empty()) {
+    size_t pos = src_endpoint.find(':');
+    if (pos == std::string::npos) {
+      return Status::Invalid("Invalid source endpoint:" + src_endpoint);
+    }
 
-  CHECK_ERROR(!fi_fabric(reinterpret_cast<fi_info*>(info.fi)->fabric_attr,
-                         reinterpret_cast<fid_fabric**>(&info.fabric), NULL),
+    std::string src_host = src_endpoint.substr(0, pos);
+    uint32_t src_port = std::stoi(src_endpoint.substr(pos + 1));
+    fi_info* src_fi;
+    CHECK_ERROR(fi_getinfo(VINEYARD_FIVERSION, src_host.c_str(),
+                           std::to_string(src_port).c_str(), FI_SOURCE, hints,
+                           reinterpret_cast<fi_info**>(&src_fi)),
+                "fi_getinfo failed with client src endpoint.");
+    hints->src_addrlen = src_fi->src_addrlen;
+    hints->src_addr = malloc(src_fi->src_addrlen);
+    memcpy(hints->src_addr, src_fi->src_addr, src_fi->src_addrlen);
+    IRDMA::FreeInfo(src_fi, false);
+  }
+  CHECK_ERROR(fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(),
+                         std::to_string(port).c_str(), 0, hints,
+                         reinterpret_cast<fi_info**>(&(info.fi))),
+              "fi_getinfo failed");
+  fi_info* fi = reinterpret_cast<fi_info*>(info.fi);
+  if (fi != nullptr && fi->nic != nullptr) {
+    std::cout << "Open device name:" << fi->nic->device_attr->name << std::endl;
+  }
+
+  CHECK_ERROR(fi_fabric(reinterpret_cast<fi_info*>(info.fi)->fabric_attr,
+                        reinterpret_cast<fid_fabric**>(&info.fabric), NULL),
               "fi_fabric failed.");
 
-  CHECK_ERROR(!fi_domain(reinterpret_cast<fid_fabric*>(info.fabric),
-                         reinterpret_cast<fi_info*>(info.fi),
-                         reinterpret_cast<fid_domain**>(&info.domain), NULL),
+  CHECK_ERROR(fi_domain(reinterpret_cast<fid_fabric*>(info.fabric),
+                        reinterpret_cast<fi_info*>(info.fi),
+                        reinterpret_cast<fid_domain**>(&info.domain), NULL),
               "fi_domain failed.");
   return Status::OK();
 }
 
 Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
                                                    std::string server_address,
-                                                   int port) {
+                                                   int port,
+                                                   std::string src_endpoint) {
   fi_info* hints = fi_allocinfo();
   if (!hints) {
     return Status::Invalid("Failed to allocate fabric info.");
@@ -311,11 +346,16 @@ Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
   hints->tx_attr->tclass = FI_TC_BULK_DATA;
   hints->ep_attr->type = FI_EP_MSG;
   hints->fabric_attr = new fi_fabric_attr;
+  hints->src_addr = NULL;
+  hints->src_addrlen = 0;
+  hints->dest_addr = NULL;
+  hints->dest_addrlen = 0;
   memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
   hints->fabric_attr->prov_name = strdup("verbs");
 
-  RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(info, hints, server_address, port));
-  IRDMA::FreeInfo(hints);
+  RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(info, hints, server_address, port,
+                                           src_endpoint));
+  IRDMA::FreeInfo(hints, true);
   return Status::OK();
 }
 
@@ -327,10 +367,11 @@ Status RDMAClientCreator::Clear() {
   return Status::OK();
 }
 
-Status RDMAClientCreator::Release(std::string rdma_endpoint) {
+Status RDMAClientCreator::Release(std::string connection_key) {
   std::lock_guard<std::mutex> lock(servers_mtx_);
-  if (servers_.find(rdma_endpoint) != servers_.end()) {
-    RDMARemoteNodeInfo& info = servers_[rdma_endpoint];
+  if (servers_.find(connection_key) != servers_.end()) {
+    std::cout << "Release RDMA client:" << connection_key << std::endl;
+    RDMARemoteNodeInfo& info = servers_[connection_key];
 
     info.refcnt--;
     if (info.refcnt == 0) {
@@ -341,8 +382,8 @@ Status RDMAClientCreator::Release(std::string rdma_endpoint) {
           reinterpret_cast<fid_domain*>(info.domain), "domain"));
       RETURN_ON_ERROR(IRDMA::CloseResource(
           reinterpret_cast<fid_fabric*>(info.fabric), "fabric"));
-      IRDMA::FreeInfo(reinterpret_cast<fi_info*>(info.fi));
-      servers_.erase(rdma_endpoint);
+      IRDMA::FreeInfo(reinterpret_cast<fi_info*>(info.fi), false);
+      servers_.erase(connection_key);
     }
   }
 
