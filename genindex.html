@@ -1,0 +1,2058 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#" /><link rel="search" title="Search" href="search.html" />
+
+    <link rel="shortcut icon" href="_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 --><title>Index - Vineyard</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="notes/key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="notes/key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/data-processing.html">Data processing</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/data-processing/using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/data-processing/python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/data-processing/distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/data-processing/accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/data-processing/gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="notes/integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="notes/integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="notes/integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="notes/integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="notes/references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="notes/references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="notes/developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="notes/developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notes/developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notes/developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#_"><strong>_</strong></a> | <a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a> | <a href="#W"><strong>W</strong></a></div>
+</section>
+<section id="_" class="genindex-section">
+  <h2>_</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.__contains__">__contains__() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectID.__eq__">__eq__() (vineyard.ObjectID method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.__getitem__">__getitem__() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectID.__hash__">__hash__() (vineyard.ObjectID method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.__init__">__init__() (vineyard.InstanceStatus method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectID.__init__">(vineyard.ObjectID method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.__init__">(vineyard.ObjectMeta method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.__repr__">__repr__() (vineyard.InstanceStatus method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectID.__repr__">(vineyard.ObjectID method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.__repr__">(vineyard.ObjectMeta method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.__setitem__">__setitem__() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.__str__">__str__() (vineyard.InstanceStatus method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectID.__str__">(vineyard.ObjectID method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.__str__">(vineyard.ObjectMeta method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.BlobBuilder.abort">abort() (vineyard.BlobBuilder method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlobBuilder.abort">(vineyard.RemoteBlobBuilder method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.add_member">add_member() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.add_remote_blob">add_remote_blob() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Blob.address">address (vineyard.Blob property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.BlobBuilder.address">(vineyard.BlobBuilder property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlob.address">(vineyard.RemoteBlob property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlobBuilder.address">(vineyard.RemoteBlobBuilder property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.allocated_size">allocated_size() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.allocated_size">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Blob">Blob (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.BlobBuilder">BlobBuilder (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.shared_memory.SharedMemory.buf">buf (vineyard.shared_memory.SharedMemory property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.core.builder.builder_context">builder_context() (in module vineyard.core.builder)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.builder.BuilderContext">BuilderContext (class in vineyard.core.builder)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.io.byte.ByteStream">ByteStream (class in vineyard.io.byte)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.clear">clear() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.clear">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.clear">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client">Client (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.close">close() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.close">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.close">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.compression">compression (vineyard.Client property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#id0">connect() (in module vineyard)</a>, <a href="notes/references/python-api.html#vineyard.connect">[1]</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.connected">connected (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.connected">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.connected">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.BlobBuilder.copy">copy() (vineyard.BlobBuilder method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlobBuilder.copy">(vineyard.RemoteBlobBuilder method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.create_blob">create_blob() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.create_blob">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.create_empty_blob">create_empty_blob() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.create_empty_blob">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.create_metadata">create_metadata() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.create_metadata">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.create_metadata">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.create_remote_blob">create_remote_blob() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.create_remote_blob">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.io.dataframe.DataframeStream">DataframeStream (class in vineyard.io.dataframe)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.deferred_requests">deferred_requests (vineyard.InstanceStatus property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.delete">delete() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.delete">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.delete">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.deploy.kubernetes.delete_kubernetes_objects">delete_kubernetes_objects() (in module vineyard.deploy.kubernetes)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.deployment">deployment (vineyard.InstanceStatus property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.driver.driver_context">driver_context() (in module vineyard.core.driver)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.driver.DriverContext">DriverContext (class in vineyard.core.driver)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.drop_name">drop_name() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.drop_name">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.drop_name">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Blob.empty">empty() (vineyard.Blob static method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.exists">exists() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.exists">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.exists">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.find_shared_memory">find_shared_memory() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.find_shared_memory">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.shared_memory.ShareableList.freeze">freeze() (vineyard.shared_memory.ShareableList method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.shared_memory.SharedMemory.freeze">(vineyard.shared_memory.SharedMemory method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Object.from_">from_() (vineyard.Object static method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get">get() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.get">(vineyard.ObjectMeta method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_blob">get_blob() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_blob">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_blobs">get_blobs() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_blobs">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.core.builder.get_current_builders">get_current_builders() (in module vineyard.core.builder)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.driver.get_current_drivers">get_current_drivers() (in module vineyard.core.driver)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.resolver.get_current_resolvers">get_current_resolvers() (in module vineyard.core.resolver)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.get_current_socket">get_current_socket() (in module vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.get_member">get_member() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_meta">get_meta() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_meta">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_meta">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_metas">get_metas() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_metas">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_metas">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_name">get_name() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_name">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_name">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_object">get_object() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_object">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_object">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_objects">get_objects() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.get_objects">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_objects">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_remote_blob">get_remote_blob() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_remote_blob">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.get_remote_blobs">get_remote_blobs() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.get_remote_blobs">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.BlobBuilder.id">id (vineyard.BlobBuilder property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.Object.id">(vineyard.Object property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.id">(vineyard.ObjectMeta property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlob.id">(vineyard.RemoteBlob property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.instance_id">instance_id (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.instance_id">(vineyard.InstanceStatus property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.instance_id">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.instance_id">(vineyard.ObjectMeta property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlob.instance_id">(vineyard.RemoteBlob property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.instance_id">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus">InstanceStatus (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.ipc_connections">ipc_connections (vineyard.InstanceStatus property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.ipc_socket">ipc_socket (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.ipc_socket">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.ipc_socket">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.IPCClient">IPCClient (class in vineyard)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Blob.is_empty">is_empty (vineyard.Blob property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlob.is_empty">(vineyard.RemoteBlob property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.RPCClient.is_fetchable">is_fetchable() (vineyard.RPCClient method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.is_ipc">is_ipc (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.is_ipc">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.is_ipc">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.is_rpc">is_rpc (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.is_rpc">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.is_rpc">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.is_shared_memory">is_shared_memory() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.is_shared_memory">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Object.isglobal">isglobal (vineyard.Object property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.isglobal">(vineyard.ObjectMeta property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Object.islocal">islocal (vineyard.Object property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.islocal">(vineyard.ObjectMeta property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Object.ispersist">ispersist (vineyard.Object property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.list_metadatas">list_metadatas() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.list_metadatas">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.list_metadatas">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.list_names">list_names() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.list_names">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.list_names">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.list_objects">list_objects() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.list_objects">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.list_objects">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Object.member">member() (vineyard.Object method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.member">(vineyard.ObjectMeta method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.memory_limit">memory_limit (vineyard.InstanceStatus property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.memory_trim">memory_trim() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.memory_trim">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.memory_trim">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.memory_usage">memory_usage (vineyard.InstanceStatus property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.memory_usage">(vineyard.ObjectMeta property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.meta">meta (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.meta">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.Object.meta">(vineyard.Object property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.meta">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.shared_memory.SharedMemory.name">name (vineyard.shared_memory.SharedMemory property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Object.nbytes">nbytes (vineyard.Object property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.nbytes">(vineyard.ObjectMeta property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Object">Object (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectBuilder">ObjectBuilder (class in vineyard)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectID">ObjectID (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta">ObjectMeta (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.io.open">open() (in module vineyard.io)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.persist">persist() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.persist">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.persist">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.put">put() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.put">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.put">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.put_name">put_name() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.put_name">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.put_name">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="R" class="genindex-section">
+  <h2>R</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.csi.read">read() (in module vineyard.csi)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.io.read">(in module vineyard.io)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.io.recordbatch.RecordBatchStream">RecordBatchStream (class in vineyard.io.recordbatch)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.builder.BuilderContext.register">register() (vineyard.core.builder.BuilderContext method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.release_object">release_object() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.release_object">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.release_objects">release_objects() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.release_objects">(vineyard.IPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.remote_instance_id">remote_instance_id (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.remote_instance_id">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.RemoteBlob">RemoteBlob (class in vineyard)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.RemoteBlobBuilder">RemoteBlobBuilder (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.reset">reset() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.reset">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.reset">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.core.resolver.resolver_context">resolver_context() (in module vineyard.core.resolver)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.resolver.ResolverContext">ResolverContext (class in vineyard.core.resolver)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.InstanceStatus.rpc_connections">rpc_connections (vineyard.InstanceStatus property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.rpc_endpoint">rpc_endpoint (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.rpc_endpoint">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.rpc_endpoint">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.RPCClient">RPCClient (class in vineyard)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.core.builder.BuilderContext.run">run() (vineyard.core.builder.BuilderContext method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.set_global">set_global() (vineyard.ObjectMeta method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.shallow_copy">shallow_copy() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.shallow_copy">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.shallow_copy">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.shared_memory.ShareableList">ShareableList (class in vineyard.shared_memory)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.shared_memory.SharedMemory">SharedMemory (class in vineyard.shared_memory)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.BlobBuilder.shrink">shrink() (vineyard.BlobBuilder method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Object.signature">signature (vineyard.Object property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.signature">(vineyard.ObjectMeta property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Blob.size">size (vineyard.Blob property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.BlobBuilder.size">(vineyard.BlobBuilder property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlob.size">(vineyard.RemoteBlob property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RemoteBlobBuilder.size">(vineyard.RemoteBlobBuilder property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.shared_memory.SharedMemory.size">(vineyard.shared_memory.SharedMemory property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.spread">spread (vineyard.Client property)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.deploy.distributed.start_vineyardd">start_vineyardd() (in module vineyard.deploy.distributed)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.deploy.kubernetes.start_vineyardd">(in module vineyard.deploy.kubernetes)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.deploy.local.start_vineyardd">(in module vineyard.deploy.local)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.status">status (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.status">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.status">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.sync_meta">sync_meta() (vineyard.Client method)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.sync_meta">(vineyard.IPCClient method)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.sync_meta">(vineyard.RPCClient method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.timeout_seconds">timeout_seconds (vineyard.Client property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Object.typename">typename (vineyard.Object property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.ObjectMeta.typename">(vineyard.ObjectMeta property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.shared_memory.SharedMemory.unlink">unlink() (vineyard.shared_memory.SharedMemory method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="V" class="genindex-section">
+  <h2>V</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.version">version (vineyard.Client property)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.IPCClient.version">(vineyard.IPCClient property)</a>
+</li>
+          <li><a href="notes/references/python-api.html#vineyard.RPCClient.version">(vineyard.RPCClient property)</a>
+</li>
+        </ul></li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard5ArrayE">vineyard::Array (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard5Array9ConstructERK10ObjectMeta">vineyard::Array::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard5Array6CreateEv">vineyard::Array::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard5Array4dataEv">vineyard::Array::data (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard5ArrayixE6size_t">vineyard::Array::operator[] (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard5Array4sizeEv">vineyard::Array::size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard12ArrayBuilderE">vineyard::ArrayBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilder12ArrayBuilderER6Client6size_t">vineyard::ArrayBuilder::ArrayBuilder (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilder12ArrayBuilderER6ClientPK1T6size_t">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilder12ArrayBuilderER6ClientRKNSt6vectorI1TEE">[2]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilder5BuildER6Client">vineyard::ArrayBuilder::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilder4dataEv">vineyard::ArrayBuilder::data (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard12ArrayBuilder4dataEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilderixE6size_t">vineyard::ArrayBuilder::operator[] (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard12ArrayBuilder4sizeEv">vineyard::ArrayBuilder::size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12ArrayBuilderD0Ev">vineyard::ArrayBuilder::~ArrayBuilder (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard4BlobE">vineyard::Blob (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob14allocated_sizeEv">vineyard::Blob::allocated_size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob11ArrowBufferEv">vineyard::Blob::ArrowBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob18ArrowBufferOrEmptyEv">vineyard::Blob::ArrowBufferOrEmpty (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob6BufferEv">vineyard::Blob::Buffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob13BufferOrEmptyEv">vineyard::Blob::BufferOrEmpty (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard4Blob9ConstructERK10ObjectMeta">vineyard::Blob::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard4Blob6CreateEv">vineyard::Blob::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob4dataEv">vineyard::Blob::data (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob4DumpEv">vineyard::Blob::Dump (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard4Blob13FromAllocatorER6ClientK8ObjectIDK9uintptr_tK6size_t">vineyard::Blob::FromAllocator (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard4Blob11FromPointerER6ClientK9uintptr_tK6size_t">vineyard::Blob::FromPointer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard4Blob9MakeEmptyER6Client">vineyard::Blob::MakeEmpty (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard4Blob4sizeEv">vineyard::Blob::size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriterE">vineyard::BlobWriter (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriter5AbortER6Client">vineyard::BlobWriter::Abort (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriter11AddKeyValueERKNSt6stringERKNSt6stringE">vineyard::BlobWriter::AddKeyValue (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriter11AddKeyValueERKNSt6stringERRNSt6stringE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10BlobWriter6BufferEv">vineyard::BlobWriter::Buffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriter5BuildER6Client">vineyard::BlobWriter::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriter4dataEv">vineyard::BlobWriter::data (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10BlobWriter4dataEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10BlobWriter4DumpEv">vineyard::BlobWriter::Dump (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10BlobWriter2idEv">vineyard::BlobWriter::id (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10BlobWriter6ShrinkER6ClientK6size_t">vineyard::BlobWriter::Shrink (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10BlobWriter4sizeEv">vineyard::BlobWriter::size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStreamE">vineyard::ByteStream (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStream6CreateEv">vineyard::ByteStream::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStream11FlushBufferEv">vineyard::ByteStream::FlushBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStream8ReadLineERNSt6stringE">vineyard::ByteStream::ReadLine (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStream18SetBufferSizeLimitE6size_t">vineyard::ByteStream::SetBufferSizeLimit (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStream10WriteBytesEPKc6size_t">vineyard::ByteStream::WriteBytes (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ByteStream9WriteLineERKNSt6stringE">vineyard::ByteStream::WriteLine (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6ClientE">vineyard::Client (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client13AllocatedSizeEK8ObjectIDR6size_t">vineyard::Client::AllocatedSize (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client6ClientEv">vineyard::Client::Client (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7ConnectERKNSt6stringE">vineyard::Client::Connect (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7ConnectERKNSt6stringERKNSt6stringE">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7ConnectERKNSt6stringERKNSt6stringERKNSt6stringE">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7ConnectEv">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11CreateArenaEK6size_tRiR6size_tR9uintptr_tR9uintptr_t">vineyard::Client::CreateArena (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client10CreateBlobE6size_tRNSt10unique_ptrI10BlobWriterEE">vineyard::Client::CreateBlob (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11CreateBlobsERKNSt6vectorI6size_tEERNSt6vectorINSt10unique_ptrI10BlobWriterEEEE">vineyard::Client::CreateBlobs (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client12CreateBufferEK6size_tR8ObjectIDR7PayloadRNSt10shared_ptrI13MutableBufferEE">vineyard::Client::CreateBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client13CreateBuffersERKNSt6vectorI6size_tEERNSt6vectorI8ObjectIDEERNSt6vectorI7PayloadEERNSt6vectorINSt10shared_ptrI13MutableBufferEEEE">vineyard::Client::CreateBuffers (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client14CreateDiskBlobE6size_tRKNSt6stringERNSt10unique_ptrI10BlobWriterEE">vineyard::Client::CreateDiskBlob (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client15CreateGPUBufferEK6size_tR8ObjectIDR7PayloadRNSt10shared_ptrI13MutableBufferEE">vineyard::Client::CreateGPUBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7DefaultEv">vineyard::Client::Default (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7DelDataEK8ObjectIDKbKb">vineyard::Client::DelData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7DelDataEK8ObjectIDKbKbKb">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7DelDataERKNSt6vectorI8ObjectIDEEKbKb">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7DelDataERKNSt6vectorI8ObjectIDEEKbKbKb">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client10DisconnectEv">vineyard::Client::Disconnect (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client10DropBufferEK8ObjectIDKi">vineyard::Client::DropBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client19FetchAndGetMetaDataEK8ObjectIDR10ObjectMetaKb">vineyard::Client::FetchAndGetMetaData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard6Client17FetchAndGetObjectE6StatusK8ObjectIDRNSt10shared_ptrI1TEEKb">vineyard::Client::FetchAndGetObject (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard6Client17FetchAndGetObjectENSt10shared_ptrI1TEEK8ObjectIDKb">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client17FetchAndGetObjectEK8ObjectIDKb">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client17FetchAndGetObjectEK8ObjectIDRNSt10shared_ptrI6ObjectEEKb">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client4ForkER6Client">vineyard::Client::Fork (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7GetBlobEK8ObjectIDRNSt10shared_ptrI4BlobEE">vineyard::Client::GetBlob (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7GetBlobEK8ObjectIDbRNSt10shared_ptrI4BlobEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client8GetBlobsEKNSt6vectorI8ObjectIDEEKbRNSt6vectorINSt10shared_ptrI4BlobEEEE">vineyard::Client::GetBlobs (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client8GetBlobsEKNSt6vectorI8ObjectIDEERNSt6vectorINSt10shared_ptrI4BlobEEEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client9GetBufferEK8ObjectIDRNSt10shared_ptrI6BufferEE">vineyard::Client::GetBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client10GetBuffersERKNSt3setI8ObjectIDEERNSt3mapI8ObjectIDNSt10shared_ptrI6BufferEEEE">vineyard::Client::GetBuffers (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client14GetBufferSizesERKNSt3setI8ObjectIDEERNSt3mapI8ObjectID6size_tEE">vineyard::Client::GetBufferSizes (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client13GetDependencyERK8ObjectIDRNSt3setI8ObjectIDEE">vineyard::Client::GetDependency (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client12GetGPUBufferEK8ObjectIDKbRNSt10shared_ptrI6BufferEE">vineyard::Client::GetGPUBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client13GetGPUBuffersERKNSt3setI8ObjectIDEEKbRNSt3mapI8ObjectIDNSt10shared_ptrI6BufferEEEE">vineyard::Client::GetGPUBuffers (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11GetMetaDataEK8ObjectIDR10ObjectMetaKb">vineyard::Client::GetMetaData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11GetMetaDataERKNSt6vectorI8ObjectIDEERNSt6vectorI10ObjectMetaEEKb">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client18GetNextStreamChunkEK8ObjectIDK6size_tRNSt10unique_ptrI13MutableBufferEE">vineyard::Client::GetNextStreamChunk (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard6Client9GetObjectE6StatusK8ObjectIDRNSt10shared_ptrI1TEEKb">vineyard::Client::GetObject (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard6Client9GetObjectENSt10shared_ptrI1TEEK8ObjectIDKb">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client9GetObjectEK8ObjectIDKb">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client9GetObjectEK8ObjectIDRNSt10shared_ptrI6ObjectEEKb">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client10GetObjectsERKNSt6vectorI10ObjectMetaEE">vineyard::Client::GetObjects (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client10GetObjectsERKNSt6vectorI8ObjectIDEEKb">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7IsInUseERK8ObjectIDRb">vineyard::Client::IsInUse (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Client5IsIPCEv">vineyard::Client::IsIPC (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Client14IsSharedMemoryEK9uintptr_t">vineyard::Client::IsSharedMemory (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Client14IsSharedMemoryEK9uintptr_tR8ObjectID">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Client14IsSharedMemoryEPKv">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Client14IsSharedMemoryEPKvR8ObjectID">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client9IsSpilledERK8ObjectIDRb">vineyard::Client::IsSpilled (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client14ListObjectMetaERKNSt6stringEKbK6size_tb">vineyard::Client::ListObjectMeta (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11ListObjectsERKNSt6stringEKbK6size_t">vineyard::Client::ListObjects (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client8OnDeleteERK8ObjectID">vineyard::Client::OnDelete (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client9OnReleaseERK8ObjectID">vineyard::Client::OnRelease (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client4OpenERKNSt6stringE">vineyard::Client::Open (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client4OpenERKNSt6stringERKNSt6stringERKNSt6stringE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client8PostSealERK10ObjectMeta">vineyard::Client::PostSeal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client19PullNextStreamChunkEK8ObjectIDR10ObjectMeta">vineyard::Client::PullNextStreamChunk (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client19PullNextStreamChunkEK8ObjectIDR8ObjectID">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client19PullNextStreamChunkEK8ObjectIDRNSt10shared_ptrI6ObjectEE">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client19PullNextStreamChunkEK8ObjectIDRNSt10unique_ptrI6BufferEE">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7ReleaseERK8ObjectID">vineyard::Client::Release (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client7ReleaseERKNSt6vectorI8ObjectIDEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client12ReleaseArenaEKiRKNSt6vectorI6size_tEERKNSt6vectorI6size_tEE">vineyard::Client::ReleaseArena (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client4SealERK8ObjectID">vineyard::Client::Seal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11ShallowCopyEK8ObjectIDR8ObjectIDR6Client">vineyard::Client::ShallowCopy (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client11ShallowCopyEK8PlasmaIDR8ObjectIDR12PlasmaClient">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client12ShrinkBufferEK8ObjectIDK6size_t">vineyard::Client::ShrinkBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client14TryAcquireLockENSt6stringERbRNSt6stringE">vineyard::Client::TryAcquireLock (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Client14TryReleaseLockENSt6stringERb">vineyard::Client::TryReleaseLock (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6ClientD0Ev">vineyard::Client::~Client (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBaseE">vineyard::ClientBase (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase5ClearEv">vineyard::ClientBase::Clear (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase13client_mutex_E">vineyard::ClientBase::client_mutex_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10ClientBaseERK10ClientBase">vineyard::ClientBase::ClientBase (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10ClientBaseERR10ClientBase">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10ClientBaseEv">[2]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase12CloseSessionEv">vineyard::ClientBase::CloseSession (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11ClusterInfoERNSt3mapI10InstanceID4jsonEE">vineyard::ClientBase::ClusterInfo (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase19compression_enabledEv">vineyard::ClientBase::compression_enabled (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase20compression_enabled_E">vineyard::ClientBase::compression_enabled_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase9ConnectedEv">vineyard::ClientBase::Connected (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10connected_E">vineyard::ClientBase::connected_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10CreateDataERK4jsonR8ObjectIDR9SignatureR10InstanceID">vineyard::ClientBase::CreateData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10CreateDataERKNSt6vectorI4jsonEERNSt6vectorI8ObjectIDEERNSt6vectorI9SignatureEERNSt6vectorI10InstanceIDEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14CreateMetaDataER10ObjectMetaR8ObjectID">vineyard::ClientBase::CreateMetaData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14CreateMetaDataER10ObjectMetaRK10InstanceIDR8ObjectID">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14CreateMetaDataERNSt6vectorI10ObjectMetaEERK10InstanceIDRNSt6vectorI8ObjectIDEE">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14CreateMetaDataERNSt6vectorI10ObjectMetaEERNSt6vectorI8ObjectIDEE">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase12CreateStreamERK8ObjectID">vineyard::ClientBase::CreateStream (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase5DebugERK4jsonR4json">vineyard::ClientBase::Debug (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7DelDataEK8ObjectIDKbKb">vineyard::ClientBase::DelData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7DelDataEK8ObjectIDKbKbKb">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7DelDataERKNSt6vectorI8ObjectIDEEKbKb">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7DelDataERKNSt6vectorI8ObjectIDEEKbKbKb">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10DisconnectEv">vineyard::ClientBase::Disconnect (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase6doReadER4json">vineyard::ClientBase::doRead (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase6doReadERNSt6stringE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7doWriteERKNSt6stringE">vineyard::ClientBase::doWrite (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase8DropNameERKNSt6stringE">vineyard::ClientBase::DropName (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10DropStreamEK8ObjectID">vineyard::ClientBase::DropStream (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase5EvictERKNSt6vectorI8ObjectIDEE">vineyard::ClientBase::Evict (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase6ExistsEK8ObjectIDRb">vineyard::ClientBase::Exists (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase19get_timeout_secondsEv">vineyard::ClientBase::get_timeout_seconds (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7GetDataEK8ObjectIDR4jsonKbKb">vineyard::ClientBase::GetData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7GetDataERKNSt6vectorI8ObjectIDEERNSt6vectorI4jsonEEKbKb">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11GetMetaDataEK8ObjectIDR10ObjectMetaKb">vineyard::ClientBase::GetMetaData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7GetNameERKNSt6stringER8ObjectIDKb">vineyard::ClientBase::GetName (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase9IfPersistEK8ObjectIDRb">vineyard::ClientBase::IfPersist (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase11instance_idEv">vineyard::ClientBase::instance_id (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase12instance_id_E">vineyard::ClientBase::instance_id_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase9InstancesERNSt6vectorI10InstanceIDEE">vineyard::ClientBase::Instances (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14InstanceStatusERNSt10shared_ptrI14InstanceStatusEE">vineyard::ClientBase::InstanceStatus (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11ipc_socket_E">vineyard::ClientBase::ipc_socket_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase9IPCSocketEv">vineyard::ClientBase::IPCSocket (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase5IsIPCEv">vineyard::ClientBase::IsIPC (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase5IsRPCEv">vineyard::ClientBase::IsRPC (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase5LabelEK8ObjectIDRKNSt3mapINSt6stringENSt6stringEEE">vineyard::ClientBase::Label (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase5LabelEK8ObjectIDRKNSt6stringERKNSt6stringE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase8ListDataERKNSt6stringEKbK6size_tRNSt13unordered_mapI8ObjectID4jsonEE">vineyard::ClientBase::ListData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase9ListNamesERKNSt6stringEKbK6size_tRNSt3mapINSt6stringE8ObjectIDEE">vineyard::ClientBase::ListNames (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase4LoadERKNSt6vectorI8ObjectIDEEKb">vineyard::ClientBase::Load (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10MemoryTrimERb">vineyard::ClientBase::MemoryTrim (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase13MigrateObjectEK8ObjectIDR8ObjectID">vineyard::ClientBase::MigrateObject (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase4OpenERKNSt6stringE">vineyard::ClientBase::Open (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10OpenStreamERK8ObjectID14StreamOpenMode">vineyard::ClientBase::OpenStream (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBaseaSERK10ClientBase">vineyard::ClientBase::operator= (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBaseaSERR10ClientBase">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7PersistEK8ObjectID">vineyard::ClientBase::Persist (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase19PullNextStreamChunkEK8ObjectIDR10ObjectMeta">vineyard::ClientBase::PullNextStreamChunk (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase19PullNextStreamChunkEK8ObjectIDR8ObjectID">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase19PullNextStreamChunkEK8ObjectIDRNSt10shared_ptrI6ObjectEE">[2]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase19PushNextStreamChunkEK8ObjectIDK8ObjectID">vineyard::ClientBase::PushNextStreamChunk (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7PutNameEK8ObjectIDRKNSt6stringE">vineyard::ClientBase::PutName (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase7ReleaseERK8ObjectID">vineyard::ClientBase::Release (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase18remote_instance_idEv">vineyard::ClientBase::remote_instance_id (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase13rpc_endpoint_E">vineyard::ClientBase::rpc_endpoint_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11RPCEndpointEv">vineyard::ClientBase::RPCEndpoint (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase15server_version_E">vineyard::ClientBase::server_version_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase10session_idEv">vineyard::ClientBase::session_id (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11session_id_E">vineyard::ClientBase::session_id_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase23set_compression_enabledEb">vineyard::ClientBase::set_compression_enabled (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase19set_timeout_secondsEi">vineyard::ClientBase::set_timeout_seconds (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11ShallowCopyEK8ObjectIDR8ObjectID">vineyard::ClientBase::ShallowCopy (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase11ShallowCopyEK8ObjectIDRK4jsonR8ObjectID">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase10StopStreamEK8ObjectIDb">vineyard::ClientBase::StopStream (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase24support_rpc_compression_E">vineyard::ClientBase::support_rpc_compression_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase12SyncMetaDataEv">vineyard::ClientBase::SyncMetaData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase16timeout_seconds_E">vineyard::ClientBase::timeout_seconds_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14TryAcquireLockENSt6stringERbRNSt6stringE">vineyard::ClientBase::TryAcquireLock (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14TryReleaseLockENSt6stringERb">vineyard::ClientBase::TryReleaseLock (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase5UnpinERKNSt6vectorI8ObjectIDEE">vineyard::ClientBase::Unpin (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ClientBase7VersionEv">vineyard::ClientBase::Version (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBase14vineyard_conn_E">vineyard::ClientBase::vineyard_conn_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ClientBaseD0Ev">vineyard::ClientBase::~ClientBase (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9DataFrameE">vineyard::DataFrame (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9DataFrame7AsBatchEb">vineyard::DataFrame::AsBatch (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9DataFrame6ColumnERK4json">vineyard::DataFrame::Column (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9DataFrame7ColumnsEv">vineyard::DataFrame::Columns (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9DataFrame9ConstructERK10ObjectMeta">vineyard::DataFrame::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9DataFrame6CreateEv">vineyard::DataFrame::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9DataFrame5IndexEv">vineyard::DataFrame::Index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9DataFrame15partition_indexEv">vineyard::DataFrame::partition_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9DataFrame5shapeEv">vineyard::DataFrame::shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilderE">vineyard::DataFrameBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder9AddColumnERK4jsonNSt10shared_ptrI14ITensorBuilderEE">vineyard::DataFrameBuilder::AddColumn (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder5BuildER6Client">vineyard::DataFrameBuilder::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard16DataFrameBuilder6ColumnERK4json">vineyard::DataFrameBuilder::Column (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder16DataFrameBuilderER6Client">vineyard::DataFrameBuilder::DataFrameBuilder (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder10DropColumnERK4json">vineyard::DataFrameBuilder::DropColumn (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard16DataFrameBuilder15partition_indexEv">vineyard::DataFrameBuilder::partition_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder9set_indexENSt10shared_ptrI14ITensorBuilderEE">vineyard::DataFrameBuilder::set_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder19set_partition_indexE6size_t6size_t">vineyard::DataFrameBuilder::set_partition_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard16DataFrameBuilder19set_row_batch_indexE6size_t">vineyard::DataFrameBuilder::set_row_batch_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15GlobalDataFrameE">vineyard::GlobalDataFrame (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15GlobalDataFrame6CreateEv">vineyard::GlobalDataFrame::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard15GlobalDataFrame15LocalPartitionsER6Client">vineyard::GlobalDataFrame::LocalPartitions (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard15GlobalDataFrame15partition_shapeEv">vineyard::GlobalDataFrame::partition_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15GlobalDataFrame13PostConstructERK10ObjectMeta">vineyard::GlobalDataFrame::PostConstruct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard22GlobalDataFrameBuilderE">vineyard::GlobalDataFrameBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard22GlobalDataFrameBuilder12AddPartitionEK8ObjectID">vineyard::GlobalDataFrameBuilder::AddPartition (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard22GlobalDataFrameBuilder13AddPartitionsERKNSt6vectorI8ObjectIDEE">vineyard::GlobalDataFrameBuilder::AddPartitions (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard22GlobalDataFrameBuilder22GlobalDataFrameBuilderER6Client">vineyard::GlobalDataFrameBuilder::GlobalDataFrameBuilder (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard22GlobalDataFrameBuilder15partition_shapeEv">vineyard::GlobalDataFrameBuilder::partition_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard22GlobalDataFrameBuilder19set_partition_shapeEK6size_tK6size_t">vineyard::GlobalDataFrameBuilder::set_partition_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12GlobalTensorE">vineyard::GlobalTensor (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12GlobalTensor6CreateEv">vineyard::GlobalTensor::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard12GlobalTensor15LocalPartitionsER6Client">vineyard::GlobalTensor::LocalPartitions (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard12GlobalTensor15partition_shapeEv">vineyard::GlobalTensor::partition_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard12GlobalTensor13PostConstructERK10ObjectMeta">vineyard::GlobalTensor::PostConstruct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard12GlobalTensor5shapeEv">vineyard::GlobalTensor::shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard19GlobalTensorBuilderE">vineyard::GlobalTensorBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard19GlobalTensorBuilder12AddPartitionEK8ObjectID">vineyard::GlobalTensorBuilder::AddPartition (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard19GlobalTensorBuilder13AddPartitionsERKNSt6vectorI8ObjectIDEE">vineyard::GlobalTensorBuilder::AddPartitions (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard19GlobalTensorBuilder19GlobalTensorBuilderER6Client">vineyard::GlobalTensorBuilder::GlobalTensorBuilder (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard19GlobalTensorBuilder15partition_shapeEv">vineyard::GlobalTensorBuilder::partition_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard19GlobalTensorBuilder19set_partition_shapeERKNSt6vectorI7int64_tEE">vineyard::GlobalTensorBuilder::set_partition_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard19GlobalTensorBuilder9set_shapeERKNSt6vectorI7int64_tEE">vineyard::GlobalTensorBuilder::set_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard19GlobalTensorBuilder5shapeEv">vineyard::GlobalTensorBuilder::shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0000EN8vineyard7HashmapE">vineyard::Hashmap (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap2atERK1K">vineyard::Hashmap::at (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap5beginEv">vineyard::Hashmap::begin (C++ function)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap12bucket_countEv">vineyard::Hashmap::bucket_count (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap13const_pointerE">vineyard::Hashmap::const_pointer (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap15const_referenceE">vineyard::Hashmap::const_reference (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap9ConstructERK10ObjectMeta">vineyard::Hashmap::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap5countERK1K">vineyard::Hashmap::count (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap6CreateEv">vineyard::Hashmap::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap15difference_typeE">vineyard::Hashmap::difference_type (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap5emptyEv">vineyard::Hashmap::empty (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap3endEv">vineyard::Hashmap::end (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap5EntryE">vineyard::Hashmap::Entry (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap12EntryPointerE">vineyard::Hashmap::EntryPointer (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap5EqualE">vineyard::Hashmap::Equal (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap4findERK1K">vineyard::Hashmap::find (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap4findERK1K">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap20flat_hash_table_typeE">vineyard::Hashmap::flat_hash_table_type (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap6HasherE">vineyard::Hashmap::Hasher (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap6hasherE">vineyard::Hashmap::hasher (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iteratorE">vineyard::Hashmap::iterator (C++ struct)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iterator7currentE">vineyard::Hashmap::iterator::current (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iterator8iteratorE12EntryPointer">vineyard::Hashmap::iterator::iterator (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iterator8iteratorEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iteratorneERK8iteratorRK8iterator">vineyard::Hashmap::iterator::operator!= (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap8iteratormlEv">vineyard::Hashmap::iterator::operator* (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iteratorppEi">vineyard::Hashmap::iterator::operator++ (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iteratorppEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap8iteratorptEv">vineyard::Hashmap::iterator::operator-&gt; (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8iteratoreqERK8iteratorRK8iterator">vineyard::Hashmap::iterator::operator== (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap9key_equalE">vineyard::Hashmap::key_equal (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap8KeyEqualE">vineyard::Hashmap::KeyEqual (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap7KeyHashE">vineyard::Hashmap::KeyHash (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap11load_factorEv">vineyard::Hashmap::load_factor (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap7pointerE">vineyard::Hashmap::pointer (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap13PostConstructERK10ObjectMeta">vineyard::Hashmap::PostConstruct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap9referenceE">vineyard::Hashmap::reference (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard7Hashmap4sizeEv">vineyard::Hashmap::size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap9size_typeE">vineyard::Hashmap::size_type (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap1TE">vineyard::Hashmap::T (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard7Hashmap10value_typeE">vineyard::Hashmap::value_type (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0000EN8vineyard14HashmapBuilderE">vineyard::HashmapBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder19AssociateDataBufferENSt10shared_ptrI4BlobEE">vineyard::HashmapBuilder::AssociateDataBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder2atERK1K">vineyard::HashmapBuilder::at (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder2atERK1K">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder5beginEv">vineyard::HashmapBuilder::begin (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder5beginEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder12bucket_countEv">vineyard::HashmapBuilder::bucket_count (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder5BuildER6Client">vineyard::HashmapBuilder::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder6cbeginEv">vineyard::HashmapBuilder::cbegin (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder4cendEv">vineyard::HashmapBuilder::cend (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4IDpEN8vineyard14HashmapBuilder7emplaceEbDpRR4Args">vineyard::HashmapBuilder::emplace (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder5emptyEv">vineyard::HashmapBuilder::empty (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder3endEv">vineyard::HashmapBuilder::end (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder3endEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder4findERK1K">vineyard::HashmapBuilder::find (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder14HashmapBuilderER6Client">vineyard::HashmapBuilder::HashmapBuilder (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder14HashmapBuilderER6ClientRRN3ska13flat_hash_mapI1K1V1H1EEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder11load_factorEv">vineyard::HashmapBuilder::load_factor (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilderixERK1K">vineyard::HashmapBuilder::operator[] (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilderixERR1K">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14HashmapBuilder7reserveE6size_t">vineyard::HashmapBuilder::reserve (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard14HashmapBuilder4sizeEv">vineyard::HashmapBuilder::size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatusE">vineyard::InstanceStatus (C++ struct)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus17deferred_requestsE">vineyard::InstanceStatus::deferred_requests (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus10deploymentE">vineyard::InstanceStatus::deployment (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus11instance_idE">vineyard::InstanceStatus::instance_id (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus14InstanceStatusERK4json">vineyard::InstanceStatus::InstanceStatus (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus15ipc_connectionsE">vineyard::InstanceStatus::ipc_connections (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus12memory_limitE">vineyard::InstanceStatus::memory_limit (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus12memory_usageE">vineyard::InstanceStatus::memory_usage (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard14InstanceStatus15rpc_connectionsE">vineyard::InstanceStatus::rpc_connections (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6ObjectE">vineyard::Object (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object5_SealER6Client">vineyard::Object::_Seal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object5BuildER6Client">vineyard::Object::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object9ConstructERK10ObjectMeta">vineyard::Object::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object2idEv">vineyard::Object::id (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object3id_E">vineyard::Object::id_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object8IsGlobalEv">vineyard::Object::IsGlobal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object7IsLocalEv">vineyard::Object::IsLocal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object9IsPersistEv">vineyard::Object::IsPersist (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object4metaEv">vineyard::Object::meta (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object5meta_E">vineyard::Object::meta_ (C++ member)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object6nbytesEv">vineyard::Object::nbytes (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object6ObjectEv">vineyard::Object::Object (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Object7PersistER10ClientBase">vineyard::Object::Persist (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Object13PostConstructERK10ObjectMeta">vineyard::Object::PostConstruct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6ObjectD0Ev">vineyard::Object::~Object (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectBaseE">vineyard::ObjectBase (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectBase5_SealER6Client">vineyard::ObjectBase::_Seal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectBase5BuildER6Client">vineyard::ObjectBase::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilderE">vineyard::ObjectBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilder5_SealER6Client">vineyard::ObjectBuilder::_Seal (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilder5_SealER6ClientRNSt10shared_ptrI6ObjectEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilder5BuildER6Client">vineyard::ObjectBuilder::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilder4SealER6Client">vineyard::ObjectBuilder::Seal (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilder4SealER6ClientRNSt10shared_ptrI6ObjectEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard13ObjectBuilder6sealedEv">vineyard::ObjectBuilder::sealed (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilder10set_sealedEKb">vineyard::ObjectBuilder::set_sealed (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ObjectBuilderD0Ev">vineyard::ObjectBuilder::~ObjectBuilder (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8ObjectIDE">vineyard::ObjectID (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMetaE">vineyard::ObjectMeta (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERK12UnorderedMapI4json5ValueE">vineyard::ObjectMeta::AddKeyValue (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERK12UnorderedMapINSt6stringE5ValueE">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERK1T">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERK3MapI4json5ValueE">[3]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERK3MapINSt6stringE5ValueE">[4]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERK5TupleI1TE">[5]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERKNSt13unordered_mapI4json5ValueEE">[6]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERKNSt13unordered_mapINSt6stringE5ValueEE">[7]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERKNSt3mapI4json5ValueEE">[8]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERKNSt3mapINSt6stringE5ValueEE">[9]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERKNSt3setI1TEE">[10]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard10ObjectMeta11AddKeyValueEvRKNSt6stringERKNSt6vectorI1TEE">[11]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta11AddKeyValueERKNSt6stringERK4json">[12]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta11AddKeyValueERKNSt6stringERKNSt6stringE">[13]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9AddMemberERKNSt6stringEK8ObjectID">vineyard::ObjectMeta::AddMember (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9AddMemberERKNSt6stringEPK6Object">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9AddMemberERKNSt6stringERK10ObjectMeta">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9AddMemberERKNSt6stringERK6Object">[3]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9AddMemberERKNSt6stringERKNSt10shared_ptrI6ObjectEE">[4]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta13AddRemoteBlobE8ObjectIDRKNSt10shared_ptrI6BufferEE">vineyard::ObjectMeta::AddRemoteBlob (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta13AddRemoteBlobERK10RemoteBlob">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta5beginEv">vineyard::ObjectMeta::begin (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta14const_iteratorE">vineyard::ObjectMeta::const_iterator (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta3endEv">vineyard::ObjectMeta::end (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta10ForceLocalEv">vineyard::ObjectMeta::ForceLocal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9GetBufferEK8ObjectIDRNSt10shared_ptrI6BufferEE">vineyard::ObjectMeta::GetBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta12GetBufferSetEv">vineyard::ObjectMeta::GetBufferSet (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9GetClientEv">vineyard::ObjectMeta::GetClient (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta5GetIdEv">vineyard::ObjectMeta::GetId (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta13GetInstanceIdEv">vineyard::ObjectMeta::GetInstanceId (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEK1TRKNSt6stringE">vineyard::ObjectMeta::GetKeyValue (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringER12UnorderedMapI4json5ValueE">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringER12UnorderedMapINSt6stringE5ValueE">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringER1T">[3]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringER3MapI4json5ValueE">[4]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringER3MapINSt6stringE5ValueE">[5]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringER5TupleI1TE">[6]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringERNSt13unordered_mapI4json5ValueEE">[7]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringERNSt13unordered_mapINSt6stringE5ValueEE">[8]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringERNSt3mapI4json5ValueEE">[9]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringERNSt3mapINSt6stringE5ValueEE">[10]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringERNSt3setI1TEE">[11]</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta11GetKeyValueEvRKNSt6stringERNSt6vectorI1TEE">[12]</a>, <a href="notes/references/cpp-api.html#_CPPv4IENK8vineyard10ObjectMeta11GetKeyValueEK4jsonRKNSt6stringE">[13]</a>, <a href="notes/references/cpp-api.html#_CPPv4IENK8vineyard10ObjectMeta11GetKeyValueEK4jsonRKNSt6stringE">[14]</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta11GetKeyValueERKNSt6stringE">[15]</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta11GetKeyValueERKNSt6stringER4json">[16]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta9GetMemberE6StatusRKNSt6stringERNSt10shared_ptrI1TEE">vineyard::ObjectMeta::GetMember (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4I0ENK8vineyard10ObjectMeta9GetMemberENSt10shared_ptrI1TEERKNSt6stringE">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9GetMemberERKNSt6stringE">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9GetMemberERKNSt6stringERNSt10shared_ptrI6ObjectEE">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta13GetMemberMetaERKNSt6stringE">vineyard::ObjectMeta::GetMemberMeta (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta13GetMemberMetaERKNSt6stringER10ObjectMeta">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9GetNBytesEv">vineyard::ObjectMeta::GetNBytes (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta12GetSignatureEv">vineyard::ObjectMeta::GetSignature (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta11GetTypeNameEv">vineyard::ObjectMeta::GetTypeName (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta6HasKeyERKNSt6stringE">vineyard::ObjectMeta::HasKey (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta6HaskeyERKNSt6stringE">vineyard::ObjectMeta::Haskey (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta10incompleteEv">vineyard::ObjectMeta::incomplete (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta8IsGlobalEv">vineyard::ObjectMeta::IsGlobal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta7IsLocalEv">vineyard::ObjectMeta::IsLocal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta5LabelERKNSt6stringE">vineyard::ObjectMeta::Label (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta6LabelsEv">vineyard::ObjectMeta::Labels (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta11MemoryUsageER4jsonKb">vineyard::ObjectMeta::MemoryUsage (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta11MemoryUsageEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta8MetaDataEv">vineyard::ObjectMeta::MetaData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta11MutMetaDataEv">vineyard::ObjectMeta::MutMetaData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta10ObjectMetaERK10ObjectMeta">vineyard::ObjectMeta::ObjectMeta (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta10ObjectMetaEv">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMetaaSERK10ObjectMeta">vineyard::ObjectMeta::operator= (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9PrintMetaEv">vineyard::ObjectMeta::PrintMeta (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta5ResetEv">vineyard::ObjectMeta::Reset (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta8ResetKeyERKNSt6stringE">vineyard::ObjectMeta::ResetKey (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta14ResetSignatureEv">vineyard::ObjectMeta::ResetSignature (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9SetBufferERK8ObjectIDRKNSt10shared_ptrI6BufferEE">vineyard::ObjectMeta::SetBuffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9SetClientEP10ClientBase">vineyard::ObjectMeta::SetClient (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9SetGlobalEb">vineyard::ObjectMeta::SetGlobal (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta5SetIdERK8ObjectID">vineyard::ObjectMeta::SetId (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta11SetMetaDataEP10ClientBaseRK4json">vineyard::ObjectMeta::SetMetaData (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta9SetNBytesEK6size_t">vineyard::ObjectMeta::SetNBytes (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta11SetTypeNameERKNSt6stringE">vineyard::ObjectMeta::SetTypeName (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta9TimestampEv">vineyard::ObjectMeta::Timestamp (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard10ObjectMeta8ToStringEv">vineyard::ObjectMeta::ToString (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta6UnsafeE4json6size_tP8ObjectIDP9uintptr_tP6size_t">vineyard::ObjectMeta::Unsafe (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMeta6UnsafeENSt6stringE6size_tP8ObjectIDP9uintptr_tP6size_t">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard10ObjectMetaD0Ev">vineyard::ObjectMeta::~ObjectMeta (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClientE">vineyard::RPCClient (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient17BatchedGetObjectsEKNSt6vectorI10ObjectMetaEERNSt6vectorINSt10shared_ptrI6ObjectEEEE">vineyard::RPCClient::BatchedGetObjects (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringE">vineyard::RPCClient::Connect (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringE8uint32_tK9SessionIDRKNSt6stringERKNSt6stringERKNSt6stringE8uint32_t">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringE8uint32_tRKNSt6stringE8uint32_t">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringE8uint32_tRKNSt6stringERKNSt6stringERKNSt6stringE8uint32_t">[3]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringEK9SessionIDRKNSt6stringERKNSt6stringERKNSt6stringE">[4]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringERKNSt6stringE">[5]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectERKNSt6stringERKNSt6stringERKNSt6stringERKNSt6stringE">[6]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient7ConnectEv">[7]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient16CreateRemoteBlobERKNSt10shared_ptrI16RemoteBlobWriterEER10ObjectMeta">vineyard::RPCClient::CreateRemoteBlob (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient17CreateRemoteBlobsERKNSt6vectorINSt10shared_ptrI16RemoteBlobWriterEEEERNSt6vectorI10ObjectMetaEE">vineyard::RPCClient::CreateRemoteBlobs (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient10DisconnectEv">vineyard::RPCClient::Disconnect (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient4ForkER9RPCClient">vineyard::RPCClient::Fork (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient11GetMetaDataEK8ObjectIDR10ObjectMetaKb">vineyard::RPCClient::GetMetaData (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient11GetMetaDataERKNSt6vectorI8ObjectIDEERNSt6vectorI10ObjectMetaEEKb">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard9RPCClient9GetObjectE6StatusK8ObjectIDRNSt10shared_ptrI1TEEKb">vineyard::RPCClient::GetObject (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard9RPCClient9GetObjectENSt10shared_ptrI1TEEK8ObjectIDKb">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient9GetObjectEK8ObjectIDKb">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient9GetObjectEK8ObjectIDRNSt10shared_ptrI6ObjectEEKb">[3]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient10GetObjectsERKNSt6vectorI8ObjectIDEEKb">vineyard::RPCClient::GetObjects (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient13GetRemoteBlobERK8ObjectIDKbRNSt10shared_ptrI10RemoteBlobEE">vineyard::RPCClient::GetRemoteBlob (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient13GetRemoteBlobERK8ObjectIDKbRNSt10shared_ptrI13MutableBufferEE">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient13GetRemoteBlobERK8ObjectIDRNSt10shared_ptrI10RemoteBlobEE">[2]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14GetRemoteBlobsERKNSt3setI8ObjectIDEEKbRNSt3mapI8ObjectIDNSt10shared_ptrI10RemoteBlobEEEE">vineyard::RPCClient::GetRemoteBlobs (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14GetRemoteBlobsERKNSt3setI8ObjectIDEERNSt3mapI8ObjectIDNSt10shared_ptrI10RemoteBlobEEEE">[1]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14GetRemoteBlobsERKNSt6vectorI8ObjectIDEEKbRNSt6vectorINSt10shared_ptrI10RemoteBlobEEEE">[2]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14GetRemoteBlobsERKNSt6vectorI8ObjectIDEEKbRNSt6vectorINSt10shared_ptrI13MutableBufferEEEE">[3]</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14GetRemoteBlobsERKNSt6vectorI8ObjectIDEERNSt6vectorINSt10shared_ptrI10RemoteBlobEEEE">[4]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient11IsFetchableERK10ObjectMeta">vineyard::RPCClient::IsFetchable (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9RPCClient5IsRPCEv">vineyard::RPCClient::IsRPC (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14ListObjectMetaERKNSt6stringEKbK6size_tb">vineyard::RPCClient::ListObjectMeta (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient11ListObjectsERKNSt6stringEKbK6size_t">vineyard::RPCClient::ListObjects (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient13rdma_endpointEv">vineyard::RPCClient::rdma_endpoint (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard9RPCClient18remote_instance_idEv">vineyard::RPCClient::remote_instance_id (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14TryAcquireLockENSt6stringERbRNSt6stringE">vineyard::RPCClient::TryAcquireLock (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClient14TryReleaseLockENSt6stringERb">vineyard::RPCClient::TryReleaseLock (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard9RPCClientD0Ev">vineyard::RPCClient::~RPCClient (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard6ScalarE">vineyard::Scalar (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Scalar9ConstructERK10ObjectMeta">vineyard::Scalar::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Scalar6CreateEv">vineyard::Scalar::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Scalar4TypeEv">vineyard::Scalar::Type (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Scalar5ValueEv">vineyard::Scalar::Value (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard13ScalarBuilderE">vineyard::ScalarBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ScalarBuilder13ScalarBuilderER6Client">vineyard::ScalarBuilder::ScalarBuilder (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ScalarBuilder13ScalarBuilderER6ClientRK1T">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13ScalarBuilder8SetValueERK1T">vineyard::ScalarBuilder::SetValue (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8SequenceE">vineyard::Sequence (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence2AtE6size_t">vineyard::Sequence::At (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence5beginEv">vineyard::Sequence::begin (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8Sequence9ConstructERK10ObjectMeta">vineyard::Sequence::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8Sequence6CreateEv">vineyard::Sequence::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence3endEv">vineyard::Sequence::end (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence5FirstEv">vineyard::Sequence::First (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8Sequence8iteratorE">vineyard::Sequence::iterator (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8Sequence8iterator8iteratorEPK8Sequence6size_t">vineyard::Sequence::iterator::iterator (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence8iteratorneE8iterator">vineyard::Sequence::iterator::operator!= (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence8iteratormlEv">vineyard::Sequence::iterator::operator* (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard8Sequence8iteratorppEv">vineyard::Sequence::iterator::operator++ (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence8iteratoreqE8iterator">vineyard::Sequence::iterator::operator== (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence6SecondEv">vineyard::Sequence::Second (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard8Sequence4SizeEv">vineyard::Sequence::Size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilderE">vineyard::SequenceBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilder2AtE6size_t">vineyard::SequenceBuilder::At (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilder15SequenceBuilderER6Client">vineyard::SequenceBuilder::SequenceBuilder (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilder15SequenceBuilderER6ClientK6size_t">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilder7SetSizeE6size_t">vineyard::SequenceBuilder::SetSize (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilder8SetValueE6size_tRKNSt10shared_ptrI13ObjectBuilderEE">vineyard::SequenceBuilder::SetValue (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard15SequenceBuilder8SetValueE6size_tRKNSt10shared_ptrI6ObjectEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard15SequenceBuilder4SizeEv">vineyard::SequenceBuilder::Size (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard6TensorE">vineyard::Tensor (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor11ArrowTensorEv">vineyard::Tensor::ArrowTensor (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor12ArrowTensorTE">vineyard::Tensor::ArrowTensorT (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor16auxiliary_bufferEv">vineyard::Tensor::auxiliary_buffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor6bufferEv">vineyard::Tensor::buffer (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor9ConstructERK10ObjectMeta">vineyard::Tensor::Construct (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor6CreateEv">vineyard::Tensor::Create (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor4dataEv">vineyard::Tensor::data (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6TensorixE6size_t">vineyard::Tensor::operator[] (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor15partition_indexEv">vineyard::Tensor::partition_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor5shapeEv">vineyard::Tensor::shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor7stridesEv">vineyard::Tensor::strides (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor21value_const_pointer_tE">vineyard::Tensor::value_const_pointer_t (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor15value_pointer_tE">vineyard::Tensor::value_pointer_t (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard6Tensor7value_tE">vineyard::Tensor::value_t (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard6Tensor10value_typeEv">vineyard::Tensor::value_type (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4I0EN8vineyard13TensorBuilderE">vineyard::TensorBuilder (C++ class)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder5BuildER6Client">vineyard::TensorBuilder::Build (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard13TensorBuilder4dataEv">vineyard::TensorBuilder::data (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard13TensorBuilder15partition_indexEv">vineyard::TensorBuilder::partition_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder19set_partition_indexERKNSt6vectorI7int64_tEE">vineyard::TensorBuilder::set_partition_index (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder9set_shapeERKNSt6vectorI7int64_tEE">vineyard::TensorBuilder::set_shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard13TensorBuilder5shapeEv">vineyard::TensorBuilder::shape (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4NK8vineyard13TensorBuilder7stridesEv">vineyard::TensorBuilder::strides (C++ function)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder13TensorBuilderER6ClientRKNSt6vectorI7int64_tEE">vineyard::TensorBuilder::TensorBuilder (C++ function)</a>, <a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder13TensorBuilderER6ClientRKNSt6vectorI7int64_tEERKNSt6vectorI7int64_tEE">[1]</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder21value_const_pointer_tE">vineyard::TensorBuilder::value_const_pointer_t (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder15value_pointer_tE">vineyard::TensorBuilder::value_pointer_t (C++ type)</a>
+</li>
+        <li><a href="notes/references/cpp-api.html#_CPPv4N8vineyard13TensorBuilder7value_tE">vineyard::TensorBuilder::value_t (C++ type)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="W" class="genindex-section">
+  <h2>W</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.Client.with_compression">with_compression() (vineyard.Client method)</a>
+</li>
+        <li><a href="notes/references/python-api.html#vineyard.Client.with_spread">with_spread() (vineyard.Client method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="notes/references/python-api.html#vineyard.csi.write">write() (in module vineyard.csi)</a>
+
+        <ul>
+          <li><a href="notes/references/python-api.html#vineyard.io.write">(in module vineyard.io)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  
+  
+</div>
+
+<!-- index page doesn't have prev -->
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

@@ -1,0 +1,894 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="Distributed Learning with Vineyard" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="tutorials/data-processing/distributed-learning.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="With the growth of data, distributed learning is becoming a must in real-world machine learning applications, as the data size can easily exceed the memory limit of a single machine. Thus, many dis..." />
+<meta name="description" content="With the growth of data, distributed learning is becoming a must in real-world machine learning applications, as the data size can easily exceed the memory limit of a single machine. Thus, many dis..." />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Accelerate Data Sharing in Kedro" href="accelerate-data-sharing-in-kedro.html" /><link rel="prev" title="multiprocessing.shared_memory in Python" href="python-sharedmemory.html" />
+
+    <link rel="shortcut icon" href="../../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Distributed Learning with Vineyard - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../data-processing.html">Data processing</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/tutorials/data-processing/distributed-learning.ipynb?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/tutorials/data-processing/distributed-learning.ipynb" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="Distributed-Learning-with-Vineyard">
+<h1>Distributed Learning with Vineyard<a class="headerlink" href="#Distributed-Learning-with-Vineyard" title="Permalink to this heading">¶</a></h1>
+<p>With the growth of data, distributed learning is becoming a must in real-world machine learning applications, as the data size can easily exceed the memory limit of a single machine. Thus, many distributed systems addressing different workloads are developed and they share the same objective of extending users’ single machine prototypes to distributed settings with as few modifications to the code as possible.</p>
+<p>For example, <strong>dask.dataframe</strong> mimics the API of <strong>pandas</strong> which is the de-facto standard library for single-machine structured data processing, so that users can apply their pandas code for data preprocessing in the dask cluster with few modifications. Similarly, <strong>horovod</strong> provides easy-to-use APIs for users to transfer their single-machine code in machine learning frameworks (e.g., TensorFlow, PyTorch, MXNet) to the distributed settings with only a few additional lines of code.</p>
+<p>However, when extending to distributed learning, the data sharing between libraries within the same python process (e.g., pandas and tensorflow) becomes inter-process sharing between engines (e.g., dask and horovod), not to mention in the distributed fashion. Existing solutions using external distributed file systems are less than optimal for the huge I/O overheads.</p>
+<p>Vineyard shares the same design principle with the aforementioned distributed systems, which aims to provide efficient cross-engine data sharing with few modifications to the existing code. Next, we demonstrate how to transfer a single-machine learning example in <strong>keras</strong> to distributed learning with dask, horovod and Vineyard.</p>
+<section id="An-Example-from-Keras">
+<h2>An Example from Keras<a class="headerlink" href="#An-Example-from-Keras" title="Permalink to this heading">¶</a></h2>
+<p>This <a class="reference external" href="https://keras.io/examples/structured_data/wide_deep_cross_networks/">example</a> uses the Covertype dataset from the UCI Machine Learning Repository. The task is to predict forest cover type from cartographic variables. The dataset includes 506,011 instances with 12 input features: 10 numerical features and 2 categorical features. Each instance is categorized into 1 of 7 classes.</p>
+<p>The solution contains three steps:</p>
+<ol class="arabic simple">
+<li><p>preprocess the data in pandas to extract the 12 features and the label</p></li>
+<li><p>store the preprocessed data in files</p></li>
+<li><p>define and train the model in keras</p></li>
+</ol>
+<p>Mapping the solution to distributed learning, we have:</p>
+<ol class="arabic simple">
+<li><p>preprocess the data in dask.dataframe</p></li>
+<li><p>share the preprocessed data using Vineyard</p></li>
+<li><p>train the model in horovod.keras</p></li>
+</ol>
+<p>We will walk through the code as follows.</p>
+</section>
+<section id="Setup">
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this heading">¶</a></h2>
+<p>The distributed deployment of vineyard and dask is as follows: on each machine, we launch a vineyard daemon process to handle the local data storage on that machine; and we also launch a dask worker on that machine for the computation accordingly. In this notebook, we limit the machine number as 1 (i.e., the local machine) just for demonstration.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import vineyard
+import subprocess as sp
+
+# launch local vineyardd
+client = vineyard.connect()
+
+# launch dask scheduler and worker
+dask_scheduler = sp.Popen([&#39;dask-scheduler&#39;, &#39;--host&#39;, &#39;localhost&#39;])
+dask_worker = sp.Popen([&#39;dask-worker&#39;, &#39;tcp://localhost:8786&#39;])
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Preprocessing-the-data">
+<h2>Preprocessing the data<a class="headerlink" href="#Preprocessing-the-data" title="Permalink to this heading">¶</a></h2>
+<p>To read the data, we replace <strong>pd.read_csv</strong> by <strong>dd.read_csv</strong>, which will automatically read the data in parallel.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import dask.dataframe as dd
+raw_data = dd.read_csv(&#39;covtype.data&#39;, header=None)
+</pre></div>
+</div>
+</div>
+<p>Then we preprocess the data using the same code from the example, except the replacement of <strong>pd.concat</strong> to <strong>dd.concat</strong> only.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>&quot;&quot;&quot;
+The two categorical features in the dataset are binary-encoded.
+We will convert this dataset representation to the typical representation, where each
+categorical feature is represented as a single integer value.
+&quot;&quot;&quot;
+import warnings
+warnings.filterwarnings(&#39;ignore&#39;)
+
+soil_type_values = [f&quot;soil_type_{idx+1}&quot; for idx in range(40)]
+wilderness_area_values = [f&quot;area_type_{idx+1}&quot; for idx in range(4)]
+
+soil_type = raw_data.loc[:, 14:53].apply(
+    lambda x: soil_type_values[0::1][x.to_numpy().nonzero()[0][0]], axis=1
+)
+wilderness_area = raw_data.loc[:, 10:13].apply(
+    lambda x: wilderness_area_values[0::1][x.to_numpy().nonzero()[0][0]], axis=1
+)
+
+CSV_HEADER = [
+    &quot;Elevation&quot;,
+    &quot;Aspect&quot;,
+    &quot;Slope&quot;,
+    &quot;Horizontal_Distance_To_Hydrology&quot;,
+    &quot;Vertical_Distance_To_Hydrology&quot;,
+    &quot;Horizontal_Distance_To_Roadways&quot;,
+    &quot;Hillshade_9am&quot;,
+    &quot;Hillshade_Noon&quot;,
+    &quot;Hillshade_3pm&quot;,
+    &quot;Horizontal_Distance_To_Fire_Points&quot;,
+    &quot;Wilderness_Area&quot;,
+    &quot;Soil_Type&quot;,
+    &quot;Cover_Type&quot;,
+]
+
+data = dd.concat(
+    [raw_data.loc[:, 0:9], wilderness_area, soil_type, raw_data.loc[:, 54]],
+    axis=1,
+    ignore_index=True,
+)
+data.columns = CSV_HEADER
+
+# Convert the target label indices into a range from 0 to 6 (there are 7 labels in total).
+data[&quot;Cover_Type&quot;] = data[&quot;Cover_Type&quot;] - 1
+</pre></div>
+</div>
+</div>
+<p>Finally, instead of saving the preprocessed data into files, we store them in Vineyard.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import vineyard
+from vineyard.core.builder import builder_context
+from vineyard.contrib.dask.dask import register_dask_types
+
+with builder_context() as builder:
+    register_dask_types(builder, None) # register dask builders
+    gdf_id = client.put(data, dask_scheduler=&#39;tcp://localhost:8786&#39;)
+    print(gdf_id)
+</pre></div>
+</div>
+</div>
+<p>We saved the preprocessed data as a global dataframe in Vineyard with the ObjectID above.</p>
+</section>
+<section id="Training-the-model">
+<h2>Training the model<a class="headerlink" href="#Training-the-model" title="Permalink to this heading">¶</a></h2>
+<p>In the single machine solution from the example. A <strong>get_dataset_from_csv</strong> function is defined to load the dataset from the files of the preprocessed data as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_dataset_from_csv</span><span class="p">(</span><span class="n">csv_file_path</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">make_csv_dataset</span><span class="p">(</span>
+        <span class="n">csv_file_path</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+        <span class="n">column_names</span><span class="o">=</span><span class="n">CSV_HEADER</span><span class="p">,</span>
+        <span class="n">column_defaults</span><span class="o">=</span><span class="n">COLUMN_DEFAULTS</span><span class="p">,</span>
+        <span class="n">label_name</span><span class="o">=</span><span class="n">TARGET_FEATURE_NAME</span><span class="p">,</span>
+        <span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>while in the training procedure, it loads the train_dataset and test_dataset separately from two files as:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">run_experiment</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="n">keras</span><span class="o">.</span><span class="n">optimizers</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">learning_rate</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">),</span>
+        <span class="n">loss</span><span class="o">=</span><span class="n">keras</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">SparseCategoricalCrossentropy</span><span class="p">(),</span>
+        <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="n">keras</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">SparseCategoricalAccuracy</span><span class="p">()],</span>
+    <span class="p">)</span>
+
+    <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">get_dataset_from_csv</span><span class="p">(</span><span class="n">train_data_file</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">test_dataset</span> <span class="o">=</span> <span class="n">get_dataset_from_csv</span><span class="p">(</span><span class="n">test_data_file</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Start training the model...&quot;</span><span class="p">)</span>
+    <span class="n">history</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="n">num_epochs</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Model training finished&quot;</span><span class="p">)</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">accuracy</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">test_dataset</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test accuracy: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">accuracy</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In our solution, we provide a function to load dataset from the global dataframe generated in the last step.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from vineyard.core.resolver import resolver_context
+from vineyard.contrib.ml.tensorflow import register_tf_types
+
+def get_dataset_from_vineyard(object_id, batch_size, shuffle=False):
+    with resolver_context() as resolver:
+        register_tf_types(None, resolver) # register tf resolvers
+        ds = vineyard.connect().get(object_id, label=TARGET_FEATURE_NAME) # specify the label column
+
+    if shuffle:
+        ds = ds.shuffle(len(ds))
+
+    len_test = int(len(ds) * 0.15)
+    test_dataset = ds.take(len_test).batch(batch_size)
+    train_dataset = ds.skip(len_test).batch(batch_size)
+
+    return train_dataset, test_dataset
+</pre></div>
+</div>
+</div>
+<p>And modify the training procedure with a few lines of horovod code.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import horovod.keras as hvd
+
+def run_experiment(model):
+
+    hvd.init()
+
+    model.compile(
+        optimizer=hvd.DistributedOptimizer(keras.optimizers.Adam(learning_rate=learning_rate)),
+        loss=keras.losses.SparseCategoricalCrossentropy(),
+        metrics=[keras.metrics.SparseCategoricalAccuracy()],
+    )
+
+    callbacks = [
+        # Horovod: broadcast initial variable states from rank 0 to all other processes.
+        # This is necessary to ensure consistent initialization of all workers when
+        # training is started with random weights or restored from a checkpoint.
+        hvd.callbacks.BroadcastGlobalVariablesCallback(0),
+    ]
+
+    train_dataset, test_dataset = get_dataset_from_vineyard(gdf_id, batch_size, shuffle=True)
+
+    print(&quot;Start training the model...&quot;)
+    history = model.fit(train_dataset, epochs=num_epochs, callbacks=callbacks)
+    print(&quot;Model training finished&quot;)
+
+    _, accuracy = model.evaluate(test_dataset, verbose=0)
+
+    print(f&quot;Test accuracy: {round(accuracy * 100, 2)}%&quot;)
+</pre></div>
+</div>
+</div>
+<p>All the other parts of training procedure are the same as the single machine solution.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>TARGET_FEATURE_NAME = &quot;Cover_Type&quot;
+
+TARGET_FEATURE_LABELS = [&quot;0&quot;, &quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;]
+
+NUMERIC_FEATURE_NAMES = [
+    &quot;Aspect&quot;,
+    &quot;Elevation&quot;,
+    &quot;Hillshade_3pm&quot;,
+    &quot;Hillshade_9am&quot;,
+    &quot;Hillshade_Noon&quot;,
+    &quot;Horizontal_Distance_To_Fire_Points&quot;,
+    &quot;Horizontal_Distance_To_Hydrology&quot;,
+    &quot;Horizontal_Distance_To_Roadways&quot;,
+    &quot;Slope&quot;,
+    &quot;Vertical_Distance_To_Hydrology&quot;,
+]
+
+CATEGORICAL_FEATURES_WITH_VOCABULARY = {
+    &quot;Soil_Type&quot;: soil_type_values,
+    &quot;Wilderness_Area&quot;: wilderness_area_values,
+}
+
+CATEGORICAL_FEATURE_NAMES = list(CATEGORICAL_FEATURES_WITH_VOCABULARY.keys())
+
+FEATURE_NAMES = NUMERIC_FEATURE_NAMES + CATEGORICAL_FEATURE_NAMES
+
+NUM_CLASSES = len(TARGET_FEATURE_LABELS)
+
+learning_rate = 0.001
+dropout_rate = 0.1
+batch_size = 265
+num_epochs = 5
+
+hidden_units = [32, 32]
+
+&quot;&quot;&quot;
+## Create model inputs
+Now, define the inputs for the models as a dictionary, where the key is the feature name,
+and the value is a `keras.layers.Input` tensor with the corresponding feature shape
+and data type.
+&quot;&quot;&quot;
+import tensorflow as tf
+
+def create_model_inputs():
+    inputs = {}
+    for feature_name in FEATURE_NAMES:
+        if feature_name in NUMERIC_FEATURE_NAMES:
+            inputs[feature_name] = layers.Input(
+                name=feature_name, shape=(), dtype=tf.float32
+            )
+        else:
+            inputs[feature_name] = layers.Input(
+                name=feature_name, shape=(), dtype=tf.string
+            )
+    return inputs
+
+
+&quot;&quot;&quot;
+## Encode features
+We create two representations of our input features: sparse and dense:
+1. In the **sparse** representation, the categorical features are encoded with one-hot
+encoding using the `CategoryEncoding` layer. This representation can be useful for the
+model to *memorize* particular feature values to make certain predictions.
+2. In the **dense** representation, the categorical features are encoded with
+low-dimensional embeddings using the `Embedding` layer. This representation helps
+the model to *generalize* well to unseen feature combinations.
+&quot;&quot;&quot;
+
+
+from tensorflow.keras.layers import StringLookup
+
+
+def encode_inputs(inputs, use_embedding=False):
+    encoded_features = []
+    for feature_name in inputs:
+        if feature_name in CATEGORICAL_FEATURE_NAMES:
+            vocabulary = CATEGORICAL_FEATURES_WITH_VOCABULARY[feature_name]
+            # Create a lookup to convert string values to an integer indices.
+            # Since we are not using a mask token nor expecting any out of vocabulary
+            # (oov) token, we set mask_token to None and  num_oov_indices to 0.
+            lookup = StringLookup(
+                vocabulary=vocabulary,
+                mask_token=None,
+                num_oov_indices=0,
+                output_mode=&quot;int&quot; if use_embedding else &quot;binary&quot;,
+            )
+            if use_embedding:
+                # Convert the string input values into integer indices.
+                encoded_feature = lookup(inputs[feature_name])
+                embedding_dims = int(math.sqrt(len(vocabulary)))
+                # Create an embedding layer with the specified dimensions.
+                embedding = layers.Embedding(
+                    input_dim=len(vocabulary), output_dim=embedding_dims
+                )
+                # Convert the index values to embedding representations.
+                encoded_feature = embedding(encoded_feature)
+            else:
+                # Convert the string input values into a one hot encoding.
+                encoded_feature = lookup(tf.expand_dims(inputs[feature_name], -1))
+        else:
+            # Use the numerical features as-is.
+            encoded_feature = tf.expand_dims(inputs[feature_name], -1)
+
+        encoded_features.append(encoded_feature)
+
+    all_features = layers.concatenate(encoded_features)
+    return all_features
+
+
+&quot;&quot;&quot;
+## Experiment 1: a baseline model
+In the first experiment, let&#39;s create a multi-layer feed-forward network,
+where the categorical features are one-hot encoded.
+&quot;&quot;&quot;
+from tensorflow import keras
+from tensorflow.keras import layers
+
+def create_baseline_model():
+    inputs = create_model_inputs()
+    features = encode_inputs(inputs)
+
+    for units in hidden_units:
+        features = layers.Dense(units)(features)
+        features = layers.BatchNormalization()(features)
+        features = layers.ReLU()(features)
+        features = layers.Dropout(dropout_rate)(features)
+
+    outputs = layers.Dense(units=NUM_CLASSES, activation=&quot;softmax&quot;)(features)
+    model = keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
+
+baseline_model = create_baseline_model()
+</pre></div>
+</div>
+</div>
+<p>Let’s run it:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>run_experiment(baseline_model)
+</pre></div>
+</div>
+</div>
+<p>We clear the environments in the end.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>dask_worker.terminate()
+dask_scheduler.terminate()
+
+vineyard.shutdown()
+</pre></div>
+</div>
+</div>
+<p>Finally, we can use <strong>horovodrun</strong> to run the above code distributedly in a cluster for distributed learning on big datasets.</p>
+</section>
+<section id="Conclusion">
+<h2>Conclusion<a class="headerlink" href="#Conclusion" title="Permalink to this heading">¶</a></h2>
+<p>From this example, we can see that with the help of Vineyard, users can easily extend their single machine solutions to distributed learning using dedicated systems without worrying about the cross-system data sharing issues.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="accelerate-data-sharing-in-kedro.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title">Accelerate Data Sharing in Kedro</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="python-sharedmemory.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">Distributed Learning with Vineyard</a><ul>
+<li><a class="reference internal" href="#An-Example-from-Keras">An Example from Keras</a></li>
+<li><a class="reference internal" href="#Setup">Setup</a></li>
+<li><a class="reference internal" href="#Preprocessing-the-data">Preprocessing the data</a></li>
+<li><a class="reference internal" href="#Training-the-model">Training the model</a></li>
+<li><a class="reference internal" href="#Conclusion">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>

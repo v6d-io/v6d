@@ -1,0 +1,1139 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="Efficient data sharing in Kubeflow with Vineyard CSI Driver" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="If you are using Kubeflow Pipeline or Argo Workflow to manage your machine learning workflow, you may find that the data saving/loading to the volumes is slow. To speed up the data saving/loading w..." />
+<meta name="description" content="If you are using Kubeflow Pipeline or Argo Workflow to manage your machine learning workflow, you may find that the data saving/loading to the volumes is slow. To speed up the data saving/loading w..." />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Vineyard + Fluid in Action: Train a Linear Regression Model on ACK" href="vineyard-on-fluid.html" /><link rel="prev" title="Data sharing with Vineyard on Kubernetes" href="data-sharing-with-vineyard-on-kubernetes.html" />
+
+    <link rel="shortcut icon" href="../../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Efficient data sharing in Kubeflow with Vineyard CSI Driver - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../data-processing.html">Data processing</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../data-processing/using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../data-processing/python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../data-processing/distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../data-processing/accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../data-processing/gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../kubernetes.html">Vineyard on Kubernetes</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.rst" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver">
+<h1>Efficient data sharing in Kubeflow with Vineyard CSI Driver<a class="headerlink" href="#efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver" title="Permalink to this heading">¶</a></h1>
+<p>If you are using <a class="reference external" href="https://github.com/kubeflow/kubeflow">Kubeflow Pipeline</a> or <a class="reference external" href="https://github.com/argoproj/argo-workflows">Argo Workflow</a> to manage your machine learning workflow,
+you may find that the data saving/loading to the volumes is slow.
+To speed up the data saving/loading within these volumes, we design the Vineyard CSI Driver to
+map each vineyard object to a volume, and the data saving/loading is handled by vineyard.
+Next, we will show you how to use the Vineyard CSI Driver to speed up a kubeflow pipeline.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>A kubernetes cluster &gt;= 1.19. If you don’t have one by hand, you can refer to the guide <a class="reference external" href="https://v6d.io/tutorials/kubernetes/using-vineyard-operator.html#step-0-optional-initialize-kubernetes-cluster">Initialize Kubernetes Cluster</a> to create one.</p></li>
+<li><p>Install the <a class="reference external" href="https://v6d.io/notes/cloud-native/deploy-kubernetes.html#quick-start">Vineyardctl</a> by following the official guide.</p></li>
+<li><p>Install the argo workflow cli &gt;= 3.4.8.</p></li>
+<li><p>Install the kfp package &lt;= 1.8.0 for kubeflow <strong>v1</strong> or &gt;= 2.0.1 for kubeflow <strong>v2</strong>.</p></li>
+</ul>
+</section>
+<section id="deploy-the-vineyard-cluster">
+<h2>Deploy the Vineyard Cluster<a class="headerlink" href="#deploy-the-vineyard-cluster" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard.ctl<span class="w"> </span>deploy<span class="w"> </span>vineyard-cluster<span class="w"> </span>--create-namespace
+</pre></div>
+</div>
+<p>This command will create a vineyard cluster in the namespace <cite>vineyard-system</cite>.
+You can check as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                                             </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+vineyard-controller-manager-648fc9b7bf-zwnhd<span class="w">     </span><span class="m">2</span>/2<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-79c8ffb879-6k8mk<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-79c8ffb879-f9kkr<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-79c8ffb879-lzgwz<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-etcd-0<span class="w">                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+</pre></div>
+</div>
+</section>
+<section id="deploy-the-vineyard-csi-driver">
+<h2>Deploy the Vineyard CSI Driver<a class="headerlink" href="#deploy-the-vineyard-csi-driver" title="Permalink to this heading">¶</a></h2>
+<p>Before deploying the Vineyard CSI Driver, you are supposed to check the vineyard
+deployment is ready as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>deployment<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                             </span>READY<span class="w">   </span>UP-TO-DATE<span class="w">   </span>AVAILABLE<span class="w">   </span>AGE
+vineyard-controller-manager<span class="w">      </span><span class="m">1</span>/1<span class="w">     </span><span class="m">1</span><span class="w">            </span><span class="m">1</span><span class="w">           </span>4d3h
+vineyardd-sample<span class="w">                 </span><span class="m">3</span>/3<span class="w">     </span><span class="m">3</span><span class="w">            </span><span class="m">3</span><span class="w">           </span>4d3h
+</pre></div>
+</div>
+<p>Then deploy the vineyard csi driver which specifies the vineyard cluster to use:</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you want to look into the debug logs of the vineyard csi driver, you can add a
+flag <code class="docutils literal notranslate"><span class="pre">--verbose</span></code> in the following command.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard.ctl<span class="w"> </span>deploy<span class="w"> </span>csidriver<span class="w"> </span>--clusters<span class="w"> </span>vineyard-system/vineyardd-sample
+</pre></div>
+</div>
+<p>Then check the status of the Vineyard CSI Driver:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>vineyard-system
+NAME<span class="w">                                             </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+vineyard-controller-manager-648fc9b7bf-zwnhd<span class="w">     </span><span class="m">2</span>/2<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyard-csi-sample-csi-driver-fb7cb5b5d-nlrxs<span class="w">   </span><span class="m">4</span>/4<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4m23s
+vineyard-csi-sample-csi-nodes-69j77<span class="w">              </span><span class="m">3</span>/3<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4m23s
+vineyard-csi-sample-csi-nodes-k85hb<span class="w">              </span><span class="m">3</span>/3<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4m23s
+vineyard-csi-sample-csi-nodes-zhfz4<span class="w">              </span><span class="m">3</span>/3<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4m23s
+vineyardd-sample-79c8ffb879-6k8mk<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-79c8ffb879-f9kkr<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-79c8ffb879-lzgwz<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+vineyardd-sample-etcd-0<span class="w">                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d3h
+</pre></div>
+</div>
+</section>
+<section id="running-the-kubeflow-pipeline-example">
+<h2>Running the Kubeflow Pipeline example<a class="headerlink" href="#running-the-kubeflow-pipeline-example" title="Permalink to this heading">¶</a></h2>
+<p>We provide two examples using different versions of Kubeflow Pipeline: <strong>v1</strong> and <strong>v2</strong>.
+To use the Vineyard CSI Driver, we need to do two modifications:</p>
+<ol class="arabic simple">
+<li><p>Change APIs like <strong>pd.read_pickle/write_pickle</strong> to <strong>vineyard.csi.write/read</strong> in the source code.</p></li>
+</ol>
+<p>2. Add the <code class="docutils literal notranslate"><span class="pre">vineyard</span> <span class="pre">object</span></code> VolumeOp to the pipeline’s dependencies. The path in the API changed
+in the first step will be mapped to a volume. Notice, the volume used in any task needs to be
+explicitly mounted to the corresponding path in the source code, and the storageclass_name
+format of each VolumeOp is <code class="docutils literal notranslate"><span class="pre">{vineyard-deployment-namespace}.{vineyard-deployment-name}.csi</span></code>.</p>
+<p>There are two ways to add the <code class="docutils literal notranslate"><span class="pre">vineyard</span> <span class="pre">object</span></code> VolumeOp to the pipeline’s dependencies:</p>
+<ul class="simple">
+<li><p>Each path in the source code is mapped to a volume, and each volume is mounted to the actual path
+in the source code. The benefit is that the source path does not need to be modified.</p></li>
+<li><p>Create a volume for the paths with the same prefix in the source code. You can add the prefix <code class="docutils literal notranslate"><span class="pre">/vineyard</span></code> for
+the paths in the source code, and mount a volume to the path <code class="docutils literal notranslate"><span class="pre">/vineyard</span></code>. In this way, you can
+only create one volume for multiple paths/vineyard objects.</p></li>
+</ul>
+<p>You may get some insights from the modified pipeline <code class="docutils literal notranslate"><span class="pre">pipeline-with-vineyard.py</span></code> and <code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2-with-vineyard</span></code>.</p>
+<section id="preparations">
+<h3>Preparations<a class="headerlink" href="#preparations" title="Permalink to this heading">¶</a></h3>
+<p>Before running the kubflow examples, we need to do some common preparations, and then
+you can choose to run <strong>KFP V1</strong> or <strong>KFP V2</strong> example.</p>
+<ol class="arabic simple">
+<li><p>First of all, we need to build the docker images for the pipeline:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>k8s/examples/vineyard-csidriver
+$<span class="w"> </span>make<span class="w"> </span>docker-build
+</pre></div>
+</div>
+<p>Or build the docker images with your docker registry:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>docker-build<span class="w"> </span><span class="nv">REGISTRY</span><span class="o">=</span>&lt;your-docker-registry&gt;
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Check the images built successfully:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>docker<span class="w"> </span>images
+train-data<span class="w">               </span>latest<span class="w">    </span>5628953ffe08<span class="w">   </span><span class="m">14</span><span class="w"> </span>seconds<span class="w"> </span>ago<span class="w">   </span><span class="m">1</span>.47GB
+test-data<span class="w">                </span>latest<span class="w">    </span>94c8c75b960a<span class="w">   </span><span class="m">14</span><span class="w"> </span>seconds<span class="w"> </span>ago<span class="w">   </span><span class="m">1</span>.47GB
+prepare-data<span class="w">             </span>latest<span class="w">    </span>5aab1b120261<span class="w">   </span><span class="m">15</span><span class="w"> </span>seconds<span class="w"> </span>ago<span class="w">   </span><span class="m">1</span>.47GB
+preprocess-data<span class="w">          </span>latest<span class="w">    </span>5246d09e6f5e<span class="w">   </span><span class="m">15</span><span class="w"> </span>seconds<span class="w"> </span>ago<span class="w">   </span><span class="m">1</span>.47GB
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Push the image to a docker registry that your kubernetes cluster can access.</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>push-images<span class="w"> </span><span class="nv">REGISTRY</span><span class="o">=</span>&lt;your-docker-registry&gt;
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Create the namespace for the pipeline:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>kubeflow
+</pre></div>
+</div>
+<p>5. To simulate the data loading/saving of the actual pipeline, we use the nfs volume
+to store the data. The nfs volume is mounted to the <code class="docutils literal notranslate"><span class="pre">/mnt/data</span></code> directory of the
+kind cluster. Then apply the data volume as follows:</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you already have nfs volume that can be accessed by the kubernetes cluster,
+you can update the <code class="docutils literal notranslate"><span class="pre">prepare-data.yaml</span></code> to use your nfs volume.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>prepare-data.yaml
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>Deploy the rbac for the pipeline:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>rbac.yaml
+</pre></div>
+</div>
+<ol class="arabic simple" start="7">
+<li><p><strong>(important)</strong> Download all need images to all kind workers:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">registry</span><span class="o">=</span><span class="s2">&quot;ghcr.io/v6d-io/v6d/kubeflow-example&quot;</span>
+<span class="nv">kubeflow_registry</span><span class="o">=</span><span class="s2">&quot;gcr.io/ml-pipeline&quot;</span>
+<span class="nv">worker</span><span class="o">=(</span><span class="k">$(</span>docker<span class="w"> </span>ps<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>kind-worker<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span>-F<span class="w"> </span><span class="s1">&#39; &#39;</span><span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span><span class="o">)</span>
+<span class="k">for</span><span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="si">${</span><span class="nv">worker</span><span class="p">[@]</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span><span class="nv">$c</span><span class="w"> </span>sh<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<span class="s2">        crictl pull </span><span class="si">${</span><span class="nv">registry</span><span class="si">}</span><span class="s2">/preprocess-data &amp;&amp; \</span>
+<span class="s2">        crictl pull </span><span class="si">${</span><span class="nv">registry</span><span class="si">}</span><span class="s2">/train-data &amp;&amp; \</span>
+<span class="s2">        crictl pull </span><span class="si">${</span><span class="nv">registry</span><span class="si">}</span><span class="s2">/test-data &amp;&amp;\</span>
+<span class="s2">        # change the following image to compatible with the installed kubeflow version</span>
+<span class="s2">        crictl pull </span><span class="si">${</span><span class="nv">kubeflow_registry</span><span class="si">}</span><span class="s2">/argoexec:v3.3.10-license-compliance &amp;&amp; \</span>
+<span class="s2">        crictl pull </span><span class="si">${</span><span class="nv">kubeflow_registry</span><span class="si">}</span><span class="s2">/kfp-driver@sha256:0ce9bf20ac9cbb21e84ff0762d5ae508d21e9c85fde2b14b51363bd1b8cd7528</span>
+<span class="s2">        # change the following image to compatible with the installed argo workflow version</span>
+<span class="s2">        crictl pull quay.io/argoproj/argoexec:v3.4.8</span>
+<span class="s2">    &quot;</span>
+<span class="k">done</span>
+</pre></div>
+</div>
+</section>
+<section id="running-kfp-v1-example">
+<h3>Running KFP V1 Example<a class="headerlink" href="#running-kfp-v1-example" title="Permalink to this heading">¶</a></h3>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you want to run the <strong>KFP V2</strong> example, you can skip this section.</p>
+</div>
+<p>The original <strong>KFP V1</strong> code is shown in <code class="docutils literal notranslate"><span class="pre">pipeline.py</span></code> under the directory <code class="docutils literal notranslate"><span class="pre">k8s/examples/vineyard-csidriver</span></code> and the
+<code class="docutils literal notranslate"><span class="pre">pipeline-with-vineyard.py</span></code> is modified to be compatible with the Vineyard CSI Driver. As we use the argo workflow to
+run the <strong>KFP v1</strong> pipeline, we need to install the argo workflow server as follows.</p>
+<ol class="arabic simple">
+<li><p>Install the argo server on Kubernetes:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>argo
+$<span class="w"> </span>kubectl<span class="w"> </span>apply<span class="w"> </span>-n<span class="w"> </span>argo<span class="w"> </span>-f<span class="w"> </span>https://github.com/argoproj/argo-workflows/releases/download/v3.4.8/install.yaml
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Check the status of the argo server:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>argo
+NAME<span class="w">                                  </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+argo-server-7698c96655-ft6sj<span class="w">          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d1h
+workflow-controller-b888f4458-sfrjd<span class="w">   </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>4d1h
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Submit the kubeflow example without vineyard to the argo server:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="k">for</span><span class="w"> </span>data_multiplier<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">4000</span><span class="w"> </span><span class="m">5000</span><span class="w"> </span><span class="m">6000</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="c1"># clean the previous argo workflow</span>
+<span class="w">    </span>argo<span class="w"> </span>delete<span class="w"> </span>--all<span class="w"> </span>-n<span class="w"> </span>kubeflow<span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="c1"># submit the pipeline without vineyard</span>
+<span class="w">    </span>argo<span class="w"> </span>submit<span class="w"> </span>--watch<span class="w"> </span>pipeline.yaml<span class="w"> </span>-n<span class="w"> </span>kubeflow<span class="w">  </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="nv">data_multiplier</span><span class="o">=</span><span class="si">${</span><span class="nv">data_multiplier</span><span class="si">}</span><span class="w"> </span>-p<span class="w"> </span><span class="nv">registry</span><span class="o">=</span><span class="s2">&quot;ghcr.io/v6d-io/v6d/kubeflow-example&quot;</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="c1"># sleep 60s to record the actual execution time</span>
+<span class="w">    </span>sleep<span class="w"> </span><span class="m">60</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="k">done</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Clear the previous resources:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>argo<span class="w"> </span>delete<span class="w"> </span>--all<span class="w"> </span>-n<span class="w"> </span>kubeflow
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Submit the kubeflow example with vineyard to the argo server:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="k">for</span><span class="w"> </span>data_multiplier<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="m">4000</span><span class="w"> </span><span class="m">5000</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="c1"># clean the previous argo workflow</span>
+<span class="w">    </span>argo<span class="w"> </span>delete<span class="w"> </span>--all<span class="w"> </span>-n<span class="w"> </span>kubeflow<span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="c1"># submit the pipeline without vineyard</span>
+<span class="w">    </span>argo<span class="w"> </span>submit<span class="w"> </span>--watch<span class="w"> </span>pipeline-with-vineyard.yaml<span class="w"> </span>-n<span class="w"> </span>kubeflow<span class="w">  </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="nv">data_multiplier</span><span class="o">=</span><span class="si">${</span><span class="nv">data_multiplier</span><span class="si">}</span><span class="w"> </span>-p<span class="w"> </span><span class="nv">registry</span><span class="o">=</span><span class="s2">&quot;ghcr.io/v6d-io/v6d/kubeflow-example&quot;</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="c1"># sleep 60s to record the actual execution time</span>
+<span class="w">    </span>sleep<span class="w"> </span><span class="m">60</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="k">done</span>
+</pre></div>
+</div>
+</section>
+<section id="running-kfp-v2-example">
+<h3>Running KFP V2 Example<a class="headerlink" href="#running-kfp-v2-example" title="Permalink to this heading">¶</a></h3>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you have installed the argo workflow server, you need to delete it first. As the KFP resources
+contain the argo workflow server, and the argo workflow server will conflict with the KFP resources.</p>
+</div>
+<p>The original <strong>KFP V2</strong> code is shown in <code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2.py</span></code> under the directory <code class="docutils literal notranslate"><span class="pre">k8s/examples/vineyard-csidriver</span></code> and the
+<code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2-with-vineyard.py</span></code> is modified to be compatible with the Vineyard CSI Driver. As it can only be compiled to
+the IR YAML, which only recognized by the kubeflow server. Thus, we need to install the kubeflow server as follows.</p>
+<ol class="arabic simple">
+<li><p>Install a KFP standalone instance on Kubernetes:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PIPELINE_VERSION</span><span class="o">=</span><span class="m">2</span>.0.1
+
+kubectl<span class="w"> </span>apply<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=</span><span class="nv">$PIPELINE_VERSION</span><span class="s2">&quot;</span>
+kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="w"> </span><span class="nv">condition</span><span class="o">=</span>established<span class="w"> </span>--timeout<span class="o">=</span>60s<span class="w"> </span>crd/applications.app.k8s.io
+kubectl<span class="w"> </span>apply<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;github.com/kubeflow/pipelines/manifests/kustomize/env/dev?ref=</span><span class="nv">$PIPELINE_VERSION</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Check the status of the KFP instance:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>kubeflow
+</pre></div>
+</div>
+<div class="admonition-details admonition">
+<p class="admonition-title">Expected output</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>NAME<span class="w">                                                          </span>READY<span class="w">   </span>STATUS<span class="w">             </span>RESTARTS<span class="w">         </span>AGE
+cache-deployer-deployment-5c95fc7fdd-d65cf<span class="w">                    </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+cache-server-6c84679764-k8q6j<span class="w">                                 </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+controller-manager-86bf69dc54-2brxq<span class="w">                           </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+metadata-envoy-deployment-6448d544f5-z4sc8<span class="w">                    </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+metadata-grpc-deployment-784b8b5fb4-8mtm7<span class="w">                     </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">2</span><span class="w"> </span><span class="o">(</span>49m<span class="w"> </span>ago<span class="o">)</span><span class="w">      </span>49m
+metadata-writer-79c5499dd8-6jjmm<span class="w">                              </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+minio-65dff76b66-tdtx5<span class="w">                                        </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+ml-pipeline-6546dcc959-k8t84<span class="w">                                  </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>48m
+ml-pipeline-persistenceagent-79479cdb74-q6lq9<span class="w">                 </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+ml-pipeline-scheduledworkflow-5cbdc7d885-lx9r7<span class="w">                </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+ml-pipeline-ui-7c94d6f4b7-z2tvs<span class="w">                               </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+ml-pipeline-viewer-crd-685f449686-bz55g<span class="w">                       </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+ml-pipeline-visualizationserver-7c8f97864d-sp8p6<span class="w">              </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+mysql-c999c6c8-nwp9d<span class="w">                                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+proxy-agent-77d7b57c99-plrpb<span class="w">                                  </span><span class="m">0</span>/1<span class="w">     </span>CrashLoopBackOff<span class="w">   </span><span class="m">14</span><span class="w"> </span><span class="o">(</span>2m17s<span class="w"> </span>ago<span class="o">)</span><span class="w">   </span>49m
+workflow-controller-6c85bc4f95-dw889<span class="w">                          </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">            </span><span class="m">0</span><span class="w">                </span>49m
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Delete the proxy deployment as it’s not used in the example and will slow down the pipeline:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>deployment<span class="w"> </span>proxy-agent<span class="w"> </span>-n<span class="w"> </span>kubeflow
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Open a terminal to portforward the KFP UI to your local machine:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>kubeflow<span class="w"> </span>svc/ml-pipeline-ui<span class="w"> </span><span class="m">8088</span>:80
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Upload the <code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2-with-vineyard.yaml</span></code> to the KFP instance:</p></li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you use the custom docker registry, you need to update the docker image
+in the <code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">pipeline-kfp-v2-with-vineyard.yaml</span></code>.</p>
+</div>
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../../_images/kubeflow_upload_pipeline.png"><img alt="Upload pipeline in the kubeflow Dashboard" src="../../_images/kubeflow_upload_pipeline.png" style="width: 75%;" /></a>
+<figcaption>
+<p><span class="caption-text">Upload pipeline in the kubeflow Dashboard</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<ol class="arabic simple" start="6">
+<li><p><strong>(Important)</strong> Clean the file system cache of the kubeflow server.</p></li>
+</ol>
+<p>As the KFP V2 doesn’t support to configure the <code class="docutils literal notranslate"><span class="pre">SecurityContext</span></code> of the container, which means
+we can’t run the command <code class="docutils literal notranslate"><span class="pre">sync;</span> <span class="pre">echo</span> <span class="pre">3</span> <span class="pre">&gt;</span> <span class="pre">/proc/sys/vm/drop_caches</span></code> in the container to clean the
+file system cache. Thus before creating a new run, we need to clean the file system cache manually
+as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># clean all the file system cache and image cache of all kind workers</span>
+$<span class="w"> </span><span class="nv">worker</span><span class="o">=(</span><span class="k">$(</span>docker<span class="w"> </span>ps<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>kind-worker<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span>-F<span class="w"> </span><span class="s1">&#39; &#39;</span><span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span><span class="o">)</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="si">${</span><span class="nv">worker</span><span class="p">[@]</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>--privileged<span class="w"> </span>-it<span class="w"> </span><span class="nv">$c</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;sync &amp;&amp; echo 3 &gt; /proc/sys/vm/drop_caches&#39;</span><span class="p">;</span><span class="w"> </span><span class="k">done</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>If you use the actual kubernetes cluster, you can login to the kubernetes node and clean the file
+system cache manually.</p>
+<ol class="arabic simple" start="7">
+<li><p>Create the runs using the previously uploaded pipelines:</p></li>
+</ol>
+<figure class="align-default" id="id5">
+<a class="reference internal image-reference" href="../../_images/kubeflow_create_run.png"><img alt="Create runs in the kubeflow Dashboard" src="../../_images/kubeflow_create_run.png" style="width: 75%;" /></a>
+<figcaption>
+<p><span class="caption-text">Create runs in the kubeflow Dashboard</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="kfp-v1-result-analysis">
+<h3>KFP V1 Result Analysis<a class="headerlink" href="#kfp-v1-result-analysis" title="Permalink to this heading">¶</a></h3>
+<p>The data scale are 14000 Mi, 18000 Mi and 21000 Mi, which correspond to
+the 4000, 5000 and 6000 in the previous data_multiplier respectively,
+and the time of argo workflow execution of the pipeline is as follows:</p>
+<section id="argo-workflow-duration">
+<h4>Argo workflow duration<a class="headerlink" href="#argo-workflow-duration" title="Permalink to this heading">¶</a></h4>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>317s</p></td>
+<td><p>270s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>403s</p></td>
+<td><p>331s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>504s</p></td>
+<td><p>389s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Actually, the cost time of argo workflow is affected by lots of factors,
+such as the network, the cpu and memory of the cluster, the data volume, etc.
+So the time of argo workflow execution of the pipeline is not stable.
+But we can still find that the time of argo workflow execution of the pipeline
+with vineyard reduced by 15%~25%.</p>
+<p>Also, we record the whole execution time via logs. The result is as follows:</p>
+</section>
+<section id="actual-execution-time">
+<h4>Actual execution time<a class="headerlink" href="#actual-execution-time" title="Permalink to this heading">¶</a></h4>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>215.1s</p></td>
+<td><p>140.3s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>298.2s</p></td>
+<td><p>198.1s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>398.7s</p></td>
+<td><p>257.5s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>According to the above results, we can find that the time of actual
+execution of the pipeline with vineyard reduced by 30%~40%. To be specific,
+we record the write/read time of the following steps:</p>
+</section>
+<section id="writing-time">
+<h4>Writing time<a class="headerlink" href="#writing-time" title="Permalink to this heading">¶</a></h4>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>33.2s</p></td>
+<td><p>8.8s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>40.8s</p></td>
+<td><p>11.6s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>48.6s</p></td>
+<td><p>13.9s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>From the above results, we can find that the writing time the pipeline
+with vineyard reduced by 70%~75%. The reason is that the data is stored
+in the vineyard cluster, so it’s actually a memory copy operation, which
+is faster than the write operation of the nfs volume.</p>
+</section>
+<section id="reading-time">
+<h4>Reading time<a class="headerlink" href="#reading-time" title="Permalink to this heading">¶</a></h4>
+<p>We delete the time of init data loading, and the results are as follows:</p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>56.6s</p></td>
+<td><p>0.02s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>76.3s</p></td>
+<td><p>0.02s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>93.7s</p></td>
+<td><p>0.02s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Based on the above results, we can find that the read time of vineyard is
+nearly a constant, which is not affected by the data scale.
+The reason is that the data is stored in the shared memory of vineyard cluster,
+so it’s actually a pointer copy operation.</p>
+<p>As a result, we can find that with vineyard, the argo workflow
+duration of the pipeline is reduced by 15%~25% and the actual
+execution time of the pipeline is reduced by about 30%~40%.</p>
+</section>
+</section>
+<section id="kfp-v2-result-analysis">
+<h3>KFP V2 Result Analysis<a class="headerlink" href="#kfp-v2-result-analysis" title="Permalink to this heading">¶</a></h3>
+<p>Different with the previous KFP V1, the KFP V2 will compile the pipeline to the IR YAML,
+and the IR YAML will be submitted to the kubeflow server. Before each component of the
+pipeline is executed, the kubeflow server will create a preprocess container to parse
+the IR YAML and generate the relevant kubernetes resources. That means the kubeflow server
+will create more pods than the previous argo workflow, thereby slowing down the execution
+speed of the entire pipeline.</p>
+<p>The execution time of the pipeline shown in the kubeflow dashboard is as follows:</p>
+<section id="kubeflow-dashboard-duration">
+<h4>Kubeflow dashboard duration<a class="headerlink" href="#kubeflow-dashboard-duration" title="Permalink to this heading">¶</a></h4>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>276s</p></td>
+<td><p>229s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>365s</p></td>
+<td><p>291s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>440s</p></td>
+<td><p>352s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Based on the above result, we can find that the execution time of kubeflow pipeline with vineyard
+is reduced by 15%~20% on the dashboard. Compared to the kfp v1, the vineyard effect is slightly
+reduced. The reason is that in the kfp v2, CreateVolume and DeleteVolume are regarded as two components,
+and that means more worker pods will be created. The time to create these pods is the main factor
+that reduces vineyard efficiency.</p>
+</section>
+<section id="id1">
+<h4>Actual execution time<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>213s</p></td>
+<td><p>133.4s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>302.7s</p></td>
+<td><p>208.1s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>377.6s</p></td>
+<td><p>265.9s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>From the above results, we can find that the actual execution time of the pipeline with vineyard
+is reduced by 30%~40%. To be specific, we record the write/read time of the following steps:</p>
+</section>
+<section id="id2">
+<h4>Writing time<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>14000 Mi</p></td>
+<td><p>33.2s</p></td>
+<td><p>8.1s</p></td>
+</tr>
+<tr class="row-odd"><td><p>18000 Mi</p></td>
+<td><p>41s</p></td>
+<td><p>10.8s</p></td>
+</tr>
+<tr class="row-even"><td><p>21000 Mi</p></td>
+<td><p>48.3s</p></td>
+<td><p>13.7s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Similarly, since writing to vineyard is just a memory copy operation, its execution time
+will be greatly reduced.</p>
+</section>
+<section id="id3">
+<h4>Reading time<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h4>
+<p>We delete the time of init data loading, and the results are as follows:</p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>data scale</p></th>
+<th class="head"><p>without vineyard</p></th>
+<th class="head"><p>with vineyard</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>8500 Mi</p></td>
+<td><p>54.5s</p></td>
+<td><p>0.04s</p></td>
+</tr>
+<tr class="row-odd"><td><p>12000 Mi</p></td>
+<td><p>73.5s</p></td>
+<td><p>0.02s</p></td>
+</tr>
+<tr class="row-even"><td><p>15000 Mi</p></td>
+<td><p>88.9s</p></td>
+<td><p>0.02s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>As the result in kfp v1, reading the vineyard data only requires a
+single operation to get the memory pointer. So the reading time of
+vineyard is almost 0.</p>
+<p>In summary, regardless of whether you are using KFP V1 or KFP V2, and whether the backend
+is Argo server or Kubeflow manifests, integrating Vineyard can effectively optimize the data
+sharing among Kubeflow components. This optimization, in turn, leads to a significant reduction
+in the overall execution time of the Kubeflow pipeline.</p>
+</section>
+</section>
+</section>
+<section id="clean-up">
+<h2>Clean up<a class="headerlink" href="#clean-up" title="Permalink to this heading">¶</a></h2>
+<p>Delete the rbac for the kubeflow example:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>rbac.yaml
+</pre></div>
+</div>
+<p>Delete all argo workflow</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>argo<span class="w"> </span>delete<span class="w"> </span>--all
+</pre></div>
+</div>
+<p>Delete the argo server:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>ns<span class="w"> </span>argo
+</pre></div>
+</div>
+<p>Delete the vineyard cluster:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard.ctl<span class="w"> </span>delete<span class="w"> </span>vineyard-cluster
+</pre></div>
+</div>
+<p>Delete the data volume:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>-f<span class="w"> </span>prepare-data.yaml
+</pre></div>
+</div>
+<p>Delete the kubeflow namespace:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>delete<span class="w"> </span>ns<span class="w"> </span>kubeflow
+</pre></div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="vineyard-on-fluid.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="data-sharing-with-vineyard-on-kubernetes.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title">Data sharing with Vineyard on Kubernetes</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a class="reference internal" href="#deploy-the-vineyard-cluster">Deploy the Vineyard Cluster</a></li>
+<li><a class="reference internal" href="#deploy-the-vineyard-csi-driver">Deploy the Vineyard CSI Driver</a></li>
+<li><a class="reference internal" href="#running-the-kubeflow-pipeline-example">Running the Kubeflow Pipeline example</a><ul>
+<li><a class="reference internal" href="#preparations">Preparations</a></li>
+<li><a class="reference internal" href="#running-kfp-v1-example">Running KFP V1 Example</a></li>
+<li><a class="reference internal" href="#running-kfp-v2-example">Running KFP V2 Example</a></li>
+<li><a class="reference internal" href="#kfp-v1-result-analysis">KFP V1 Result Analysis</a><ul>
+<li><a class="reference internal" href="#argo-workflow-duration">Argo workflow duration</a></li>
+<li><a class="reference internal" href="#actual-execution-time">Actual execution time</a></li>
+<li><a class="reference internal" href="#writing-time">Writing time</a></li>
+<li><a class="reference internal" href="#reading-time">Reading time</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kfp-v2-result-analysis">KFP V2 Result Analysis</a><ul>
+<li><a class="reference internal" href="#kubeflow-dashboard-duration">Kubeflow dashboard duration</a></li>
+<li><a class="reference internal" href="#id1">Actual execution time</a></li>
+<li><a class="reference internal" href="#id2">Writing time</a></li>
+<li><a class="reference internal" href="#id3">Reading time</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#clean-up">Clean up</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

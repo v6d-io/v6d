@@ -1,0 +1,819 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="Accelerate Data Sharing in Kedro" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="tutorials/data-processing/accelerate-data-sharing-in-kedro.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="This is a tutorial that shows how Vineyard accelerate the intermediate data sharing between tasks in Kedro pipelines using our vineyard-kedro plugin, when data scales and the pipeline are deployed ..." />
+<meta name="description" content="This is a tutorial that shows how Vineyard accelerate the intermediate data sharing between tasks in Kedro pipelines using our vineyard-kedro plugin, when data scales and the pipeline are deployed ..." />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Sharing GPU Memory" href="gpu-memory-sharing.html" /><link rel="prev" title="Distributed Learning with Vineyard" href="distributed-learning.html" />
+
+    <link rel="shortcut icon" href="../../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Accelerate Data Sharing in Kedro - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../data-processing.html">Data processing</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../notes/developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../notes/developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../notes/developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/tutorials/data-processing/accelerate-data-sharing-in-kedro.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/tutorials/data-processing/accelerate-data-sharing-in-kedro.rst" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="accelerate-data-sharing-in-kedro">
+<span id="id1"></span><h1>Accelerate Data Sharing in Kedro<a class="headerlink" href="#accelerate-data-sharing-in-kedro" title="Permalink to this heading">¶</a></h1>
+<p>This is a tutorial that shows how Vineyard accelerate the intermediate data
+sharing between tasks in Kedro pipelines using our
+<a class="reference external" href="https://pypi.org/project/vineyard-kedro/">vineyard-kedro</a> plugin, when data
+scales and the pipeline are deployed on Kubernetes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This tutorial is based on the <a class="reference external" href="https://github.com/AdamShafi92/mlops-at-home">Developing and Learning MLOps at Home</a> project,
+a tutorial about orchestrating a machine learning pipeline with Kedro.</p>
+</div>
+<section id="prepare-the-kubernetes-cluster">
+<h2>Prepare the Kubernetes cluster<a class="headerlink" href="#prepare-the-kubernetes-cluster" title="Permalink to this heading">¶</a></h2>
+<p>To deploy Kedro pipelines on Kubernetes, you must have a kubernetes cluster.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Vineyard Scheduler is compatible with Kubernetes versions 1.19 to 1.24. Ensure your Kubernetes
+cluster is within this version range for proper functionality.</p>
+</div>
+<p>We recommend <a class="reference external" href="https://kind.sigs.k8s.io/">kind v0.13.0</a> to create a multi-node
+Kubernetes cluster on your local machine as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cat<span class="w"> </span><span class="s">&lt;&lt;EOF | kind create cluster --config=-</span>
+<span class="s">kind: Cluster</span>
+<span class="s">apiVersion: kind.x-k8s.io/v1alpha4</span>
+<span class="s">nodes:</span>
+<span class="s">- role: control-plane</span>
+<span class="s">  image: kindest/node:v1.19.3</span>
+<span class="s">- role: worker</span>
+<span class="s">  image: kindest/node:v1.19.3</span>
+<span class="s">- role: worker</span>
+<span class="s">  image: kindest/node:v1.19.3</span>
+<span class="s">- role: worker</span>
+<span class="s">  image: kindest/node:v1.19.3</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+</section>
+<section id="deploy-argo-workflows">
+<h2>Deploy Argo Workflows<a class="headerlink" href="#deploy-argo-workflows" title="Permalink to this heading">¶</a></h2>
+<p>Install the argo operator on Kubernetes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>argo
+$<span class="w"> </span>kubectl<span class="w"> </span>apply<span class="w"> </span>-n<span class="w"> </span>argo<span class="w"> </span>-f<span class="w"> </span>https://github.com/argoproj/argo-workflows/releases/download/v3.4.8/install.yaml
+</pre></div>
+</div>
+<p>When the deployment becomes ready, you can see the following pods:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>pod<span class="w"> </span>-n<span class="w"> </span>argo
+NAME<span class="w">                                </span>READY<span class="w">   </span>STATUS<span class="w">    </span>RESTARTS<span class="w">   </span>AGE
+argo-server-7698c96655-jg2ds<span class="w">        </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>11s
+workflow-controller-b888f4458-x4qf2<span class="w"> </span><span class="m">1</span>/1<span class="w">     </span>Running<span class="w">   </span><span class="m">0</span><span class="w">          </span>11s
+</pre></div>
+</div>
+</section>
+<section id="deploy-vineyard">
+<h2>Deploy Vineyard<a class="headerlink" href="#deploy-vineyard" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Install the vineyard operator:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>vineyard<span class="w"> </span>https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
+$<span class="w"> </span>helm<span class="w"> </span>repo<span class="w"> </span>update
+$<span class="w"> </span>helm<span class="w"> </span>install<span class="w"> </span>vineyard-operator<span class="w"> </span>vineyard/vineyard-operator<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--namespace<span class="w"> </span>vineyard-system<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--create-namespace
+</pre></div>
+</div>
+</li>
+<li><p>Create a vineyard cluster:</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<dl class="simple">
+<dt>To handle the large data, we set the memory of vineyard cluster to 8G and</dt><dd><p>the shared memory to 8G.</p>
+</dd>
+</dl>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard.ctl<span class="w"> </span>deploy<span class="w"> </span>vineyardd<span class="w"> </span>--vineyardd.memory<span class="o">=</span>8Gi<span class="w"> </span>--vineyardd.size<span class="o">=</span>8Gi
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The above command will try to create a vineyard cluster with 3 replicas
+by default. If you are working with Minikube, Kind, or other Kubernetes
+that has less nodes available, try reduce the replicas by</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard.ctl<span class="w"> </span>deploy<span class="w"> </span>vineyardd<span class="w"> </span>--replicas<span class="o">=</span><span class="m">1</span><span class="w"> </span>--vineyardd.memory<span class="o">=</span>8Gi<span class="w"> </span>--vineyardd.size<span class="o">=</span>8Gi
+</pre></div>
+</div>
+</div>
+</li>
+</ol>
+</section>
+<section id="prepare-the-s3-service">
+<h2>Prepare the S3 Service<a class="headerlink" href="#prepare-the-s3-service" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Deploy the Minio cluster:</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you already have the AWS S3 service, just skip this section and jump to
+the next section.</p>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>python/vineyard/contrib/kedro/benchmark/mlops/minio-dev.yaml
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The default access key and secret key of the minio cluster are <code class="code docutils literal notranslate"><span class="pre">minioadmin</span></code>
+and <code class="code docutils literal notranslate"><span class="pre">minioadmin</span></code>.</p>
+</div>
+</li>
+<li><p>Create the S3 bucket:</p>
+<ul>
+<li><p>If you are working with AWS S3, you can create a bucket named
+<code class="code docutils literal notranslate"><span class="pre">aws-s3-benchmark-bucket</span></code> with the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>aws<span class="w"> </span>s3api<span class="w"> </span>create-bucket<span class="w"> </span>--bucket<span class="w"> </span>aws-s3-benchmark-bucket<span class="w"> </span>--region<span class="w"> </span>&lt;Your<span class="w"> </span>AWS<span class="w"> </span>Region<span class="w"> </span>Name&gt;
+</pre></div>
+</div>
+</li>
+<li><p>If you are working with Minio, you first need to expose the services
+and then create the bucket:</p>
+<ul>
+<li><p>Forward minio-artifacts service:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>port-forward<span class="w"> </span>service/minio<span class="w"> </span>-n<span class="w"> </span>minio-dev<span class="w"> </span><span class="m">9000</span>:9000
+</pre></div>
+</div>
+</li>
+<li><p>Install the minio client:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>wget<span class="w"> </span>https://dl.min.io/client/mc/release/linux-amd64/mc
+$<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>mc
+$<span class="w"> </span>sudo<span class="w"> </span>mv<span class="w"> </span>mc<span class="w"> </span>/usr/local/bin
+</pre></div>
+</div>
+</li>
+<li><p>Configure the minio client:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mc<span class="w"> </span><span class="nb">alias</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span>minio<span class="w"> </span>http://localhost:9000
+Enter<span class="w"> </span>Access<span class="w"> </span>Key:<span class="w"> </span>&lt;Your<span class="w"> </span>Access<span class="w"> </span>Key&gt;
+Enter<span class="w"> </span>Secret<span class="w"> </span>Key:<span class="w"> </span>&lt;Your<span class="w"> </span>Secret<span class="w"> </span>Key&gt;
+</pre></div>
+</div>
+</li>
+<li><p>Finally, create the bucket <code class="code docutils literal notranslate"><span class="pre">minio-s3-benchmark-bucket</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mc<span class="w"> </span>mb<span class="w"> </span>minio/minio-s3-benchmark-bucket
+Bucket<span class="w"> </span>created<span class="w"> </span>successfully<span class="w"> </span><span class="sb">`</span>minio/minio-s3-benchmark-bucket<span class="sb">`</span>.
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="prepare-the-docker-images">
+<h2>Prepare the Docker images<a class="headerlink" href="#prepare-the-docker-images" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Vineyard has delivered <a class="reference external" href="https://github.com/v6d-io/v6d/tree/main/python/vineyard/contrib/kedro/benchmark">a benchmark project</a>
+to test Kedro pipelines on Vineyard and S3:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>python/vineyard/contrib/kedro/benchmark/mlops
+</pre></div>
+</div>
+</li>
+<li><p>Configure the credentials configurations of AWS S3:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cat<span class="w"> </span>conf/aws-s3/credentials.yml
+benchmark_aws_s3:
+<span class="w">    </span>client_kwargs:
+<span class="w">        </span>aws_access_key_id:<span class="w"> </span>Your<span class="w"> </span>AWS/Minio<span class="w"> </span>Access<span class="w"> </span>Key<span class="w"> </span>ID
+<span class="w">        </span>aws_secret_access_key:<span class="w"> </span>Your<span class="w"> </span>AWS/Minio<span class="w"> </span>Secret<span class="w"> </span>Access<span class="w"> </span>Key
+<span class="w">        </span>region_name:<span class="w"> </span>Your<span class="w"> </span>AWS<span class="w"> </span>Region<span class="w"> </span>Name
+</pre></div>
+</div>
+</li>
+<li><p>To deploy pipelines to Kubernetes, you first need to build the Docker image for the
+benchmark project.</p>
+<p>To show how vineyard can accelerate the data sharing along with the dataset
+scales, Docker images for different data size will be generated:</p>
+<ul>
+<li><p>For running Kedro on vineyard:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>docker-build
+</pre></div>
+</div>
+<p>You will see Docker images for different data size are generated:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>docker<span class="w"> </span>images<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>mlops
+mlops-benchmark<span class="w">    </span>latest<span class="w">    </span>fceaeb5a6688<span class="w">   </span><span class="m">17</span><span class="w"> </span>seconds<span class="w"> </span>ago<span class="w">   </span><span class="m">1</span>.07GB
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>To make those images available for your Kubernetes cluster, they need to be
+pushed to your registry (or load to kind cluster if you setup your Kubernetes
+cluster using kind):</p>
+<ul>
+<li><p>Push to registry:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>docker<span class="w"> </span>tag<span class="w"> </span>mlops-benchmark:latest<span class="w"> </span>&lt;Your<span class="w"> </span>Registry&gt;/mlops-benchmark:latest
+$<span class="w"> </span>docker<span class="w"> </span>push<span class="w"> </span>&lt;Your<span class="w"> </span>Registry&gt;/mlops-benchmark:latest
+</pre></div>
+</div>
+</li>
+<li><p>Load to kind cluster:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kind<span class="w"> </span>load<span class="w"> </span>docker-image<span class="w"> </span>mlops-benchmark:latest
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="deploy-the-kedro-pipelines">
+<h2>Deploy the Kedro Pipelines<a class="headerlink" href="#deploy-the-kedro-pipelines" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Deploy the Kedro pipeline with vineyard for intermediate data sharing:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>vineyard
+$<span class="w"> </span><span class="k">for</span><span class="w"> </span>multiplier<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="m">500</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>argo<span class="w"> </span>submit<span class="w"> </span>-n<span class="w"> </span>vineyard<span class="w"> </span>--watch<span class="w"> </span>argo-vineyard-benchmark.yml<span class="w"> </span>-p<span class="w"> </span><span class="nv">multiplier</span><span class="o">=</span><span class="si">${</span><span class="nv">multiplier</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">done</span>
+</pre></div>
+</div>
+</li>
+<li><p>Similarly, using AWS S3 or Minio for intermediate data sharing:</p>
+<ul>
+<li><p>Using AWS S3:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>aws-s3
+<span class="c1"># create the aws secrets from your ENV</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>aws-secrets<span class="w"> </span>-n<span class="w"> </span>aws-s3<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--from-literal<span class="o">=</span><span class="nv">access_key_id</span><span class="o">=</span><span class="nv">$AWS_ACCESS_KEY_ID</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--from-literal<span class="o">=</span><span class="nv">secret_access_key</span><span class="o">=</span><span class="nv">$AWS_SECRET_ACCESS_KEY</span>
+$<span class="w"> </span><span class="k">for</span><span class="w"> </span>multiplier<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="m">2000</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>argo<span class="w"> </span>submit<span class="w"> </span>-n<span class="w"> </span>aws-s3<span class="w"> </span>--watch<span class="w"> </span>argo-aws-s3-benchmark.yml<span class="w"> </span>-p<span class="w"> </span><span class="nv">multiplier</span><span class="o">=</span><span class="si">${</span><span class="nv">multiplier</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">done</span>
+</pre></div>
+</div>
+</li>
+<li><p>Using <a class="reference external" href="https://github.com/getindata/kedro-sagemaker/blob/dbd78fd6c1781cc9e8cf046e14b3ab96faf63719/kedro_sagemaker/datasets.py#L126">Cloudpickle dataset</a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>cloudpickle
+<span class="c1"># create the aws secrets from your ENV</span>
+$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>aws-secrets<span class="w"> </span>-n<span class="w"> </span>cloudpickle<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--from-literal<span class="o">=</span><span class="nv">access_key_id</span><span class="o">=</span><span class="nv">$AWS_ACCESS_KEY_ID</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--from-literal<span class="o">=</span><span class="nv">secret_access_key</span><span class="o">=</span><span class="nv">$AWS_SECRET_ACCESS_KEY</span>
+$<span class="w"> </span><span class="k">for</span><span class="w"> </span>multiplier<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="m">2000</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>argo<span class="w"> </span>submit<span class="w"> </span>-n<span class="w"> </span>cloudpickle<span class="w"> </span>--watch<span class="w"> </span>argo-cloudpickle-benchmark.yml<span class="w"> </span>-p<span class="w"> </span><span class="nv">multiplier</span><span class="o">=</span><span class="si">${</span><span class="nv">multiplier</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">done</span>
+</pre></div>
+</div>
+</li>
+<li><p>Using Minio:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>minio-s3
+$<span class="w"> </span><span class="k">for</span><span class="w"> </span>multiplier<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="m">2000</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>argo<span class="w"> </span>submit<span class="w"> </span>-n<span class="w"> </span>minio-s3<span class="w"> </span>--watch<span class="w"> </span>argo-minio-s3-benchmark.yml<span class="w"> </span>-p<span class="w"> </span><span class="nv">multiplier</span><span class="o">=</span><span class="si">${</span><span class="nv">multiplier</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="k">done</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this heading">¶</a></h2>
+<p>After running the benchmark above on Kubernetes, we recorded each node’s execution time from the logs
+of the argo workflow and calculated the sum of all nodes as the following end-to-end execution time
+for each data scale:</p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Data Scale</p></th>
+<th class="head"><p>Vineyard</p></th>
+<th class="head"><p>Minio S3</p></th>
+<th class="head"><p>Cloudpickle S3</p></th>
+<th class="head"><p>AWS S3</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>4.2s</p></td>
+<td><p>4.3s</p></td>
+<td><p>22.5s</p></td>
+<td><p>16.9s</p></td>
+</tr>
+<tr class="row-odd"><td><p>10</p></td>
+<td><p>4.9s</p></td>
+<td><p>5.5s</p></td>
+<td><p>28.6s</p></td>
+<td><p>23.3s</p></td>
+</tr>
+<tr class="row-even"><td><p>100</p></td>
+<td><p>13.2s</p></td>
+<td><p>20.3s</p></td>
+<td><p>64.4s</p></td>
+<td><p>74s</p></td>
+</tr>
+<tr class="row-odd"><td><p>500</p></td>
+<td><p>53.6s</p></td>
+<td><p>84.5s</p></td>
+<td><p>173.2s</p></td>
+<td><p>267.9s</p></td>
+</tr>
+<tr class="row-even"><td><p>1000</p></td>
+<td><p>109.8s</p></td>
+<td><p>164.2s</p></td>
+<td><p>322.7s</p></td>
+<td><p>510.6s</p></td>
+</tr>
+<tr class="row-odd"><td><p>2000</p></td>
+<td><p>231.6s</p></td>
+<td><p>335.9s</p></td>
+<td><p>632.8s</p></td>
+<td><p>1069.7s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>We have the following observations from above comparison:</p>
+<ul class="simple">
+<li><p>Vineyard can significantly accelerate the data sharing between tasks in Kedro pipelines, without the
+need for any intrusive changes to the original Kedro pipelines;</p></li>
+<li><p>When data scales, the performance of Vineyard is more impressive, as the intermediate data sharing
+cost becomes more dominant in end-to-end execution;</p></li>
+<li><p>Even compared with local Minio, Vineyard still outperforms it by a large margin, thanks to the ability
+of Vineyard to avoid (de)serialization, file I/O and excessive memory copies.</p></li>
+<li><p>When using the Cloudpickle dataset(pickle + zstd), the performance is better than AWS S3, as the dataset
+will be compressed before uploading to S3.</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="gpu-memory-sharing.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title">Sharing GPU Memory</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="distributed-learning.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title">Distributed Learning with Vineyard</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">Accelerate Data Sharing in Kedro</a><ul>
+<li><a class="reference internal" href="#prepare-the-kubernetes-cluster">Prepare the Kubernetes cluster</a></li>
+<li><a class="reference internal" href="#deploy-argo-workflows">Deploy Argo Workflows</a></li>
+<li><a class="reference internal" href="#deploy-vineyard">Deploy Vineyard</a></li>
+<li><a class="reference internal" href="#prepare-the-s3-service">Prepare the S3 Service</a></li>
+<li><a class="reference internal" href="#prepare-the-docker-images">Prepare the Docker images</a></li>
+<li><a class="reference internal" href="#deploy-the-kedro-pipelines">Deploy the Kedro Pipelines</a></li>
+<li><a class="reference internal" href="#performance">Performance</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

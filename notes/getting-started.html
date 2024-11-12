@@ -1,0 +1,715 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta property="og:title" content="Getting Started" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="notes/getting-started.html" />
+<meta property="og:site_name" content="vineyard" />
+<meta property="og:description" content="Installing vineyard: Vineyard is distributed as a Python package and can be effortlessly installed using pip: Launching vineyard server: A vineyard daemon server will be launched with default setti..." />
+<meta name="description" content="Installing vineyard: Vineyard is distributed as a Python package and can be effortlessly installed using pip: Launching vineyard server: A vineyard daemon server will be launched with default setti..." />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Architecture" href="architecture.html" /><link rel="prev" title="Why bother?" href="../docs.html" />
+
+    <link rel="shortcut icon" href="../_static/vineyard.ico"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Getting Started - Vineyard</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css?v=45cf7dbc" />
+    <link rel="stylesheet" type="text/css" href="../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css?v=2a6c4383" />
+    <link rel="stylesheet" type="text/css" href="../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css?v=d290406d" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/brands.min.css?v=af964456" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/v4-shims.min.css?v=e329b598" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=11f00004" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/panels.css?v=0f22cee4" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/index.css?v=c31c8fd8" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+<script>
+  document.body.dataset.theme = "light";
+</script>
+
+<script>
+  function ready(callback) {
+    if (document.readyState!='loading') {
+      // in case the document is already rendered
+      callback();
+    } else if (document.addEventListener) {
+      // modern browsers
+      document.addEventListener('DOMContentLoaded', callback);
+    } else document.attachEvent('onreadystatechange', function() {
+      // IE <= 8
+      if (document.readyState=='complete') {
+        callback();
+      }
+    });
+  }
+
+  ready(function() {
+    let coll = document.getElementsByClassName("admonition-details");
+    for (let i = 0; i < coll.length; i++) {
+      let titles = coll[i].getElementsByClassName("admonition-title");
+      if (titles.length == 0) {
+        continue;
+      }
+      titles[0].addEventListener("click", function () {
+        this.parentElement.classList.toggle("active");
+
+        if (this.parentElement.classList.contains("active")) {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " - (click to collapse)";
+        } else {
+          this.getElementsByClassName("admonition-caret")[0].innerText = " + (click to expand)";
+        }
+      });
+      titles[0].appendChild(document.createElement("br"));
+      let caret = document.createElement("span");
+      caret.classList.add("admonition-caret");
+      caret.innerText = " + (click to expand)";
+      titles[0].appendChild(caret);
+    }
+  });
+</script>
+
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../docs.html"><div class="brand">Vineyard</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../docs.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/vineyard-logo-h.png" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guides</span></p>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="key-concepts.html">Key Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Key Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts/objects.html">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts/vcdl.html">Code Generation for Boilerplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts/data-accessing.html">Data Accessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts/streams.html">Streams in Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="key-concepts/io-drivers.html">I/O Drivers</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cloud-Native</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cloud-native/deploy-kubernetes.html">Deploy on Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cloud-native/vineyard-operator.html">Vineyard Operator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cloud-native/vineyardctl.html">Command-line tool</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/data-processing.html">Data processing</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Data processing</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/data-processing/using-objects-python.html">Sharing Python Objects with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/data-processing/python-sharedmemory.html"><code class="code docutils literal notranslate"><span class="pre">multiprocessing.shared_memory</span></code> in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/data-processing/distributed-learning.html">Distributed Learning with Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/data-processing/accelerate-data-sharing-in-kedro.html">Accelerate Data Sharing in Kedro</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/data-processing/gpu-memory-sharing.html">Sharing GPU Memory</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/kubernetes.html">Vineyard on Kubernetes</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Vineyard on Kubernetes</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/kubernetes/using-vineyard-operator.html">Use vineyard operator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/kubernetes/ml-pipeline-mars-pytorch.html">Machine learning with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/kubernetes/data-sharing-with-vineyard-on-kubernetes.html">Data sharing with Vineyard on Kubernetes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.html">Efficient data sharing in Kubeflow with Vineyard CSI Driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/kubernetes/vineyard-on-fluid.html">Vineyard + Fluid in Action: Train a Linear Regression Model on ACK</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/extending.html">Extending vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Extending vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/extending/define-datatypes-python.html">Define Data Types in Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/extending/define-datatypes-cpp.html">Defining Custom Data Types in C++</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integration</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="integration-bigdata.html">Big-data on Vineyard</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Big-data on Vineyard</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="integration/dask.html">Dask on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integration/ml.html">Machine Learning with Vineyard</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="integration-orchestration.html">Workflow orchestration</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Workflow orchestration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="integration/airflow.html">Airflow on Vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integration/kedro.html">Kedro Vineyard Plugin</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="references.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="references/python-api.html">Python API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="references/cpp-api.html">C++ API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="references/crds.html">Kubernetes CRDs</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guides</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="developers.html">Getting Involved</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Getting Involved</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="developers/build-from-source.html">Building from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers/contributing.html">Contributing to vineyard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers/troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers/roadmap.html">Roadmap</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developers/faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/blob/main/docs/notes/getting-started.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/v6d-io/v6d/edit/main/docs/notes/getting-started.rst" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this heading">¶</a></h1>
+<section id="installing-vineyard">
+<span id="id1"></span><h2>Installing vineyard<a class="headerlink" href="#installing-vineyard" title="Permalink to this heading">¶</a></h2>
+<p>Vineyard is distributed as a <a class="reference external" href="https://pypi.org/project/vineyard">Python package</a> and can be effortlessly installed using <code class="code docutils literal notranslate"><span class="pre">pip</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip3<span class="w"> </span>install<span class="w"> </span>vineyard
+</pre></div>
+</div>
+</section>
+<section id="launching-vineyard-server">
+<h2>Launching vineyard server<a class="headerlink" href="#launching-vineyard-server" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard
+</pre></div>
+</div>
+<p>A vineyard daemon server will be launched with default settings. By default, <code class="code docutils literal notranslate"><span class="pre">/var/run/vineyard.sock</span></code>
+will be used by vineyardd to listen for incoming IPC connections.</p>
+<p>To stop the running vineyardd instance, simply press <code class="code docutils literal notranslate"><span class="pre">Ctrl-C</span></code> in the terminal.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you encounter errors like <code class="docutils literal notranslate"><span class="pre">cannot</span> <span class="pre">launch</span> <span class="pre">vineyardd</span> <span class="pre">on</span> <span class="pre">'/var/run/vineyard.sock':</span>
+<span class="pre">Permission</span> <span class="pre">denied,</span></code>, it means <strong>you don’t have the permission</strong> to create a UNIX-domain
+socket at <code class="code docutils literal notranslate"><span class="pre">/var/run/vineyard.sock</span></code>. You can either:</p>
+<ul>
+<li><p>Run vineyard as root, using <code class="docutils literal notranslate"><span class="pre">sudo</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sudo<span class="w"> </span>-E<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard
+</pre></div>
+</div>
+</li>
+<li><p>Or, change the socket path to a writable location with the <code class="docutils literal notranslate"><span class="pre">--socket</span></code> command
+line option:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python3<span class="w"> </span>-m<span class="w"> </span>vineyard<span class="w"> </span>--socket<span class="w"> </span>/tmp/vineyard.sock
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<section id="connecting-to-vineyard">
+<h2>Connecting to vineyard<a class="headerlink" href="#connecting-to-vineyard" title="Permalink to this heading">¶</a></h2>
+<p>Once launched, you can call <code class="code docutils literal notranslate"><span class="pre">vineyard.connect</span></code> with the socket name to initiate a vineyard client
+from Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">vineyard</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;/var/run/vineyard.sock&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="storing-and-retrieving-python-objects">
+<h2>Storing and Retrieving Python Objects<a class="headerlink" href="#storing-and-retrieving-python-objects" title="Permalink to this heading">¶</a></h2>
+<p>Vineyard is designed as an in-memory object store and offers two high-level APIs <code class="code docutils literal notranslate"><span class="pre">put</span></code> and
+<code class="code docutils literal notranslate"><span class="pre">get</span></code> for creating and accessing shared objects, enabling seamless interoperability with the Python
+ecosystem. The former returns a <code class="code docutils literal notranslate"><span class="pre">vineyard.ObjectID</span></code> upon success, which can be used
+to retrieve shared objects from vineyard using the latter.</p>
+<p>In the following example, we use <code class="code docutils literal notranslate"><span class="pre">client.put()</span></code> to build a vineyard object from the numpy
+ndarray <code class="docutils literal notranslate"><span class="pre">arr</span></code>, which returns the <code class="docutils literal notranslate"><span class="pre">object_id</span></code> - a unique identifier in vineyard representing
+the object. Given the <code class="docutils literal notranslate"><span class="pre">object_id</span></code>, we can obtain a shared-memory object from vineyard with the
+<code class="code docutils literal notranslate"><span class="pre">client.get()</span></code> method.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">object_id</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">object_id</span>
+<span class="go">o0015c78883eddf1c</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shared_array</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">object_id</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shared_array</span>
+<span class="go">ndarray([[0.39736989, 0.38047846, 0.01948815, 0.38332264],</span>
+<span class="go">         [0.61671189, 0.48903213, 0.03875045, 0.5873005 ]])</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="code docutils literal notranslate"><span class="pre">shared_array</span></code> does not allocate extra memory in the Python process; instead, it shares memory
+with the vineyard server via <a class="reference external" href="https://man7.org/linux/man-pages/man2/mmap.2.html">mmap</a> in a zero-copy process.</p>
+</div>
+<p>The sharable objects can be complex and nested. Like numpy ndarray, the pandas dataframe <code class="docutils literal notranslate"><span class="pre">df</span></code> can
+be seamlessly stored in vineyard and retrieved with the <code class="docutils literal notranslate"><span class="pre">.put()</span></code> and <code class="docutils literal notranslate"><span class="pre">.get()</span></code> methods as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;u&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                   <span class="s1">&#39;v&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                   <span class="s1">&#39;weight&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">3.2</span><span class="p">,</span> <span class="mf">4.7</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">object_id</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shared_dataframe</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">object_id</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">shared_dataframe</span>
+<span class="go">   u  v  weight</span>
+<span class="go">0  0  1     1.5</span>
+<span class="go">1  0  2     3.2</span>
+<span class="go">2  1  3     4.7</span>
+<span class="go">3  2  3     0.3</span>
+<span class="go">4  2  4     0.8</span>
+<span class="go">5  3  4     2.5</span>
+</pre></div>
+</div>
+<p>Under the hood, vineyard implements a builder/resolver mechanism to represent arbitrary
+data structures as <em>vineyard objects</em> and resolve them back to native values in the corresponding
+programming languages and computing systems. See also <a class="reference internal" href="key-concepts/io-drivers.html#divein-driver-label"><span class="std std-ref">I/O Drivers</span></a> for more information.</p>
+</section>
+<section id="sharing-objects-between-tasks">
+<h2>Sharing objects between tasks<a class="headerlink" href="#sharing-objects-between-tasks" title="Permalink to this heading">¶</a></h2>
+<p>Vineyard is designed for sharing intermediate data between tasks. The following example
+demonstrates how a dataframe can be passed between two <strong>processes</strong> using vineyard, namely
+the producer and consumer in the example below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">import</span> <span class="nn">vineyard</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="n">socket</span> <span class="o">=</span> <span class="s1">&#39;/var/run/vineyard.sock&#39;</span>
+
+<span class="k">def</span> <span class="nf">produce</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+   <span class="n">client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">socket</span><span class="p">)</span>
+   <span class="n">client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="s1">&#39;ABCD&#39;</span><span class="p">)),</span>
+              <span class="n">persist</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">consume</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+   <span class="n">client</span> <span class="o">=</span> <span class="n">vineyard</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">socket</span><span class="p">)</span>
+   <span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+   <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;dataset&#39;</span>
+
+   <span class="n">producer</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">produce</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">name</span><span class="p">,))</span>
+   <span class="n">producer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+   <span class="n">consumer</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">consume</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">name</span><span class="p">,))</span>
+   <span class="n">consumer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+   <span class="n">producer</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+   <span class="n">consumer</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Running the code above, you should see the following output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>A   -4.529080
+B   -2.969152
+C   -7.067356
+D    4.003676
+dtype: float64
+</pre></div>
+</div>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this heading">¶</a></h2>
+<p>Beyond the core functionality of sharing objects between tasks, vineyard also provides:</p>
+<ul class="simple">
+<li><p>Distributed objects and stream abstraction over immutable chunks;</p></li>
+<li><p>An IDL (<a class="reference internal" href="key-concepts/vcdl.html#vcdl"><span class="std std-ref">Code Generation for Boilerplate</span></a>) that helps integrate vineyard with other systems at minimal cost;</p></li>
+<li><p>A mechanism of pluggable drivers for various tasks that serve as the glue
+between the core compute engine and the external world, e.g., data sources, data
+sinks;</p></li>
+<li><p>Integration with Kubernetes for sharing between tasks in workflows deployed
+on cloud-native infrastructures.</p></li>
+</ul>
+<div class="sphinx-bs container pb-4 docutils">
+<div class="row docutils">
+<div class="d-flex col-lg-12 p-2 docutils">
+<div class="card w-100 shadow docutils">
+<div class="card-header text-center docutils">
+<p class="card-text"><a class="sphinx-bs btn text-wrap btn-block stretched-link reference internal" href="architecture.html"><span class="doc">Architecture</span></a></p>
+</div>
+<div class="card-body docutils">
+<p class="card-text">Overview of vineyard.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>Learn more about vineyard’s key concepts from the following user guides:</p>
+<div class="sphinx-bs container-lg pb-4 docutils">
+<div class="row docutils">
+<div class="d-flex col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2 docutils">
+<div class="card w-100 shadow docutils">
+<div class="card-body text-center docutils">
+<p class="card-text"><a class="sphinx-bs btn text-wrap btn-block stretched-link reference internal" href="key-concepts/objects.html"><span class="doc">Vineyard Objects</span></a></p>
+<p class="card-text">Explore the design of the object model in vineyard.</p>
+</div>
+</div>
+</div>
+<div class="d-flex col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2 docutils">
+<div class="card w-100 shadow docutils">
+<div class="card-body text-center docutils">
+<p class="card-text"><a class="sphinx-bs btn text-wrap btn-block stretched-link reference internal" href="key-concepts/vcdl.html"><span class="doc">VCDL</span></a></p>
+<p class="card-text">Discover how vineyard integrates with other computing systems.</p>
+</div>
+</div>
+</div>
+<div class="d-flex col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2 docutils">
+<div class="card w-100 shadow docutils">
+<div class="card-body text-center docutils">
+<p class="card-text"><a class="sphinx-bs btn text-wrap btn-block stretched-link reference internal" href="key-concepts/io-drivers.html"><span class="doc">I/O Drivers</span></a></p>
+<p class="card-text">Understand the design and implementation of pluggable routines for I/O, repartition,
+migration, and more.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>Vineyard is a natural fit for cloud-native computing, where it can be deployed and
+managed by the <em>vineyard operator</em>, providing data-aware scheduling for data analytical
+workflows to achieve efficient data sharing on Kubernetes. More details about vineyard
+on Kubernetes can be found here:</p>
+<div class="sphinx-bs container pb-4 docutils">
+<div class="row docutils">
+<div class="d-flex col-lg-12 p-2 docutils">
+<div class="card w-100 shadow docutils">
+<div class="card-header text-center docutils">
+<p class="card-text"><a class="sphinx-bs btn text-wrap btn-block stretched-link reference internal" href="cloud-native/deploy-kubernetes.html"><span class="doc">Kubernetes</span></a></p>
+</div>
+<div class="card-body docutils">
+<p class="card-text">Deploy vineyard on Kubernetes and accelerate your big-data workflows.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+<div class="related-pages">
+  <a class="next-page" href="architecture.html">
+      <div class="page-info">
+        <div class="context">
+          <span>Next</span>
+        </div>
+        <div class="title">Architecture</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  <a class="prev-page" href="../docs.html">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>Previous</span>
+        </div>
+        
+        <div class="title">Home</div>
+        
+      </div>
+    </a>
+</div>
+
+<!-- index page doesn't have prev -->
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="0"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6CYXWKLJB8');
+</script>
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    <div class="copyright">
+        Copyright &#169; 2020-2023, The Vineyard Authors
+    </div>
+    Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons"><a class="muted-link" href="https://github.com//" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal">Getting Started</a><ul>
+<li><a class="reference internal" href="#installing-vineyard">Installing vineyard</a></li>
+<li><a class="reference internal" href="#launching-vineyard-server">Launching vineyard server</a></li>
+<li><a class="reference internal" href="#connecting-to-vineyard">Connecting to vineyard</a></li>
+<li><a class="reference internal" href="#storing-and-retrieving-python-objects">Storing and Retrieving Python Objects</a></li>
+<li><a class="reference internal" href="#sharing-objects-between-tasks">Sharing objects between tasks</a></li>
+<li><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=ccbe24c1"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=c7037924"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>
