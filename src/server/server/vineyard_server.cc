@@ -57,9 +57,18 @@ namespace vineyard {
   } while (0)
 #endif  // ENSURE_VINEYARDD_READY
 
+bool is_all_digits(const std::string& name) {
+  for (char ch : name) {
+    if (!std::isdigit(static_cast<unsigned char>(ch))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Helper function to adjust the name if it's all digits.
 std::string AdjustName(const std::string& name) {
-  if (std::regex_match(name, std::regex("[0-9]+$"))) {
+  if (is_all_digits(name)) {
     return "_" + name;
   }
   return name;
@@ -883,7 +892,7 @@ Status VineyardServer::PutName(const ObjectID object_id,
   // as the nlohmann/json can't convert '/names/1234: 12345' to 'names:{"1234",
   // "12345"}'
   std::string new_name = AdjustName(name);
-  std::cout << "new_name is: " << new_name << std::endl;
+
   meta_service_ptr_->RequestToPersist(
       [object_id, name = new_name](const Status& status, const json& meta,
                                    std::vector<meta_tree::op_t>& ops) {
