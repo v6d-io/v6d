@@ -42,6 +42,7 @@ from vineyard._C import RPCClient
 from vineyard._C import VineyardException
 from vineyard._C import _connect
 from vineyard.core.builder import BuilderContext
+from vineyard.core.builder import get_current_builders
 from vineyard.core.builder import put
 from vineyard.core.resolver import ResolverContext
 from vineyard.core.resolver import get
@@ -839,10 +840,11 @@ class Client:
         builder: Optional[BuilderContext] = None,
         persist: bool = False,
         name: Optional[str] = None,
+        as_async: bool = False,
         **kwargs,
     ):
         try:
-            return put(self, value, builder, persist, name, **kwargs)
+            return put(self, value, builder, persist, name, as_async, **kwargs)
         except NotEnoughMemoryException as exec:
             with envvars(
                 {'VINEYARD_RPC_SKIP_RETRY': '1', 'VINEYARD_IPC_SKIP_RETRY': '1'}
@@ -868,7 +870,7 @@ class Client:
                     host, port = meta[instance_id]['rpc_endpoint'].split(':')
                     self._rpc_client = _connect(host, port)
                     self.compression = previous_compression_state
-            return put(self, value, builder, persist, name, **kwargs)
+            return put(self, value, builder, persist, name, as_async, **kwargs)
 
     @_apply_docstring(put)
     def put(
@@ -881,16 +883,28 @@ class Client:
         **kwargs,
     ):
         if as_async:
+
             def _default_callback(future):
                 try:
                     result = future.result()
-                    print(f"Successfully put object {result}", flush=True)
+                    if isinstance(result, ObjectID):
+                        print(f"Successfully put object {result}", flush=True)
+                    elif isinstance(result, ObjectMeta):
+                        print(f"Successfully put object {result.id}", flush=True)
                 except Exception as e:
                     print(f"Failed to put object: {e}", flush=True)
 
+            current_builder = builder or get_current_builders()
+
             thread_pool = self.put_thread_pool
             result = thread_pool.submit(
-                self._put_internal, value, builder, persist, name, **kwargs
+                self._put_internal,
+                value,
+                current_builder,
+                persist,
+                name,
+                as_async=True,
+                **kwargs,
             )
             result.add_done_callback(_default_callback)
             return result
