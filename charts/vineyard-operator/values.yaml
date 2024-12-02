@@ -6,7 +6,7 @@ controllerManager:
         drop:
         - ALL
     image:
-      repository: gcr.io/kubebuilder/kube-rbac-proxy
+      repository: ghcr.io/v6d-io/v6d/kube-rbac-proxy
       tag: v0.13.0
     resources:
       limits:
