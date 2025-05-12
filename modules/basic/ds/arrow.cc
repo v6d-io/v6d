@@ -361,9 +361,20 @@ void NumericArray<T>::PostConstruct(const ObjectMeta& meta) {
   } else {
     data_type = type_name_to_arrow_type(this->data_type_);
   }
+
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  // use the factory method as the constructor is protected since 20.0.0
+  auto data = arrow::ArrayData::Make(
+      data_type, this->length_,
+      {this->null_bitmap_->ArrowBuffer(), this->buffer_->ArrowBufferOrEmpty()},
+      this->null_count_, this->offset_);
+  this->array_ = std::static_pointer_cast<ArrayType>(arrow::MakeArray(data));
+#else
+  // use the constructor
   this->array_ = std::make_shared<ArrayType>(
       data_type, this->length_, this->buffer_->ArrowBufferOrEmpty(),
       this->null_bitmap_->ArrowBuffer(), this->null_count_, this->offset_);
+#endif
 }
 
 template class NumericArray<int8_t>;
@@ -584,10 +595,18 @@ template class FixedNumericArrayBuilder<arrow::Time64Type>;
 template class FixedNumericArrayBuilder<arrow::TimestampType>;
 
 void BooleanArray::PostConstruct(const ObjectMeta& meta) {
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  auto data = arrow::ArrayData::Make(
+      ConvertToArrowType<bool>::TypeValue(), this->length_,
+      {this->null_bitmap_->ArrowBuffer(), this->buffer_->ArrowBufferOrEmpty()},
+      this->null_count_, this->offset_);
+  this->array_ = std::static_pointer_cast<ArrayType>(arrow::MakeArray(data));
+#else
   this->array_ = std::make_shared<ArrayType>(
       ConvertToArrowType<bool>::TypeValue(), this->length_,
       this->buffer_->ArrowBufferOrEmpty(), this->null_bitmap_->ArrowBuffer(),
       this->null_count_, this->offset_);
+#endif
 }
 
 BooleanArrayBuilder::BooleanArrayBuilder(Client& client)
@@ -642,10 +661,33 @@ Status BooleanArrayBuilder::Build(Client& client) {
 
 template <typename ArrayType>
 void BaseBinaryArray<ArrayType>::PostConstruct(const ObjectMeta& meta) {
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  std::shared_ptr<arrow::DataType> data_type;
+  if constexpr (std::is_same_v<ArrayType, arrow::StringArray>) {
+    data_type = arrow::utf8();
+  } else if constexpr (std::is_same_v<ArrayType, arrow::LargeStringArray>) {
+    data_type = arrow::large_utf8();
+  } else if constexpr (std::is_same_v<ArrayType, arrow::BinaryArray>) {
+    data_type = arrow::binary();
+  } else if constexpr (std::is_same_v<ArrayType, arrow::LargeBinaryArray>) {
+    data_type = arrow::large_binary();
+  } else {
+    VINEYARD_ASSERT(false, "Unsupported array type: " +
+                               std::to_string(ArrayType::type_id()));
+  }
+  auto data =
+      arrow::ArrayData::Make(data_type, this->length_,
+                             {this->null_bitmap_->ArrowBuffer(),
+                              this->buffer_offsets_->ArrowBufferOrEmpty(),
+                              this->buffer_data_->ArrowBufferOrEmpty()},
+                             this->null_count_, this->offset_);
+  this->array_ = std::static_pointer_cast<ArrayType>(arrow::MakeArray(data));
+#else
   this->array_ = std::make_shared<ArrayType>(
       this->length_, this->buffer_offsets_->ArrowBufferOrEmpty(),
       this->buffer_data_->ArrowBufferOrEmpty(),
       this->null_bitmap_->ArrowBuffer(), this->null_count_, this->offset_);
+#endif
 }
 
 template class BaseBinaryArray<arrow::BinaryArray>;
@@ -722,10 +764,19 @@ template class GenericBinaryArrayBuilder<arrow::LargeStringArray,
                                          arrow::LargeStringBuilder>;
 
 void FixedSizeBinaryArray::PostConstruct(const ObjectMeta& meta) {
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  auto data = arrow::ArrayData::Make(
+      arrow::fixed_size_binary(this->byte_width_), this->length_,
+      {this->null_bitmap_->ArrowBuffer(), this->buffer_->ArrowBufferOrEmpty()},
+      this->null_count_, this->offset_);
+  this->array_ = std::static_pointer_cast<arrow::FixedSizeBinaryArray>(
+      arrow::MakeArray(data));
+#else
   this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
       arrow::fixed_size_binary(this->byte_width_), this->length_,
       this->buffer_->ArrowBufferOrEmpty(), this->null_bitmap_->ArrowBuffer(),
       this->null_count_, this->offset_);
+#endif
 }
 
 FixedSizeBinaryArrayBuilder::FixedSizeBinaryArrayBuilder(
@@ -784,7 +835,13 @@ Status FixedSizeBinaryArrayBuilder::Build(Client& client) {
 }
 
 void NullArray::PostConstruct(const ObjectMeta& meta) {
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  auto data = arrow::ArrayData::Make(arrow::null(), this->length_, {}, 0);
+  this->array_ =
+      std::static_pointer_cast<arrow::NullArray>(arrow::MakeArray(data));
+#else
   this->array_ = std::make_shared<arrow::NullArray>(this->length_);
+#endif
 }
 
 NullArrayBuilder::NullArrayBuilder(Client& client)
@@ -831,10 +888,19 @@ void BaseListArray<ArrayType>::PostConstruct(const ObjectMeta& meta) {
   auto array = detail::CastToArray(values_);
   auto list_type =
       std::make_shared<typename ArrayType::TypeClass>(array->type());
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  auto data =
+      arrow::ArrayData::Make(list_type, this->length_,
+                             {this->null_bitmap_->ArrowBuffer(),
+                              this->buffer_offsets_->ArrowBufferOrEmpty()},
+                             {array->data()}, this->null_count_, this->offset_);
+  this->array_ = std::static_pointer_cast<ArrayType>(arrow::MakeArray(data));
+#else
   this->array_ = std::make_shared<ArrayType>(
       list_type, this->length_, this->buffer_offsets_->ArrowBufferOrEmpty(),
       array, this->null_bitmap_->ArrowBuffer(), this->null_count_,
       this->offset_);
+#endif
 }
 
 template class BaseListArray<arrow::ListArray>;
@@ -920,9 +986,18 @@ template class BaseListArrayBuilder<arrow::LargeListArray>;
 
 void FixedSizeListArray::PostConstruct(const ObjectMeta& meta) {
   auto array = detail::CastToArray(values_);
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  auto list_type = arrow::fixed_size_list(array->type(), this->list_size_);
+
+  auto data = arrow::ArrayData::Make(list_type, this->length_, {nullptr},
+                                     {array->data()}, 0, 0);
+  this->array_ = std::static_pointer_cast<arrow::FixedSizeListArray>(
+      arrow::MakeArray(data));
+#else
   this->array_ = std::make_shared<arrow::FixedSizeListArray>(
       arrow::fixed_size_list(array->type(), this->list_size_), this->length_,
       array);
+#endif
 }
 
 FixedSizeListArrayBuilder::FixedSizeListArrayBuilder(
