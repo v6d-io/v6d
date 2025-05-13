@@ -156,6 +156,7 @@ def put(
     builder: Optional[BuilderContext] = None,
     persist: bool = False,
     name: Optional[str] = None,
+    as_async: bool = False,
     **kwargs
 ):
     """Put python value to vineyard.
@@ -185,16 +186,22 @@ def put(
         name: str, optional
             If given, the name will be automatically associated with the resulted
             object. Note that only take effect when the object is persisted.
+        as_async: bool, optional
+            If true, which means the object will be put to vineyard asynchronously.
+            Thus we need to use the passed builder.
         kw:
             User-specific argument that will be passed to the builder.
 
     Returns:
         ObjectID: The result object id will be returned.
     """
-    if builder is not None:
+    if builder is not None and not as_async:
         return builder(client, value, **kwargs)
 
-    meta = get_current_builders().run(client, value, **kwargs)
+    if as_async:
+        meta = builder.run(client, value, **kwargs)
+    else:
+        meta = get_current_builders().run(client, value, **kwargs)
 
     # the builders is expected to return an :class:`ObjectMeta`, or an
     # :class:`Object` (in the `bytes_builder` and `memoryview` builder).
