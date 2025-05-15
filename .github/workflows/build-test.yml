@@ -43,7 +43,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         metadata: [local, etcd, redis]  # disable redis for now as it seems has some nondeterministic bugs
         exclude:
           - metadata: local

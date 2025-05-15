@@ -29,7 +29,7 @@ jobs:
       image: archlinux:latest
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
 
     steps:
       - name: Install Dependencies for Linux

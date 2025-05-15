@@ -31,10 +31,10 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-11]
+        os: [ubuntu-22.04, macos-11]
         arrow: [none, 6.0.1-1, 9.0.0-1, 10.0.1-1]
         exclude:
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             arrow: none
           - os: macos-11
             arrow: 6.0.1-1
