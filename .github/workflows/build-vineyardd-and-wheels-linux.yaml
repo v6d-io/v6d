@@ -30,7 +30,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         platform: [x86_64, aarch64]
 
     steps:
@@ -107,7 +107,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
 
     steps:
       - uses: actions/checkout@v3
@@ -147,7 +147,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         platform: [x86_64, aarch64]
 
     steps:
@@ -197,7 +197,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
 
     steps:
       - uses: actions/checkout@v3
@@ -236,7 +236,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         platform: [x86_64, aarch64]
 
     steps:
@@ -300,7 +300,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         platform: [x86_64, aarch64]
 
     steps:
@@ -359,7 +359,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         platform: [x86_64, aarch64]
 
     steps:
