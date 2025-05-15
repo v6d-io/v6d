@@ -18,7 +18,7 @@ limitations under the License.
 
 #define VINEYARD_VERSION_MAJOR 0
 #define VINEYARD_VERSION_MINOR 24
-#define VINEYARD_VERSION_PATCH 2
+#define VINEYARD_VERSION_PATCH 3
 
 #define VINEYARD_VERSION                                              \
   ((VINEYARD_VERSION_MAJOR * 1000) + VINEYARD_VERSION_MINOR) * 1000 + \
