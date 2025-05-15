@@ -69,7 +69,7 @@ jobs:
           sudo pip3 install -U pip
           sudo pip3 install libclang parsec setuptools wheel twine
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
 

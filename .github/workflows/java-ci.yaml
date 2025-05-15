@@ -49,7 +49,7 @@ jobs:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
       VINEYARD_IPC_SOCKET: "/tmp/vineyard.ci.sock"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 

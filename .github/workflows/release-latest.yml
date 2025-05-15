@@ -33,7 +33,7 @@ jobs:
         os: [ubuntu-22.04]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -78,7 +78,7 @@ jobs:
           overwrite: true
           body: "vineyard repository tarball ${{ steps.tag.outputs.TAG }}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'workflow_dispatch'}}
         with:
           name: vineyard-tarball-${{ github.sha }}

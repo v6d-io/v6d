@@ -47,7 +47,7 @@ jobs:
     env:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 

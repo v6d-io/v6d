@@ -36,7 +36,7 @@ jobs:
         os: [macos-11]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -189,7 +189,7 @@ jobs:
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
       - name: Upload CI artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           path: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
@@ -203,7 +203,7 @@ jobs:
         platform: [x86_64, aarch64]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: false
 
@@ -259,7 +259,7 @@ jobs:
 
       - name: Upload CI artifacts
         if: ${{ matrix.platform == 'x86_64' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           path: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
@@ -274,7 +274,7 @@ jobs:
         python: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -471,7 +471,7 @@ jobs:
           overwrite: true
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'workflow_dispatch' }}
         with:
           name: vineyard-macosx-wheels-${{ matrix.python }}
