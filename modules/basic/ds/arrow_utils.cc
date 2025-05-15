@@ -1432,10 +1432,16 @@ Status ConsolidateColumns(
   }
 
   // build the list array
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 20000000
+  std::shared_ptr<arrow::ArrayData> array_data = arrow::ArrayData::Make(
+      dtype, columns[0]->length() * columns.size(), {nullptr, data_buffer});
+  std::shared_ptr<arrow::Array> primitive_array = arrow::MakeArray(array_data);
+#else
+  auto primitive_array = std::make_shared<arrow::PrimitiveArray>(
+      dtype, columns[0]->length() * columns.size(), data_buffer);
+#endif
   out = std::make_shared<arrow::FixedSizeListArray>(
-      list_array_dtype, columns[0]->length(),
-      std::make_shared<arrow::PrimitiveArray>(
-          dtype, columns[0]->length() * columns.size(), data_buffer));
+      list_array_dtype, columns[0]->length(), primitive_array);
   return Status::OK();
 }
 
