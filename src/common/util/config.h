@@ -23,6 +23,6 @@ limitations under the License.
 #define VINEYARD_VERSION                                              \
   ((VINEYARD_VERSION_MAJOR * 1000) + VINEYARD_VERSION_MINOR) * 1000 + \
       VINEYARD_VERSION_PATCH
-#define VINEYARD_VERSION_STRING "0.24.2"
+#define VINEYARD_VERSION_STRING "0.24.3"
 
 #endif  // SRC_COMMON_UTIL_CONFIG_H_
