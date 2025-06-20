@@ -553,7 +553,7 @@ boost::leaf::result<ObjectID> DataLoader::resolveVineyardObject(
   // encoding: 'o' prefix for object id, and 's' prefix for object name.
   CHECK_OR_RAISE(!source.empty() && (source[0] == 'o' || source[0] == 's'));
   if (source[0] == 'o') {
-    sourceId = vineyard::ObjectIDFromString(source.substr(1));
+    sourceId = vineyard::ObjectIDFromString(source);
   } else {
     VY_OK_OR_RAISE(client_.GetName(source.substr(1), sourceId, true));
   }
