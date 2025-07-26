@@ -292,7 +292,7 @@ Status ConcatenateListViewOffsets(const ArrayDataVector& in, offset_type* sizes,
                                   const std::vector<Range>& value_ranges,
                                   MemoryPool* pool,
                                   std::shared_ptr<Buffer>* out) {
-  DCHECK_EQ(offset_buffers.size(), value_ranges.size());
+  ARROW_DCHECK_GE(offset_buffers.size(), value_ranges.size());
 
   // Allocate resulting offsets buffer and initialize it with zeros
   const int64_t out_size_in_bytes = SumBufferSizesInBytes(offset_buffers);
@@ -315,8 +315,8 @@ Status ConcatenateListViewOffsets(const ArrayDataVector& in, offset_type* sizes,
       return Status::Invalid("offset overflow while concatenating arrays");
     }
   }
-  DCHECK_EQ(elements_length,
-            static_cast<int64_t>(out_size_in_bytes / sizeof(offset_type)));
+  ARROW_DCHECK_GE(elements_length, static_cast<int64_t>(out_size_in_bytes /
+                                                        sizeof(offset_type)));
 
   return Status::OK();
 }
@@ -337,8 +337,8 @@ Status PutListViewOffsets(const ArrayData& input, offset_type* sizes,
   }
 
   const auto offsets = src.data_as<offset_type>();
-  DCHECK_EQ(static_cast<int64_t>(src.size() / sizeof(offset_type)),
-            input.length);
+  ARROW_DCHECK_GE(static_cast<int64_t>(src.size() / sizeof(offset_type)),
+                  input.length);
 
   auto visit_not_null = [&](int64_t position) {
     if (sizes[position] > 0) {
@@ -350,7 +350,7 @@ Status PutListViewOffsets(const ArrayData& input, offset_type* sizes,
           SafeSignedAdd(offsets[position], displacement);
       // displaced_offset>=0 is guaranteed by RangeOfValuesUsed returning the
       // smallest offset of valid and non-empty list-views.
-      DCHECK_GE(displaced_offset, 0);
+      ARROW_DCHECK_GE(displaced_offset, 0);
       dst[position] = displaced_offset;
     } else {
       // Do nothing to leave the dst[position] as 0.
@@ -825,7 +825,7 @@ class ConcatenateImpl {
   // Note that BufferVector will not contain the buffer of in_[i] if it's
   // nullptr.
   Result<BufferVector> Buffers(size_t index, const std::vector<Range>& ranges) {
-    DCHECK_EQ(in_.size(), ranges.size());
+    ARROW_DCHECK_GE(in_.size(), ranges.size());
     BufferVector buffers;
     buffers.reserve(in_.size());
     for (size_t i = 0; i < in_.size(); ++i) {
@@ -836,7 +836,7 @@ class ConcatenateImpl {
             SliceBufferSafe(buffer, ranges[i].offset, ranges[i].length));
         buffers.push_back(std::move(sliced_buffer));
       } else {
-        DCHECK_EQ(ranges[i].length, 0);
+        ARROW_DCHECK_GE(ranges[i].length, 0);
       }
       buffer.reset();  // release the reference
     }
@@ -871,7 +871,7 @@ class ConcatenateImpl {
   // Note that BufferVector will not contain the buffer of in_[i] if it's
   // nullptr.
   Result<BufferVector> Buffers(size_t index, const FixedWidthType& fixed) {
-    DCHECK_EQ(fixed.bit_width() % 8, 0);
+    ARROW_DCHECK_GE(fixed.bit_width() % 8, 0);
     return Buffers(index, fixed.bit_width() / 8);
   }
 
@@ -915,7 +915,7 @@ class ConcatenateImpl {
   // Elements are sliced with the explicitly passed ranges.
   Result<ArrayDataVector> ChildData(size_t index,
                                     const std::vector<Range>& ranges) {
-    DCHECK_EQ(in_.size(), ranges.size());
+    ARROW_DCHECK_GE(in_.size(), ranges.size());
     ArrayDataVector child_data(in_.size());
     for (size_t i = 0; i < in_.size(); ++i) {
       ARROW_ASSIGN_OR_RAISE(child_data[i],
