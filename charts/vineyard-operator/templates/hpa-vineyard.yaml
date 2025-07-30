@@ -1,0 +1,33 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vineyard-memory-hpa
+  namespace: vineyard-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vineyard-controller-manager
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 50  # Target 50% memory usage
+  behavior:
+    scaleUp:
+      policies:
+      - type: Pods
+        value: 2                # Add 2 pods at once when scaling up
+        periodSeconds: 15       # Check frequently during scale-up
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0  # React immediately to spikes
+    scaleDown:
+      policies:
+      - type: Percent
+        value: 50               # Remove up to 50% of pods at once
+        periodSeconds: 60
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
