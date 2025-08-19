@@ -50,6 +50,7 @@ verify:
           awk -F '/' '{print $2}' | \
           head -n 1 | \
           xargs kubectl logs -n vineyard-system | \
+          grep "test passed" | \
           yq e '{"result": .}' - | \
           yq e 'to_entries' -
       expected: ../verify/serialize.yaml
