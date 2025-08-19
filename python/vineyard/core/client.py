@@ -370,12 +370,18 @@ class Client:
     @_apply_docstring(IPCClient.delete)
     def delete(
         self,
-        object: Union[ObjectID, Object, ObjectMeta, List[ObjectID]],
+        object_id: Union[ObjectID, Object, ObjectMeta, List[ObjectID]] = None,
+        name: str = None,
         force: bool = False,
         deep: bool = True,
         memory_trim: bool = False,
     ) -> None:
-        return self.default_client().delete(object, force, deep, memory_trim)
+        if object_id is None and name is None:
+            raise ValueError("Either object_id or name should be provided.")
+        if name is not None:
+            object_id = self.default_client().get_name(name)
+            self.default_client().drop_name(name)
+        return self.default_client().delete(object_id, force, deep, memory_trim)
 
     @_apply_docstring(IPCClient.create_stream)
     def create_stream(self, id: ObjectID) -> None:
@@ -438,6 +444,10 @@ class Client:
     @_apply_docstring(IPCClient.get_name)
     def get_name(self, name: str, wait: bool = False) -> ObjectID:
         return self.default_client().get_name(name, wait)
+
+    @_apply_docstring(IPCClient.name_exists)
+    def name_exists(self, name: str) -> bool:
+        return self.default_client().name_exists(name)
 
     @_apply_docstring(IPCClient.drop_name)
     def drop_name(self, name: str) -> None:
