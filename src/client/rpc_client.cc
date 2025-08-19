@@ -94,16 +94,18 @@ Status RPCClient::Connect(const std::string& rpc_endpoint) {
 Status RPCClient::Connect(const std::string& rpc_endpoint,
                           std::string const& username,
                           std::string const& password,
-                          const std::string& rdma_endpoint) {
+                          const std::string& rdma_endpoint,
+                          std::string src_rdma_ednpoint) {
   return this->Connect(rpc_endpoint, RootSessionID(), username, password,
-                       rdma_endpoint);
+                       rdma_endpoint, src_rdma_ednpoint);
 }
 
 Status RPCClient::Connect(const std::string& rpc_endpoint,
                           const SessionID session_id,
                           std::string const& username,
                           std::string const& password,
-                          const std::string& rdma_endpoint) {
+                          const std::string& rdma_endpoint,
+                          std::string src_rdma_ednpoint) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;
   if (pos == std::string::npos) {
@@ -125,28 +127,32 @@ Status RPCClient::Connect(const std::string& rpc_endpoint,
 
   return this->Connect(host, static_cast<uint32_t>(std::stoul(port)),
                        session_id, username, password, rdma_host,
-                       static_cast<uint32_t>(std::stoul(rdma_port)));
+                       static_cast<uint32_t>(std::stoul(rdma_port)),
+                       src_rdma_ednpoint);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
-                          const std::string& rdma_host, uint32_t rdma_port) {
+                          const std::string& rdma_host, uint32_t rdma_port,
+                          std::string src_rdma_ednpoint) {
   return this->Connect(host, port, RootSessionID(), "", "", rdma_host,
-                       rdma_port);
+                       rdma_port, src_rdma_ednpoint);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
                           std::string const& username,
                           std::string const& password,
-                          const std::string& rdma_host, uint32_t rdma_port) {
+                          const std::string& rdma_host, uint32_t rdma_port,
+                          std::string src_rdma_ednpoint) {
   return this->Connect(host, port, RootSessionID(), username, password,
-                       rdma_host, rdma_port);
+                       rdma_host, rdma_port, src_rdma_ednpoint);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
                           const SessionID session_id,
                           std::string const& username,
                           std::string const& password,
-                          const std::string& rdma_host, uint32_t rdma_port) {
+                          const std::string& rdma_host, uint32_t rdma_port,
+                          std::string src_rdma_ednpoint) {
   std::lock_guard<std::recursive_mutex> guard(client_mutex_);
   std::string rpc_endpoint = host + ":" + std::to_string(port);
   RETURN_ON_ASSERT(!connected_ || rpc_endpoint == rpc_endpoint_);
@@ -183,7 +189,8 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   instance_id_ = UnspecifiedInstanceID() - 1;
 
   if (rdma_host.length() > 0) {
-    Status status = ConnectRDMA(rdma_host, rdma_port);
+    src_rdma_endpoint_ = src_rdma_ednpoint;
+    Status status = ConnectRDMA(rdma_host, rdma_port, src_rdma_ednpoint);
     if (status.ok()) {
       rdma_endpoint_ = rdma_host + ":" + std::to_string(rdma_port);
       std::cout << "Connected to RPC server: " << rpc_endpoint
@@ -192,24 +199,28 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
     } else {
       std::cout << "Connect RDMA server failed! Fall back to RPC mode. Error:"
                 << status.message() << std::endl;
+      std::cout << "Failed src_rdma_ednpoint: " << src_rdma_ednpoint
+                << std::endl;
     }
   }
 
   return Status::OK();
 }
 
-Status RPCClient::ConnectRDMA(const std::string& rdma_host,
-                              uint32_t rdma_port) {
+Status RPCClient::ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port,
+                              std::string src_rdma_endpoint) {
   if (this->rdma_connected_) {
     return Status::OK();
   }
 
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
-                                            static_cast<int>(rdma_port)));
+                                            static_cast<int>(rdma_port),
+                                            src_rdma_endpoint));
 
   int retry = 0;
   do {
-    if (this->rdma_client_->Connect().ok()) {
+    Status status = this->rdma_client_->Connect();
+    if (status.ok()) {
       break;
     }
     if (retry == 10) {
@@ -217,8 +228,9 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
     }
     retry++;
     usleep(300 * 1000);
-    std::cout << "Connect rdma server failed! retry: " << retry << " times."
-              << std::endl;
+    std::cout << "Connect rdma server failed! Error:" + status.message() +
+                     "retry: "
+              << retry << " times." << std::endl;
   } while (true);
   this->rdma_connected_ = true;
   return Status::OK();
@@ -272,6 +284,9 @@ Status RPCClient::RDMAReleaseMemInfo(RegisterMemInfo& remote_info) {
 
 Status RPCClient::StopRDMA() {
   if (!rdma_connected_) {
+    RETURN_ON_ERROR(
+        RDMAClientCreator::Release(RDMAClientCreator::buildConnectionKey(
+            rdma_endpoint_, src_rdma_endpoint_)));
     return Status::OK();
   }
   rdma_connected_ = false;
@@ -285,7 +300,9 @@ Status RPCClient::StopRDMA() {
 
   RETURN_ON_ERROR(rdma_client_->Stop());
   RETURN_ON_ERROR(rdma_client_->Close());
-  RETURN_ON_ERROR(RDMAClientCreator::Release(rdma_endpoint_));
+  RETURN_ON_ERROR(
+      RDMAClientCreator::Release(RDMAClientCreator::buildConnectionKey(
+          rdma_endpoint_, src_rdma_endpoint_)));
 
   return Status::OK();
 }

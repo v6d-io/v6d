@@ -696,6 +696,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                                 --disable-perf
                                 --disable-efa
                                 --disable-mrail
+                                --with-cuda=no
                                 --enable-verbs > /dev/null
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
         )
@@ -719,6 +720,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                                 --disable-perf
                                 --disable-efa
                                 --disable-mrail
+                                --with-cuda=no
                                 --disable-verbs > /dev/null
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
         )

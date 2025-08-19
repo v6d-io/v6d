@@ -26,10 +26,15 @@ limitations under the License.
 
 namespace vineyard {
 
-#define CHECK_ERROR(condition, message) \
-  if (!(condition)) {                   \
-    return Status::Invalid(message);    \
-  }
+#define CHECK_ERROR(condition, message)                               \
+  do {                                                                \
+    int condition_ret = 0;                                            \
+    condition_ret = (condition);                                      \
+    if (condition_ret) {                                              \
+      return Status::Invalid(std::string(message) +                   \
+                             "ret:" + std::to_string(condition_ret)); \
+    }                                                                 \
+  } while (0)
 
 #if defined(__linux__)
 #define POST(post_fn, op_str, ...)                                 \
