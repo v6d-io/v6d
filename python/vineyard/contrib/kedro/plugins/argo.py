@@ -8,7 +8,7 @@
 # which is licensed under the Apache License, Version 2.0.
 
 """Command line `kedro vineyard argo generate` will generate an Argo workflow
-   configuration file from a Kedro pipeline.
+configuration file from a Kedro pipeline.
 """
 
 import re

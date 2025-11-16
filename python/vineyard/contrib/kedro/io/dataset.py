@@ -17,7 +17,7 @@
 #
 
 """``VineyardDataSet`` is a data set implementation which handles in-memory data.
-   stored in vineyard.
+stored in vineyard.
 """
 
 from typing import Any

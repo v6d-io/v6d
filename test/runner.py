@@ -444,12 +444,12 @@ def run_invalid_client_test(tests, host, port):
     send_garbage_bytes(b'1' * 1000)
     send_garbage_bytes(b'1' * 10000)
     send_garbage_bytes(b'1' * 100000)
-    send_garbage_bytes(b'\xFF' * 1)
-    send_garbage_bytes(b'\xFF' * 10)
-    send_garbage_bytes(b'\xFF' * 100)
-    send_garbage_bytes(b'\xFF' * 1000)
-    send_garbage_bytes(b'\xFF' * 10000)
-    send_garbage_bytes(b'\xFF' * 100000)
+    send_garbage_bytes(b'\xff' * 1)
+    send_garbage_bytes(b'\xff' * 10)
+    send_garbage_bytes(b'\xff' * 100)
+    send_garbage_bytes(b'\xff' * 1000)
+    send_garbage_bytes(b'\xff' * 10000)
+    send_garbage_bytes(b'\xff' * 100000)
 
 
 def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
