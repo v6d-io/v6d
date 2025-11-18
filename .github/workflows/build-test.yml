@@ -146,11 +146,13 @@ jobs:
           sudo chmod -R a+wrx ~/.ccache
 
           # install python packages for codegen, and io adaptors
-          sudo pip3 install -U "Pygments>=2.4.1"
-          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
+          # Use legacy resolver to avoid backtracking timeout issues
+          sudo pip3 install -U pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+          sudo pip3 install -U "Pygments>=2.4.1" -i https://pypi.tuna.tsinghua.edu.cn/simple --use-deprecated=legacy-resolver --timeout=300
+          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --use-deprecated=legacy-resolver --timeout=600
 
           # install linters
-          sudo pip3 install auditwheel black isort flake8 twine
+          sudo pip3 install auditwheel black isort flake8 twine -i https://pypi.tuna.tsinghua.edu.cn/simple --use-deprecated=legacy-resolver --timeout=300
 
       - name: Setup tmate session
         if: false
@@ -317,7 +319,7 @@ jobs:
 
           # install python packages
           twine check dist/*.whl
-          sudo pip3 install dist/*.whl -U
+          sudo pip3 install dist/*.whl -U -i https://pypi.tuna.tsinghua.edu.cn/simple --use-deprecated=legacy-resolver --timeout=300
 
           # don't upload incomplete vineyard_bdist to release
           rm -rf dist/vineyard_bdist* || true

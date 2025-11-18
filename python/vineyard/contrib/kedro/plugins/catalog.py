@@ -8,8 +8,8 @@
 # which is licensed under the Apache License, Version 2.0.
 
 """Command line `kedro vineyard catalog {list/create}` will list the catalog of
-   given pipelines, and create a catalog configuration which overrides existing
-   ones with VineyardDataSet.
+given pipelines, and create a catalog configuration which overrides existing
+ones with VineyardDataSet.
 """
 
 import os

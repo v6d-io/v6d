@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-''' This module exposes support for DataframeStream, that use can used like:
+'''This module exposes support for DataframeStream, that use can used like:
 
 .. code:: python
 

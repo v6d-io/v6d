@@ -16,8 +16,7 @@
 # limitations under the License.
 #
 
-''' This module exposes support for RecordBatchStream.
-'''
+'''This module exposes support for RecordBatchStream.'''
 
 import contextlib
 import json

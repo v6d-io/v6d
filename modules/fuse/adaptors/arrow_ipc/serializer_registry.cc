@@ -118,16 +118,16 @@ static void from_arrow_view(Client* client, std::string const& path,
 void from_arrow_view(Client* client, std::string const& path,
                      std::shared_ptr<arrow::BufferBuilder> buffer) {
   // recover table from buffer
-  auto fp = std::make_shared<arrow::io::BufferReader>(buffer->data(),
-                                                      buffer->length());
+  std::shared_ptr<arrow::Buffer> arrow_buffer;
+  CHECK_ARROW_ERROR_AND_ASSIGN(arrow_buffer, buffer->Finish());
+  auto fp = std::make_shared<arrow::io::BufferReader>(arrow_buffer);
   from_arrow_view(client, path, fp.get());
 }
 
 void from_arrow_view(Client* client, std::string const& path,
                      std::shared_ptr<arrow::Buffer> buffer) {
   // recover table from buffer
-  auto fp =
-      std::make_shared<arrow::io::BufferReader>(buffer->data(), buffer->size());
+  auto fp = std::make_shared<arrow::io::BufferReader>(buffer);
   from_arrow_view(client, path, fp.get());
 }
 

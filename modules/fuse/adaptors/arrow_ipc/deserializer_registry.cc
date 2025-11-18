@@ -51,7 +51,7 @@ std::shared_ptr<internal::ChunkBuffer> numeric_array_arrow_ipc_view(
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   DLOG(INFO) << "table is written";
-  writer->Close();
+  CHECK_ARROW_ERROR(writer->Close());
   DLOG(INFO) << "buffer is extracted";
   return cbuffer;
 }
@@ -78,7 +78,7 @@ std::shared_ptr<internal::ChunkBuffer> string_array_arrow_ipc_view(
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   DLOG(INFO) << "table is written";
-  writer->Close();
+  CHECK_ARROW_ERROR(writer->Close());
   std::shared_ptr<internal::ChunkBuffer> buffer_;
   DLOG(INFO) << "writer is closed";
   return cbuffer;
@@ -103,7 +103,7 @@ std::shared_ptr<internal::ChunkBuffer> bool_array_arrow_ipc_view(
 
   VINEYARD_CHECK_OK(writer->WriteTable(*my_table));
   DLOG(INFO) << "table is written";
-  writer->Close();
+  CHECK_ARROW_ERROR(writer->Close());
 
   return cbuffer;
 }
@@ -123,7 +123,7 @@ std::shared_ptr<internal::ChunkBuffer> dataframe_arrow_ipc_view(
       writer, arrow::ipc::MakeFileWriter(cbuffer, batch->schema()));
   VINEYARD_CHECK_OK(writer->WriteTable(*table));
   std::shared_ptr<internal::ChunkBuffer> buffer;
-  writer->Close();
+  CHECK_ARROW_ERROR(writer->Close());
   return cbuffer;
 }
 
