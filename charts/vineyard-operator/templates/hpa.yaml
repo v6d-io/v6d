@@ -1,0 +1,34 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "vineyard-operator.fullname" . }}-hpa
+  labels:
+    {{- include "vineyard-operator.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "vineyard-operator.fullname" . }}-controller-manager
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.targetMemoryUtilization }}
+  behavior:
+    scaleUp:
+      policies:
+      - type: Pods
+        value: {{ .Values.autoscaling.scaleUp.pods }}
+        periodSeconds: {{ .Values.autoscaling.scaleUp.periodSeconds }}
+      selectPolicy: Max
+      stabilizationWindowSeconds: {{ .Values.autoscaling.scaleUp.stabilizationWindowSeconds }}
+    scaleDown:
+      policies:
+      - type: Percent
+        value: {{ .Values.autoscaling.scaleDown.percent }}
+        periodSeconds: {{ .Values.autoscaling.scaleDown.periodSeconds }}
+      stabilizationWindowSeconds: {{ .Values.autoscaling.scaleDown.stabilizationWindowSeconds }}
