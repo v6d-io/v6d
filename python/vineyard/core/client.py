@@ -18,11 +18,11 @@
 
 import contextlib
 import os
+import threading
 import warnings
+from concurrent.futures import Future
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
-from concurrent.futures import Future
-import threading
 from typing import Any
 from typing import Dict
 from typing import List
@@ -45,28 +45,28 @@ from vineyard._C import VineyardException
 from vineyard._C import _connect
 from vineyard.core.builder import BuilderContext
 from vineyard.core.builder import put
-from vineyard.core.resolver import get_current_resolvers
 from vineyard.core.resolver import ResolverContext
 from vineyard.core.resolver import get
+from vineyard.core.resolver import get_current_resolvers
+
 
 class AsyncFixedStreamChunk:
-    
+
     def __init__(self, client, chunk_nums):
         self.client = client
         self._chunk_nums = chunk_nums
-        self.future : Optional[Future] = None
+        self.future: Optional[Future] = None
         self._reader_index = 0
         self._writer_index = 0
         self._ready_list = []
-        self._exception : Optional[Exception] = None
+        self._exception: Optional[Exception] = None
         self._lock = threading.RLock()
         self._start_fetch()
-        
 
     def _start_fetch(self):
         self.future = self.client._async_task_thread_pool.submit(self._fetch)
         self.future.add_done_callback(self._callback)
-    
+
     def _fetch(self):
         try:
             try:
@@ -81,7 +81,7 @@ class AsyncFixedStreamChunk:
                 self._writer_index += 1
         except Exception as e:
             self._exception = e
-    
+
     def _callback(self, future):
         try:
             future.result()
@@ -91,7 +91,7 @@ class AsyncFixedStreamChunk:
             with self._lock:
                 if self._writer_index < self._chunk_nums:
                     self._start_fetch()
-    
+
     def get(self) -> int:
         if self._exception:
             raise self._exception
@@ -106,6 +106,7 @@ class AsyncFixedStreamChunk:
             print("Error in AsyncFixedStreamChunk get:", e)
             pass
         return -1
+
 
 def _apply_docstring(func):
     def _apply(fn):
@@ -455,13 +456,15 @@ class Client:
     @_apply_docstring(IPCClient.close_stream)
     def close_stream(self, id: ObjectID) -> None:
         return self.default_client().close_stream(id)
-    
+
     @_apply_docstring(IPCClient.delete_stream)
     def delete_stream(self, id: ObjectID) -> None:
         return self.default_client().delete_stream(id)
-    
+
     @_apply_docstring(IPCClient.create_fixed_stream)
-    def create_fixed_stream(self, stream_name: str, blob_num: int, size: int) -> ObjectID:
+    def create_fixed_stream(
+        self, stream_name: str, blob_num: int, size: int
+    ) -> ObjectID:
         return self.default_client().create_fixed_stream(stream_name, blob_num, size)
 
     @_apply_docstring(IPCClient.push_chunk)
@@ -738,17 +741,45 @@ class Client:
         return self.ipc_client.next_buffer_chunk(stream)
 
     @_apply_docstring(IPCClient.vineyard_open_remote_fixed_stream_with_id)
-    def vineyard_open_remote_fixed_stream_with_id(self, remote_id: ObjectID, local_id: ObjectID, blob_nums: int, size: int, remote_endpoint: str, mode: str, wait: bool, timeout: int) -> int:
-        return self.ipc_client.vineyard_open_remote_fixed_stream_with_id(remote_id, local_id, blob_nums, size, remote_endpoint, mode, wait, timeout)
-    
+    def vineyard_open_remote_fixed_stream_with_id(
+        self,
+        remote_id: ObjectID,
+        local_id: ObjectID,
+        blob_nums: int,
+        size: int,
+        remote_endpoint: str,
+        mode: str,
+        wait: bool,
+        timeout: int,
+    ) -> int:
+        return self.ipc_client.vineyard_open_remote_fixed_stream_with_id(
+            remote_id, local_id, blob_nums, size, remote_endpoint, mode, wait, timeout
+        )
+
     @_apply_docstring(IPCClient.vineyard_open_remote_fixed_stream_with_name)
-    def vineyard_open_remote_fixed_stream_with_name(self, remote_name: str, local_id: ObjectID, blob_nums: int, size: int, remote_endpoint: str, mode: str, wait: bool, timeout: int) -> int:
-        return self.ipc_client.vineyard_open_remote_fixed_stream_with_name(remote_name, local_id, blob_nums, size, remote_endpoint, mode, wait, timeout)
-    
+    def vineyard_open_remote_fixed_stream_with_name(
+        self,
+        remote_name: str,
+        local_id: ObjectID,
+        blob_nums: int,
+        size: int,
+        remote_endpoint: str,
+        mode: str,
+        wait: bool,
+        timeout: int,
+    ) -> int:
+        return self.ipc_client.vineyard_open_remote_fixed_stream_with_name(
+            remote_name, local_id, blob_nums, size, remote_endpoint, mode, wait, timeout
+        )
+
     @_apply_docstring(IPCClient.vineyard_activate_remote_fixed_stream_with_offset)
-    def vineyard_activate_remote_fixed_stream_with_offset(self, stream_id: ObjectID, offsets: List[int]) -> None:
-        return self.ipc_client.vineyard_activate_remote_fixed_stream_with_offset(stream_id, offsets)
-    
+    def vineyard_activate_remote_fixed_stream_with_offset(
+        self, stream_id: ObjectID, offsets: List[int]
+    ) -> None:
+        return self.ipc_client.vineyard_activate_remote_fixed_stream_with_offset(
+            stream_id, offsets
+        )
+
     # List[0]: fd, List[1]: size, List[2]: offset
     @_apply_docstring(IPCClient.get_vineyard_mmap_fd)
     def get_vineyard_mmap_fd(self) -> List[int]:
@@ -757,7 +788,7 @@ class Client:
     @_apply_docstring(IPCClient.vineyard_get_next_fixed_stream_chunk)
     def vineyard_get_next_fixed_stream_chunk(self) -> int:
         return self.ipc_client.vineyard_get_next_fixed_stream_chunk()
-    
+
     @_apply_docstring(IPCClient.open_fixed_stream)
     def open_fixed_stream(self, stream_id: ObjectID, mode: str) -> None:
         return self.ipc_client.open_fixed_stream(stream_id, mode)
@@ -1002,5 +1033,6 @@ class Client:
 
     def vineyard_get_next_fixed_stream_chunk_async(self, nums) -> AsyncFixedStreamChunk:
         return AsyncFixedStreamChunk(self, nums)
+
 
 __all__ = ['Client']

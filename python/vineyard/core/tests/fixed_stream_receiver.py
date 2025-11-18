@@ -16,90 +16,96 @@
 # limitations under the License.
 #
 
-from datetime import datetime
 import mmap
 import sys
 import time
-import vineyard
-from vineyard.io.fixed_blob import FixedBlobStream
+from datetime import datetime
 
+import vineyard
 from vineyard._C import ObjectID
+from vineyard.io.fixed_blob import FixedBlobStream
 
 blob_num = 10
 blob_size = 1024 * 1024 * 2
 
-def run_receiver(client: vineyard.Client, mm: mmap.mmap, ipc_socket: str, rpc_endpoint: str):
-  fixed_blob_stream = FixedBlobStream.new(client, "test-stream-5", blob_num, blob_size, True, rpc_endpoint)
-  stream_reader = fixed_blob_stream.open_reader(client, True, 10000)
-  offset_list = []
-  for i in range(blob_num):
-    offset_list.append(i * blob_size)
-  
-  stream_reader.activate_stream_with_offset(offset_list)
 
-  total_finished = stream_reader.check_block_received(-1)
-  print("Stream is :", "finished" if total_finished else "not finished")
-  
-  for i in range(blob_num):
-    finished = False
-    while not finished:
-      start_time = datetime.now().microsecond
-      try:
-        finished = stream_reader.check_block_received(i)
-      except Exception as e:
-        print(f"Error checking block {i}: {e}")
-        break
+def run_receiver(
+    client: vineyard.Client, mm: mmap.mmap, ipc_socket: str, rpc_endpoint: str
+):
+    fixed_blob_stream = FixedBlobStream.new(
+        client, "test-stream-5", blob_num, blob_size, True, rpc_endpoint
+    )
+    stream_reader = fixed_blob_stream.open_reader(client, True, 10000)
+    offset_list = []
+    for i in range(blob_num):
+        offset_list.append(i * blob_size)
 
-      end_time = datetime.now().microsecond
-      print(f"Waiting for chunk {i}...")
-      time.sleep(0.2)
-    
-    if finished is not True:
-      while True:
-        aborted = stream_reader.abort()
-        if aborted:
-          print("Stream aborted, bye...")
-          return
+    stream_reader.activate_stream_with_offset(offset_list)
 
-    for j in range(blob_size):
-      assert mm.read_byte() == j % 256
-    print("Chunk ", i, " received successfully")
+    total_finished = stream_reader.check_block_received(-1)
+    print("Stream is :", "finished" if total_finished else "not finished")
 
-  for i in range(blob_num):
-    finished = False
-    while not finished:
-      start_time = datetime.now().microsecond
-      finished = stream_reader.check_block_received(i)
-      end_time = datetime.now().microsecond
-      print(f"check used time: {end_time - start_time} us")
+    for i in range(blob_num):
+        finished = False
+        while not finished:
+            start_time = datetime.now().microsecond
+            try:
+                finished = stream_reader.check_block_received(i)
+            except Exception as e:
+                print(f"Error checking block {i}: {e}")
+                break
 
-  start_time = datetime.now().microsecond
-  total_finished = stream_reader.check_block_received(-1)
-  end_time = datetime.now().microsecond
-  print("Stream is :", "finished" if total_finished else "not finished")
-  print("check all use time: ", end_time - start_time, " us")
-  stream_reader.finish_and_delete()
+            end_time = datetime.now().microsecond
+            print(f"Waiting for chunk {i}...")
+            time.sleep(0.2)
+
+        if finished is not True:
+            while True:
+                aborted = stream_reader.abort()
+                if aborted:
+                    print("Stream aborted, bye...")
+                    return
+
+        for j in range(blob_size):
+            assert mm.read_byte() == j % 256
+        print("Chunk ", i, " received successfully")
+
+    for i in range(blob_num):
+        finished = False
+        while not finished:
+            start_time = datetime.now().microsecond
+            finished = stream_reader.check_block_received(i)
+            end_time = datetime.now().microsecond
+            print(f"check used time: {end_time - start_time} us")
+
+    start_time = datetime.now().microsecond
+    total_finished = stream_reader.check_block_received(-1)
+    end_time = datetime.now().microsecond
+    print("Stream is :", "finished" if total_finished else "not finished")
+    print("check all use time: ", end_time - start_time, " us")
+    stream_reader.finish_and_delete()
 
 
 def __main__():
-  arguments = sys.argv[1:]
-  if len(arguments) < 2:
-    print("Usage: fixed_stream_receiver.py <ipc_socket> <rpc_endpoint>")
-    return 1
-  
-  ipc_socket = arguments[0]
-  rpc_endpoint = arguments[1]
-  client = vineyard.connect(ipc_socket)
-  client.timeout_seconds = 5
+    arguments = sys.argv[1:]
+    if len(arguments) < 2:
+        print("Usage: fixed_stream_receiver.py <ipc_socket> <rpc_endpoint>")
+        return 1
 
-  list = client.get_vineyard_mmap_fd()
-  fd = list[0]
-  offset = list[2]
+    ipc_socket = arguments[0]
+    rpc_endpoint = arguments[1]
+    client = vineyard.connect(ipc_socket)
+    client.timeout_seconds = 5
 
-  mm = mmap.mmap(fd, 0)
-  mm.seek(offset)
+    list = client.get_vineyard_mmap_fd()
+    fd = list[0]
+    offset = list[2]
 
-  run_receiver(client, mm, ipc_socket, rpc_endpoint)
+    mm = mmap.mmap(fd, 0)
+    mm.seek(offset)
+
+    run_receiver(client, mm, ipc_socket, rpc_endpoint)
+
 
 if __name__ == "__main__":
-  __main__()
+    __main__()
