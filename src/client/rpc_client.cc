@@ -1051,6 +1051,7 @@ Status RPCClient::GetRemoteBlobs(
 
 Status RPCClient::doReleaseBlobsWithRDMARequest(
     std::unordered_set<ObjectID> id_set) {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteReleaseBlobsWithRDMARequest(id_set, message_out);
   RETURN_ON_ERROR(doWrite(message_out));

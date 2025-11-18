@@ -34,6 +34,10 @@ namespace vineyard {
         return Status::Wrap(st, err_message.str());                      \
       }                                                                  \
     }                                                                    \
+    if (root.value("type", "UNKNOWN") != (type)) {                       \
+      std::cerr << "Json root:" << json_to_string(tree) << std::endl;    \
+      std::cerr << "Expected type: " << (type) << std::endl;             \
+    }                                                                    \
     RETURN_ON_ASSERT(root.value("type", "UNKNOWN") == (type));           \
   } while (0)
 
@@ -45,6 +49,10 @@ const std::string command_t::REGISTER_REQUEST = "register_request";
 const std::string command_t::REGISTER_REPLY = "register_reply";
 const std::string command_t::EXIT_REQUEST = "exit_request";
 const std::string command_t::EXIT_REPLY = "exit_reply";
+const std::string command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REQUEST =
+    "require_extra_request_memory_request";
+const std::string command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REPLY =
+    "require_extra_request_memory_reply";
 
 // Blobs APIs
 const std::string command_t::CREATE_BUFFER_REQUEST = "create_buffer_request";
@@ -80,6 +88,9 @@ const std::string command_t::CREATE_REMOTE_BUFFERS_REQUEST =
     "create_remote_buffers_request";
 const std::string command_t::GET_REMOTE_BUFFERS_REQUEST =
     "get_remote_buffers_request";
+const std::string command_t::GET_USER_BUFFERS_REQUEST =
+    "get_user_buffers_request";
+const std::string command_t::GET_USER_BUFFERS_REPLY = "get_user_buffers_reply";
 
 const std::string command_t::INCREASE_REFERENCE_COUNT_REQUEST =
     "increase_reference_count_request";
@@ -91,6 +102,8 @@ const std::string command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST =
     "del_data_with_feedbacks_request";
 const std::string command_t::DEL_DATA_WITH_FEEDBACKS_REPLY =
     "del_data_with_feedbacks_reply";
+const std::string command_t::DEL_HUGE_DATA_REQUEST = "del_huge_data_request";
+const std::string command_t::DEL_HUGE_DATA_REPLY = "del_huge_data_reply";
 
 const std::string command_t::CREATE_BUFFER_PLASMA_REQUEST =
     "create_buffer_by_plasma_request";
@@ -135,6 +148,27 @@ const std::string command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST =
     "release_blobs_with_rdma_request";
 const std::string command_t::RELEASE_BLOBS_WITH_RDMA_REPLY =
     "release_blobs_with_rdma_reply";
+const std::string command_t::BATCH_PERSIST_REQUEST = "batch_persist_request";
+const std::string command_t::BATCH_PERSIST_REPLY = "batch_persist_reply";
+const std::string command_t::CREATE_HUGE_DATAS_REQUEST =
+    "create_huge_datas_request";
+const std::string command_t::CREATE_HUGE_DATAS_REPLY =
+    "create_huge_datas_reply";
+const std::string command_t::GET_HUGE_DATA_REQUEST = "get_huge_data_request";
+const std::string command_t::GET_HUGE_DATA_REPLY = "get_huge_data_reply";
+
+const std::string command_t::CREATE_USER_BUFFERS_REQUEST =
+    "create_user_buffers_request";
+const std::string command_t::CREATE_USER_BUFFERS_REPLY =
+    "create_user_buffers_reply";
+const std::string command_t::GET_REMOTE_BLOBS_WITH_RDMA_REQUEST =
+    "get_remote_blobs_with_rdma_request";
+const std::string command_t::GET_REMOTE_BLOBS_WITH_RDMA_REPLY =
+    "get_remote_blobs_with_rdma_reply";
+const std::string command_t::DELETE_USER_BUFFERS_REQUEST =
+    "delete_user_buffers_request";
+const std::string command_t::DELETE_USER_BUFFERS_REPLY =
+    "delete_user_buffers_reply";
 
 // Stream APIs
 const std::string command_t::CREATE_STREAM_REQUEST = "create_stream_request";
@@ -149,6 +183,10 @@ const std::string command_t::PUSH_NEXT_STREAM_CHUNK_REQUEST =
     "push_next_stream_chunk_request";
 const std::string command_t::PUSH_NEXT_STREAM_CHUNK_REPLY =
     "push_next_stream_chunk_reply";
+const std::string command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REQUEST =
+    "push_next_stream_chunk_by_offset_request";
+const std::string command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REPLY =
+    "push_next_stream_chunk_by_offset_reply";
 const std::string command_t::PULL_NEXT_STREAM_CHUNK_REQUEST =
     "pull_next_stream_chunk_request";
 const std::string command_t::PULL_NEXT_STREAM_CHUNK_REPLY =
@@ -157,6 +195,82 @@ const std::string command_t::STOP_STREAM_REQUEST = "stop_stream_request";
 const std::string command_t::STOP_STREAM_REPLY = "stop_stream_reply";
 const std::string command_t::DROP_STREAM_REQUEST = "drop_stream_request";
 const std::string command_t::DROP_STREAM_REPLY = "drop_stream_reply";
+const std::string command_t::ABORT_STREAM_REQUEST = "abort_stream_request";
+const std::string command_t::ABORT_STREAM_REPLY = "abort_stream_reply";
+const std::string command_t::PUT_STREAM_NAME_REQUEST =
+    "put_stream_name_request";
+const std::string command_t::PUT_STREAM_NAME_REPLY = "put_stream_name_reply";
+const std::string command_t::GET_STREAM_ID_BY_NAME_REQUEST =
+    "get_stream_id_by_name_request";
+const std::string command_t::GET_STREAM_ID_BY_NAME_REPLY =
+    "get_stream_id_by_name_reply";
+const std::string command_t::ACTIVATE_REMOTE_FIXED_STREAM_REQUEST =
+    "activate_remote_fixed_stream_request";
+const std::string command_t::ACTIVATE_REMOTE_FIXED_STREAM_REPLY =
+    "activate_remote_fixed_stream_reply";
+const std::string command_t::STREAM_READY_ACK = "stream_ready_ack";
+const std::string command_t::CREATE_FIXED_STREAM_REQUEST =
+    "create_fixed_stream_request";
+const std::string command_t::CREATE_FIXED_STREAM_REPLY =
+    "create_fixed_stream_reply";
+const std::string command_t::OPEN_FIXED_STREAM_REQUEST =
+    "open_fixed_stream_request";
+const std::string command_t::OPEN_FIXED_STREAM_REPLY =
+    "open_fixed_stream_reply";
+const std::string command_t::CLOSE_STREAM_REQUEST = "close_stream_request";
+const std::string command_t::CLOSE_STREAM_REPLY = "close_stream_reply";
+const std::string command_t::DELETE_STREAM_REQUEST = "delete_stream_request";
+const std::string command_t::DELETE_STREAM_REPLY = "delete_stream_reply";
+const std::string command_t::CHECK_FIXED_STREAM_RECEIVED_REQUEST =
+    "check_fixed_stream_received_request";
+const std::string command_t::CHECK_FIXED_STREAM_RECEIVED_REPLY =
+    "check_fixed_stream_received_reply";
+
+// sidecar operation
+const std::string command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST =
+    "VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST";
+const std::string command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REPLY =
+    "VINEYARD_OPEN_REMOTE_FIXED_STREAM_REPLY";
+const std::string command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REQUEST =
+    "vineyard_activate_remote_fixed_stream_request";
+const std::string command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REPLY =
+    "vineyard_activate_remote_fixed_stream_reply";
+const std::string
+    command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REQUEST =
+        "vineyard_activate_remote_fixed_stream_with_offset_request";
+const std::string
+    command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REPLY =
+        "vineyard_activate_remote_fixed_stream_with_offset_reply";
+const std::string command_t::VINEYARD_STOP_STREAM_REQUEST =
+    "vineyard_stop_stream_request";
+const std::string command_t::VINEYARD_STOP_STREAM_REPLY =
+    "vineyard_stop_stream_reply";
+const std::string command_t::VINEYARD_DROP_STREAM_REQUEST =
+    "vineyard_drop_stream_request";
+const std::string command_t::VINEYARD_DROP_STREAM_REPLY =
+    "vineyard_drop_stream_reply";
+const std::string command_t::VINEYARD_ABORT_REMOTE_STREAM_REQUEST =
+    "vineyard_abort_remote_stream_request";
+const std::string command_t::VINEYARD_ABORT_REMOTE_STREAM_REPLY =
+    "vineyard_abort_remote_stream_reply";
+const std::string command_t::VINEYARD_STREAM_READY_ACK =
+    "vineyard_stream_ready_ack";
+const std::string command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REQUEST =
+    "vineyard_close_remote_fixed_stream_request";
+const std::string command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REPLY =
+    "vineyard_close_remote_fixed_stream_reply";
+const std::string command_t::VINEYARD_GET_METAS_BY_NAMES_REQUEST =
+    "vineyard_get_metas_by_names_request";
+const std::string command_t::VINEYARD_GET_METAS_BY_NAMES_REPLY =
+    "vineyard_get_metas_by_names_reply";
+const std::string command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REQUEST =
+    "vineyard_get_remote_blobs_with_rdma_request";
+const std::string command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REPLY =
+    "vineyard_get_remote_blobs_with_rdma_reply";
+const std::string command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REQUEST =
+    "vineyard_get_remote_blobs_with_offset_request";
+const std::string command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REPLY =
+    "vineyard_get_remote_blobs_with_offset_reply";
 
 // Names APIs
 const std::string command_t::PUT_NAME_REQUEST = "put_name_request";
@@ -167,6 +281,24 @@ const std::string command_t::LIST_NAME_REQUEST = "list_name_request";
 const std::string command_t::LIST_NAME_REPLY = "list_name_reply";
 const std::string command_t::DROP_NAME_REQUEST = "drop_name_request";
 const std::string command_t::DROP_NAME_REPLY = "drop_name_reply";
+const std::string command_t::GET_NAME_LOCATION_REQUEST =
+    "get_name_location_request";
+const std::string command_t::GET_NAME_LOCATION_REPLY =
+    "get_name_location_reply";
+const std::string command_t::GET_METAS_BY_NAMES_REQUEST =
+    "get_metas_by_names_request";
+const std::string command_t::GET_METAS_BY_NAMES_REPLY =
+    "get_metas_by_names_reply";
+const std::string command_t::PUT_NAME_LOCATION_REQUEST =
+    "put_name_location_request";
+const std::string command_t::PUT_NAME_LOCATION_REPLY =
+    "put_name_location_reply";
+const std::string command_t::GET_NAMES_REQUEST = "get_names_request";
+const std::string command_t::GET_NAMES_REPLY = "get_names_reply";
+const std::string command_t::DROP_NAMES_REQUEST = "drop_names_request";
+const std::string command_t::DROP_NAMES_REPLY = "drop_names_reply";
+const std::string command_t::PUT_NAMES_REQUEST = "put_names_request";
+const std::string command_t::PUT_NAMES_REPLY = "put_names_reply";
 
 // Arena APIs
 const std::string command_t::MAKE_ARENA_REQUEST = "make_arena_request";
@@ -198,6 +330,10 @@ const std::string command_t::IS_IN_USE_REQUEST = "is_in_use_request";
 const std::string command_t::IS_IN_USE_REPLY = "is_in_use_reply";
 
 // Meta APIs
+const std::string command_t::GET_VINEYARD_MMAP_FD_REQUEST =
+    "get_vineyard_mmap_fd_request";
+const std::string command_t::GET_VINEYARD_MMAP_FD_REPLY =
+    "get_vineyard_mmap_fd_reply";
 const std::string command_t::CLUSTER_META_REQUEST = "cluster_meta";
 const std::string command_t::CLUSTER_META_REPLY = "cluster_meta";
 const std::string command_t::INSTANCE_STATUS_REQUEST =
@@ -215,6 +351,117 @@ const std::string command_t::ACQUIRE_LOCK_REQUEST = "acquire_lock_request";
 const std::string command_t::ACQUIRE_LOCK_REPLY = "acquire_lock_reply";
 const std::string command_t::RELEASE_LOCK_REQUEST = "release_lock_request";
 const std::string command_t::RELEASE_LOCK_REPLY = "release_lock_reply";
+
+std::map<std::string, int> CommandMap = {
+    // Connecting APIs
+    {command_t::REGISTER_REQUEST, 1},
+    {command_t::EXIT_REQUEST, 2},
+
+    // Blobs APIs
+    {command_t::CREATE_BUFFER_REQUEST, 10001},
+    {command_t::CREATE_BUFFERS_REQUEST, 10002},
+    {command_t::CREATE_DISK_BUFFER_REQUEST, 10003},
+    {command_t::CREATE_GPU_BUFFER_REQUEST, 10004},
+    {command_t::SEAL_BUFFER_REQUEST, 10005},
+    {command_t::GET_BUFFERS_REQUEST, 10006},
+    {command_t::GET_GPU_BUFFERS_REQUEST, 10007},
+    {command_t::DROP_BUFFER_REQUEST, 10008},
+    {command_t::SHRINK_BUFFER_REQUEST, 10009},
+    {command_t::REQUEST_FD_REQUEST, 10010},
+    {command_t::CREATE_REMOTE_BUFFER_REQUEST, 10011},
+    {command_t::CREATE_REMOTE_BUFFERS_REQUEST, 10012},
+    {command_t::GET_REMOTE_BUFFERS_REQUEST, 10013},
+    {command_t::INCREASE_REFERENCE_COUNT_REQUEST, 10014},
+    {command_t::RELEASE_REQUEST, 10015},
+    {command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST, 10016},
+    {command_t::CREATE_BUFFER_PLASMA_REQUEST, 10017},
+    {command_t::GET_BUFFERS_PLASMA_REQUEST, 10018},
+    {command_t::PLASMA_SEAL_REQUEST, 10019},
+    {command_t::PLASMA_RELEASE_REQUEST, 10020},
+    {command_t::PLASMA_DEL_DATA_REQUEST, 10021},
+    {command_t::CREATE_USER_BUFFERS_REQUEST, 10022},
+    {command_t::GET_REMOTE_BLOBS_WITH_RDMA_REQUEST, 10023},
+    {command_t::DELETE_USER_BUFFERS_REQUEST, 10024},
+
+    // Metadata APIs
+    {command_t::CREATE_DATA_REQUEST, 20001},
+    {command_t::CREATE_DATAS_REQUEST, 20002},
+    {command_t::GET_DATA_REQUEST, 20003},
+    {command_t::LIST_DATA_REQUEST, 20004},
+    {command_t::DELETE_DATA_REQUEST, 20005},
+    {command_t::EXISTS_REQUEST, 20006},
+    {command_t::PERSIST_REQUEST, 20007},
+    {command_t::IF_PERSIST_REQUEST, 20008},
+    {command_t::LABEL_REQUEST, 20009},
+    {command_t::CLEAR_REQUEST, 20010},
+    {command_t::MEMORY_TRIM_REQUEST, 20011},
+    {command_t::RELEASE_BLOBS_WITH_RDMA_REQUEST, 20012},
+    {command_t::GET_METAS_BY_NAMES_REQUEST, 20013},
+
+    // Stream APIs
+    {command_t::CREATE_STREAM_REQUEST, 30001},
+    {command_t::OPEN_STREAM_REQUEST, 30002},
+    {command_t::GET_NEXT_STREAM_CHUNK_REQUEST, 30003},
+    {command_t::PUSH_NEXT_STREAM_CHUNK_REQUEST, 30004},
+    {command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REQUEST, 30005},
+    {command_t::PULL_NEXT_STREAM_CHUNK_REQUEST, 30006},
+    {command_t::STOP_STREAM_REQUEST, 30007},
+    {command_t::DROP_STREAM_REQUEST, 30008},
+    {command_t::ABORT_STREAM_REQUEST, 30009},
+    {command_t::PUT_STREAM_NAME_REQUEST, 30010},
+    {command_t::GET_STREAM_ID_BY_NAME_REQUEST, 30011},
+    {command_t::ACTIVATE_REMOTE_FIXED_STREAM_REQUEST, 30012},
+    {command_t::CREATE_FIXED_STREAM_REQUEST, 30014},
+    {command_t::OPEN_FIXED_STREAM_REQUEST, 30015},
+    {command_t::CLOSE_STREAM_REQUEST, 30016},
+    {command_t::DELETE_STREAM_REQUEST, 30017},
+    {command_t::CHECK_FIXED_STREAM_RECEIVED_REQUEST, 30018},
+
+    // stream operation by vineyardd
+    {command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST, 40001},
+    {command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REQUEST, 40002},
+    {command_t::VINEYARD_STOP_STREAM_REQUEST, 40004},
+    {command_t::VINEYARD_DROP_STREAM_REQUEST, 40005},
+    {command_t::VINEYARD_ABORT_REMOTE_STREAM_REQUEST, 40006},
+    {command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REQUEST, 40007},
+    {command_t::VINEYARD_GET_METAS_BY_NAMES_REQUEST, 40008},
+    {command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REQUEST, 40009},
+
+    // Names APIs
+    {command_t::PUT_NAME_REQUEST, 50001},
+    {command_t::GET_NAME_REQUEST, 50002},
+    {command_t::LIST_NAME_REQUEST, 50003},
+    {command_t::DROP_NAME_REQUEST, 50004},
+    {command_t::GET_METAS_BY_NAMES_REQUEST, 50005},
+
+    // Arena APIs
+    {command_t::MAKE_ARENA_REQUEST, 60001},
+    {command_t::FINALIZE_ARENA_REQUEST, 60002},
+
+    // Session APIs
+    {command_t::NEW_SESSION_REQUEST, 70001},
+    {command_t::DELETE_SESSION_REQUEST, 70002},
+    {command_t::MOVE_BUFFERS_OWNERSHIP_REQUEST, 70003},
+
+    // Spill APIs
+    {command_t::EVICT_REQUEST, 80001},
+    {command_t::LOAD_REQUEST, 80002},
+    {command_t::UNPIN_REQUEST, 80003},
+    {command_t::IS_SPILLED_REQUEST, 80004},
+    {command_t::IS_IN_USE_REQUEST, 80005},
+
+    // Meta APIs
+    {command_t::GET_VINEYARD_MMAP_FD_REQUEST, 90001},
+    {command_t::CLUSTER_META_REQUEST, 90002},
+    {command_t::INSTANCE_STATUS_REQUEST, 90003},
+    {command_t::MIGRATE_OBJECT_REQUEST, 90004},
+    {command_t::SHALLOW_COPY_REQUEST, 90005},
+    {command_t::DEBUG_REQUEST, 90006},
+
+    // distributed lock
+    {command_t::ACQUIRE_LOCK_REQUEST, 100001},
+    {command_t::RELEASE_LOCK_REQUEST, 100002},
+};
 
 void WriteErrorReply(Status const& status, std::string& msg) {
   encode_msg(status.ToJSON(), msg);
@@ -316,6 +563,33 @@ void WriteExitRequest(std::string& msg) {
   root["type"] = command_t::EXIT_REQUEST;
 
   encode_msg(root, msg);
+}
+
+void WriteRequireExtraRequestMemoryRequest(const size_t size,
+                                           std::string& msg) {
+  json root;
+  root["type"] = command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REQUEST;
+  root["size"] = size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadRequireExtraRequestMemoryRequest(const json& root, size_t& size) {
+  CHECK_IPC_ERROR(root, command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REQUEST);
+  size = root["size"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteRequireExtraRequestMemoryReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadRequireExtraRequestMemoryReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REPLY);
+  return Status::OK();
 }
 
 void WriteCreateBufferRequest(const size_t size, std::string& msg) {
@@ -606,6 +880,60 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent, bool& compress) {
   RETURN_ON_ERROR(ReadGetBuffersReply(root, objects, fd_sent));
   compress = root.value("compress", false);
+  return Status::OK();
+}
+
+void WriteGetUserBuffersRequest(std::vector<ObjectID>& ids, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_USER_BUFFERS_REQUEST;
+  root["ids"] = ids;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetUserBuffersRequest(const json& root, std::vector<ObjectID>& ids) {
+  CHECK_IPC_ERROR(root, command_t::GET_USER_BUFFERS_REQUEST);
+  ids = root["ids"].get<std::vector<ObjectID>>();
+
+  return Status::OK();
+}
+
+void WriteGetUserBuffersReply(
+    const std::vector<std::shared_ptr<Payload>>& objects, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_USER_BUFFERS_REPLY;
+  json payloads = json::array();
+  for (size_t i = 0; i < objects.size(); ++i) {
+    json tree;
+    objects[i]->ToJSON(tree);
+    root[std::to_string(i)] = tree;
+    payloads.push_back(tree);
+  }
+  root["payloads"] = payloads;
+  root["num"] = objects.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetUserBuffersReply(const json& root,
+                               std::vector<Payload>& objects) {
+  CHECK_IPC_ERROR(root, command_t::GET_USER_BUFFERS_REPLY);
+
+  if (root.contains("payloads") && root["payloads"].is_array()) {
+    for (auto const& payload : root["payloads"]) {
+      Payload object;
+      object.FromJSON(payload);
+      objects.emplace_back(object);
+    }
+  } else {
+    for (size_t i = 0; i < root.value("num", static_cast<size_t>(0)); ++i) {
+      json tree = root[std::to_string(i)];
+      Payload object;
+      object.FromJSON(tree);
+      objects.emplace_back(object);
+    }
+  }
+
   return Status::OK();
 }
 
@@ -922,6 +1250,43 @@ Status ReadDelDataWithFeedbacksReply(json const& root,
   return Status::OK();
 }
 
+void WriteDelHugeDataRequest(const size_t id_num, const bool force,
+                             const bool deep, const bool memory_trim,
+                             const bool fastpath, std::string& msg) {
+  json root;
+  root["type"] = command_t::DEL_HUGE_DATA_REQUEST;
+  root["id_num"] = id_num;
+  root["force"] = force;
+  root["deep"] = deep;
+  root["memory_trim"] = memory_trim;
+  root["fastpath"] = fastpath;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDelHugeDataRequest(json const& root, size_t& id_num, bool& force,
+                              bool& deep, bool& memory_trim, bool& fastpath) {
+  CHECK_IPC_ERROR(root, command_t::DEL_HUGE_DATA_REQUEST);
+  id_num = root["id_num"].get<size_t>();
+  force = root.value("force", false);
+  deep = root.value("deep", false);
+  memory_trim = root.value("memory_trim", false);
+  fastpath = root.value("fastpath", false);
+  return Status::OK();
+}
+
+void WriteDelHugeDataReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::DEL_HUGE_DATA_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDelHugeDataReply(json const& root) {
+  CHECK_IPC_ERROR(root, command_t::DEL_HUGE_DATA_REPLY);
+  return Status::OK();
+}
+
 void WriteCreateBufferByPlasmaRequest(PlasmaID const plasma_id,
                                       size_t const size,
                                       size_t const plasma_size,
@@ -1083,6 +1448,102 @@ Status ReadPlasmaDelDataReply(json const& root) {
   return Status::OK();
 }
 
+void WriteCreateUserBuffersRequest(const std::vector<uint64_t>& offsets,
+                                   const std::vector<size_t>& sizes,
+                                   std::string& msg) {
+  json root;
+
+  root["type"] = command_t::CREATE_USER_BUFFERS_REQUEST;
+  root["offsets_size"] = offsets.size();
+  root["sizes_size"] = sizes.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateUserBuffersRequest(const json& root, size_t& offsets_num,
+                                    size_t& sizes_num) {
+  CHECK_IPC_ERROR(root, command_t::CREATE_USER_BUFFERS_REQUEST);
+  offsets_num = root["offsets_size"].get<size_t>();
+  sizes_num = root["sizes_size"].get<size_t>();
+
+  return Status::OK();
+}
+
+void WriteCreateUserBuffersReply(const std::vector<ObjectID>& ids,
+                                 std::string& msg) {
+  json root;
+  root["type"] = command_t::CREATE_USER_BUFFERS_REPLY;
+  root["ids_size"] = ids.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateUserBuffersReply(const json& root,
+                                  std::vector<ObjectID>& ids) {
+  CHECK_IPC_ERROR(root, command_t::CREATE_USER_BUFFERS_REPLY);
+  uint64_t ids_size = root["ids_size"].get<size_t>();
+  ids.resize(ids_size);
+  return Status::OK();
+}
+
+void WriteDeleteUserBuffersRequest(const std::vector<uint64_t>& ids,
+                                   std::string& msg) {
+  json root;
+  root["type"] = command_t::DELETE_USER_BUFFERS_REQUEST;
+  root["id_num"] = ids.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadDeleteUserBuffersRequest(const json& root,
+                                    std::vector<uint64_t>& ids) {
+  CHECK_IPC_ERROR(root, command_t::DELETE_USER_BUFFERS_REQUEST);
+  ids.resize(root["id_num"].get<size_t>());
+  return Status::OK();
+}
+
+void WriteDeleteUserBuffersReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::DELETE_USER_BUFFERS_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDeleteUserBuffersReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::DELETE_USER_BUFFERS_REPLY);
+  return Status::OK();
+}
+
+void WriteGetRemoteBlobsWithRDMARequest(
+    std::vector<std::vector<ObjectID>>& remote_ids, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_REMOTE_BLOBS_WITH_RDMA_REQUEST;
+  root["remote_ids"] = remote_ids;
+  encode_msg(root, msg);
+}
+
+Status ReadGetRemoteBlobsWithRDMARequest(
+    const json& root,
+
+    std::vector<std::vector<ObjectID>>& remote_ids) {
+  CHECK_IPC_ERROR(root, command_t::GET_REMOTE_BLOBS_WITH_RDMA_REQUEST);
+  remote_ids = root["remote_ids"].get<std::vector<std::vector<ObjectID>>>();
+  return Status::OK();
+}
+
+void WriteGetRemoteBlobsWithRDMAReply(std::string& msg, int index) {
+  json root;
+  root["type"] = command_t::GET_REMOTE_BLOBS_WITH_RDMA_REPLY;
+  root["index"] = index;
+  encode_msg(root, msg);
+}
+
+Status ReadGetRemoteBlobsWithRDMAReply(const json& root, int& index) {
+  CHECK_IPC_ERROR(root, command_t::GET_REMOTE_BLOBS_WITH_RDMA_REPLY);
+  index = root["index"].get<int>();
+  return Status::OK();
+}
+
 void WriteCreateDataRequest(const json& content, std::string& msg) {
   json root;
   root["type"] = command_t::CREATE_DATA_REQUEST;
@@ -1218,6 +1679,77 @@ Status ReadGetDataReply(const json& root,
   return Status::OK();
 }
 
+void WriteCreateHugeDatasRequest(const size_t& json_num, std::string& msg) {
+  json root;
+  root["type"] = command_t::CREATE_HUGE_DATAS_REQUEST;
+  root["json_num"] = json_num;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateHugeDatasRequest(const json& root, size_t& json_num) {
+  CHECK_IPC_ERROR(root, command_t::CREATE_HUGE_DATAS_REQUEST);
+  json_num = root["json_num"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteCreateHugeDatasReply(const size_t& ids_num,
+                               const Signature& signature,
+                               const InstanceID& instance_id,
+                               std::string& msg) {
+  json root;
+  root["type"] = command_t::CREATE_HUGE_DATAS_REPLY;
+  root["ids_num"] = ids_num;
+  root["signature"] = signature;
+  root["instance_id"] = instance_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateHugeDatasReply(const json& root, size_t& ids_num,
+                                Signature& signatures,
+                                InstanceID& instance_id) {
+  CHECK_IPC_ERROR(root, command_t::CREATE_HUGE_DATAS_REPLY);
+  ids_num = root["ids_num"].get<size_t>();
+  signatures = root["signature"].get<Signature>();
+  instance_id = root["instance_id"].get<InstanceID>();
+  return Status::OK();
+}
+
+void WriteGetHugeDataRequest(const size_t id_num, const bool sync_remote,
+                             const bool wait, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_HUGE_DATA_REQUEST;
+  root["id_num"] = id_num;
+  root["sync_remote"] = sync_remote;
+  root["wait"] = wait;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetHugeDataRequest(const json& root, size_t& id_num,
+                              bool& sync_remote, bool& wait) {
+  CHECK_IPC_ERROR(root, command_t::GET_HUGE_DATA_REQUEST);
+  id_num = root["id_num"].get<size_t>();
+  sync_remote = root.value("sync_remote", false);
+  wait = root.value("wait", false);
+  return Status::OK();
+}
+
+void WriteGetHugeDataReply(size_t json_length, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_HUGE_DATA_REPLY;
+  root["json_length"] = json_length;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetHugeDataReply(const json& root, size_t& json_length) {
+  CHECK_IPC_ERROR(root, command_t::GET_HUGE_DATA_REPLY);
+  json_length = root["json_length"].get<size_t>();
+  return Status::OK();
+}
+
 void WriteListDataRequest(std::string const& pattern, bool const regex,
                           size_t const limit, std::string& msg) {
   json root;
@@ -1341,6 +1873,40 @@ void WritePersistReply(std::string& msg) {
 
 Status ReadPersistReply(const json& root) {
   CHECK_IPC_ERROR(root, command_t::PERSIST_REPLY);
+  return Status::OK();
+}
+
+void WriteBatchPersistRequest(const std::vector<ObjectID>& ids,
+                              std::string& msg) {
+  json root;
+  root["type"] = command_t::BATCH_PERSIST_REQUEST;
+  std::string buffer(ids.size() * sizeof(ObjectID), 0);
+  memcpy(buffer.data(), ids.data(), ids.size() * sizeof(ObjectID));
+  root["ids_size"] = ids.size();
+  root["buffer"] = base64_encode(buffer);
+
+  encode_msg(root, msg);
+}
+
+Status ReadBatchPersistRequest(const json& root, std::vector<ObjectID>& ids) {
+  CHECK_IPC_ERROR(root, command_t::BATCH_PERSIST_REQUEST);
+  uint64_t ids_size = root["ids_size"].get<size_t>();
+  std::string encoded = root["buffer"].get<std::string>();
+  ids.resize(ids_size);
+  std::string decoded = base64_decode(encoded);
+  memcpy(ids.data(), decoded.data(), ids_size * sizeof(ObjectID));
+  return Status::OK();
+}
+
+void WriteBatchPersistReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::BATCH_PERSIST_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadBatchPersistReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::BATCH_PERSIST_REPLY);
   return Status::OK();
 }
 
@@ -1514,6 +2080,39 @@ Status ReadReleaseBlobsWithRDMAReply(const json& root) {
   return Status::OK();
 }
 
+void WriteGetMetasByNamesRequest(const std::vector<std::string>& names,
+                                 std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_METAS_BY_NAMES_REQUEST;
+  root["names"] = names;
+  encode_msg(root, msg);
+}
+
+Status ReadGetMetasByNamesRequest(const json& root,
+                                  std::vector<std::string>& names) {
+  CHECK_IPC_ERROR(root, command_t::GET_METAS_BY_NAMES_REQUEST);
+  names = root["names"].get<std::vector<std::string>>();
+  return Status::OK();
+}
+
+void WriteGetMetasByNamesReply(std::vector<ObjectID>& ids, json& contents,
+                               std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_METAS_BY_NAMES_REPLY;
+  root["ids"] = ids;
+  root["contents"] = contents;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetMetasByNamesReply(const json& root, std::vector<ObjectID>& ids,
+                                json& contents) {
+  CHECK_IPC_ERROR(root, command_t::GET_METAS_BY_NAMES_REPLY);
+  ids = root["ids"].get<std::vector<ObjectID>>();
+  contents = root["contents"];
+  return Status::OK();
+}
+
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg) {
   json root;
   root["type"] = command_t::CREATE_STREAM_REQUEST;
@@ -1540,33 +2139,77 @@ Status ReadCreateStreamReply(const json& root) {
   return Status::OK();
 }
 
-void WriteOpenStreamRequest(const ObjectID& object_id, const int64_t& mode,
+void WriteCreateFixedStreamRequest(std::string stream_name, int blob_nums,
+                                   size_t blob_size, std::string& msg) {
+  json root;
+  root["type"] = command_t::CREATE_FIXED_STREAM_REQUEST;
+  root["stream_name"] = stream_name;
+  root["blob_nums"] = blob_nums;
+  root["blob_size"] = blob_size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateFixedStreamRequest(const json& root, std::string& stream_name,
+                                    int& blob_nums, size_t& blob_size) {
+  CHECK_IPC_ERROR(root, command_t::CREATE_FIXED_STREAM_REQUEST);
+  stream_name = root["stream_name"].get<std::string>();
+  blob_nums = root["blob_nums"].get<int>();
+  blob_size = root["blob_size"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteCreateFixedStreamReply(std::string& msg, ObjectID& stream_id) {
+  json root;
+  root["type"] = command_t::CREATE_FIXED_STREAM_REPLY;
+  root["stream_id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCreateFixedStreamReply(const json& root, ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::CREATE_FIXED_STREAM_REPLY);
+  stream_id = root["stream_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteOpenStreamRequest(const ObjectID& object_id, std::string stream_name,
+                            const int64_t& mode, bool wait, uint64_t timeout,
                             std::string& msg) {
   json root;
   root["type"] = command_t::OPEN_STREAM_REQUEST;
   root["object_id"] = object_id;
   root["mode"] = mode;
+  root["stream_name"] = stream_name;
+  root["wait"] = wait;
+  root["timeout"] = timeout;
 
   encode_msg(root, msg);
 }
 
 Status ReadOpenStreamRequest(const json& root, ObjectID& object_id,
-                             int64_t& mode) {
+                             std::string& stream_name, int64_t& mode,
+                             bool& wait, uint64_t& timeout) {
   CHECK_IPC_ERROR(root, command_t::OPEN_STREAM_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   mode = root["mode"].get<int64_t>();
+  stream_name = root["stream_name"].get<std::string>();
+  wait = root["wait"].get<bool>();
+  timeout = root["timeout"].get<uint64_t>();
   return Status::OK();
 }
 
-void WriteOpenStreamReply(std::string& msg) {
+void WriteOpenStreamReply(std::string& msg, ObjectID& id) {
   json root;
   root["type"] = command_t::OPEN_STREAM_REPLY;
+  root["id"] = id;
 
   encode_msg(root, msg);
 }
 
-Status ReadOpenStreamReply(const json& root) {
+Status ReadOpenStreamReply(const json& root, ObjectID& ret_id) {
   CHECK_IPC_ERROR(root, command_t::OPEN_STREAM_REPLY);
+  ret_id = root["id"].get<ObjectID>();
   return Status::OK();
 }
 
@@ -1637,6 +2280,38 @@ Status ReadPushNextStreamChunkReply(const json& root) {
   return Status::OK();
 }
 
+void WritePushNextStreamChunkByOffsetRequest(const ObjectID stream_id,
+                                             const size_t offset,
+                                             std::string& msg) {
+  json root;
+  root["type"] = command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REQUEST;
+  root["id"] = stream_id;
+  root["offset"] = offset;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPushNextStreamChunkByOffsetRequest(const json& root,
+                                              ObjectID& stream_id,
+                                              size_t& offset) {
+  CHECK_IPC_ERROR(root, command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  offset = root["offset"].get<size_t>();
+
+  return Status::OK();
+}
+
+void WritePushNextStreamChunkByOffsetReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REPLY;
+  encode_msg(root, msg);
+}
+
+Status ReadPushNextStreamChunkByOffsetReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REPLY);
+  return Status::OK();
+}
+
 void WritePullNextStreamChunkRequest(const ObjectID stream_id,
                                      std::string& msg) {
   json root;
@@ -1663,6 +2338,38 @@ void WritePullNextStreamChunkReply(ObjectID const chunk, std::string& msg) {
 Status ReadPullNextStreamChunkReply(const json& root, ObjectID& chunk) {
   CHECK_IPC_ERROR(root, command_t::PULL_NEXT_STREAM_CHUNK_REPLY);
   chunk = root["chunk"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteCheckFixedStreamReceivedRequest(const ObjectID stream_id, int index,
+                                          std::string& msg) {
+  json root;
+  root["type"] = command_t::CHECK_FIXED_STREAM_RECEIVED_REQUEST;
+  root["id"] = stream_id;
+  root["index"] = index;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCheckFixedStreamReceivedRequest(const json& root,
+                                           ObjectID& stream_id, int& index) {
+  CHECK_IPC_ERROR(root, command_t::CHECK_FIXED_STREAM_RECEIVED_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  index = root["index"].get<int>();
+  return Status::OK();
+}
+
+void WriteCheckFixedStreamReceivedReply(bool finished, std::string& msg) {
+  json root;
+  root["type"] = command_t::CHECK_FIXED_STREAM_RECEIVED_REPLY;
+  root["finished"] = finished;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCheckFixedStreamReceivedReply(bool& finished, const json& root) {
+  CHECK_IPC_ERROR(root, command_t::CHECK_FIXED_STREAM_RECEIVED_REPLY);
+  finished = root["finished"].get<bool>();
   return Status::OK();
 }
 
@@ -1722,21 +2429,599 @@ Status ReadDropStreamReply(const json& root) {
   return Status::OK();
 }
 
-void WritePutNameRequest(const ObjectID object_id, const std::string& name,
-                         std::string& msg) {
+void WriteAbortStreamRequest(const ObjectID stream_id, std::string& msg) {
   json root;
-  root["type"] = command_t::PUT_NAME_REQUEST;
-  root["object_id"] = object_id;
+  root["type"] = command_t::ABORT_STREAM_REQUEST;
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadAbortStreamRequest(const json& root, ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::ABORT_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteAbortStreamReply(std::string& msg, bool success) {
+  json root;
+  root["type"] = command_t::ABORT_STREAM_REPLY;
+  root["success"] = success;
+
+  encode_msg(root, msg);
+}
+
+Status ReadAbortStreamReply(const json& root, bool& success) {
+  CHECK_IPC_ERROR(root, command_t::ABORT_STREAM_REPLY);
+  success = root["success"].get<bool>();
+  return Status::OK();
+}
+
+void WritePutStreamNameRequest(const ObjectID stream_id, std::string name,
+                               std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_STREAM_NAME_REQUEST;
+  root["id"] = stream_id;
   root["name"] = name;
 
   encode_msg(root, msg);
 }
 
+Status ReadPutStreamNameRequest(const json& root, ObjectID& stream_id,
+                                std::string& name) {
+  CHECK_IPC_ERROR(root, command_t::PUT_STREAM_NAME_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  name = root["name"].get<std::string>();
+  return Status::OK();
+}
+
+void WritePutStreamNameReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_STREAM_NAME_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutStreamNameReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::PUT_STREAM_NAME_REPLY);
+  return Status::OK();
+}
+
+void WriteGetStreamIDByNameRequest(const std::string name, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_STREAM_ID_BY_NAME_REQUEST;
+  root["name"] = name;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetStreamIDByNameRequest(const json& root, std::string& name) {
+  CHECK_IPC_ERROR(root, command_t::GET_STREAM_ID_BY_NAME_REQUEST);
+  name = root["name"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteGetStreamIDByNameReply(const ObjectID stream_id, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_STREAM_ID_BY_NAME_REPLY;
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetStreamIDByNameReply(const json& root, ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::GET_STREAM_ID_BY_NAME_REPLY);
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteActivateRemoteFixedStreamRequest(
+    ObjectID stream_id, std::vector<std::vector<uint64_t>>& buffer_list,
+    std::vector<std::vector<uint64_t>>& rkeys_list,
+    std::vector<std::vector<size_t>>& sizes_list, std::string advice_device,
+    int port, std::string& msg) {
+  json root;
+  root["type"] = command_t::ACTIVATE_REMOTE_FIXED_STREAM_REQUEST;
+  root["id"] = stream_id;
+  root["buffer_list"] = buffer_list;
+  root["rkeys_list"] = rkeys_list;
+  root["sizes_list"] = sizes_list;
+  root["advice_device"] = advice_device;
+  root["port"] = port;
+
+  encode_msg(root, msg);
+}
+
+Status ReadActivateRemoteFixedStreamRequest(
+    const json& root, ObjectID& stream_id,
+    std::vector<std::vector<uint64_t>>& buffer_list,
+    std::vector<std::vector<uint64_t>>& rkeys,
+    std::vector<std::vector<size_t>>& sizes_list, std::string& advice_device,
+    int& port) {
+  CHECK_IPC_ERROR(root, command_t::ACTIVATE_REMOTE_FIXED_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  buffer_list = root["buffer_list"].get<std::vector<std::vector<uint64_t>>>();
+  rkeys = root["rkeys_list"].get<std::vector<std::vector<uint64_t>>>();
+  sizes_list = root["sizes_list"].get<std::vector<std::vector<size_t>>>();
+  advice_device = root["advice_device"].get<std::string>();
+  port = root["port"].get<int>();
+  return Status::OK();
+}
+
+void WriteActivateRemoteFixedStreamReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::ACTIVATE_REMOTE_FIXED_STREAM_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadActivateRemoteFixedStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::ACTIVATE_REMOTE_FIXED_STREAM_REPLY);
+  return Status::OK();
+}
+
+void WriteStreamReadyAckReply(std::string& msg, int index) {
+  json root;
+  root["type"] = command_t::STREAM_READY_ACK;
+  root["index"] = index;
+
+  encode_msg(root, msg);
+}
+
+Status ReadStreamReadyAckReply(const json& root, int& index) {
+  CHECK_IPC_ERROR(root, command_t::STREAM_READY_ACK);
+  index = root["index"].get<int>();
+  return Status::OK();
+}
+
+Status WriteOpenFixedStreamRequest(const ObjectID stream_id,
+                                   const uint64_t mode, std::string& msg) {
+  json root;
+  root["type"] = command_t::OPEN_FIXED_STREAM_REQUEST;
+  root["id"] = stream_id;
+  root["mode"] = mode;
+
+  encode_msg(root, msg);
+  return Status::OK();
+}
+
+Status ReadOpenFixedStreamRequest(const json& root, ObjectID& stream_id,
+                                  int64_t& mode) {
+  CHECK_IPC_ERROR(root, command_t::OPEN_FIXED_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  mode = root["mode"].get<int64_t>();
+  return Status::OK();
+}
+
+void WriteOpenFixedStreamReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::OPEN_FIXED_STREAM_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadOpenFixedStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::OPEN_FIXED_STREAM_REPLY);
+  return Status::OK();
+}
+
+void WriteCloseStreamRequest(ObjectID stream_id, std::string& msg) {
+  json root;
+  root["type"] = command_t::CLOSE_STREAM_REQUEST;
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCloseStreamRequest(const json& root, ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::CLOSE_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteCloseStreamReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::CLOSE_STREAM_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadCloseStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::CLOSE_STREAM_REPLY);
+  return Status::OK();
+}
+
+void WriteDeleteStreamRequest(ObjectID stream_id, std::string& msg) {
+  json root;
+  root["type"] = command_t::DELETE_STREAM_REQUEST;
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDeleteStreamRequest(const json& root, ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::DELETE_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteDeleteStreamReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::DELETE_STREAM_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDeleteStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::DELETE_STREAM_REPLY);
+  return Status::OK();
+}
+
+void WriteVineyardOpenRemoteFixedStreamRequest(
+    ObjectID const remote_id, std::string stream_name, ObjectID local_id,
+    int blob_nums, size_t size, std::string remote_endpoint, uint64_t mode,
+    bool wait, uint64_t timeout, std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST;
+  root["remote_id"] = remote_id;
+  root["stream_name"] = stream_name;
+  root["local_id"] = local_id;
+  root["blob_nums"] = blob_nums;
+  root["size"] = size;
+  root["remote_endpoint"] = remote_endpoint;
+  root["mode"] = mode;
+  root["wait"] = wait;
+  root["timeout"] = timeout;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardOpenRemoteFixedStreamRequest(
+    const json& root, ObjectID& remote_id, std::string& remote_stream_name,
+    ObjectID& local_id, int& blob_nums, size_t& size,
+    std::string& remote_endpoint, uint64_t& mode, bool& wait,
+    uint64_t& timeout) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST);
+  remote_id = root["remote_id"].get<ObjectID>();
+  remote_stream_name = root["stream_name"].get<std::string>();
+  local_id = root["local_id"].get<ObjectID>();
+  blob_nums = root["blob_nums"].get<int>();
+  size = root["size"].get<size_t>();
+  remote_endpoint = root["remote_endpoint"].get<std::string>();
+  mode = root["mode"].get<int64_t>();
+  wait = root["wait"].get<bool>();
+  timeout = root["timeout"].get<int64_t>();
+  return Status::OK();
+}
+
+void WriteVineyardOpenRemoteFixedStreamReply(std::string& msg,
+                                             ObjectID const local_stream_id) {
+  json root;
+  root["type"] = command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REPLY;
+  root["local_stream_id"] = local_stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardOpenRemoteFixedStreamReply(const json& root,
+                                              ObjectID& local_id) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REPLY);
+  local_id = root["local_stream_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteVineyardActivateRemoteFixedStreamRequest(
+    ObjectID stream_id, bool create, std::vector<ObjectID>& blob_list,
+    std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REQUEST;
+  root["id"] = stream_id;
+  root["create"] = create;
+  root["blob_list"] = blob_list;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardActivateRemoteFixedStreamRequest(
+    const json& root, ObjectID& stream_id, bool& create,
+    std::vector<ObjectID>& blob_list) {
+  CHECK_IPC_ERROR(root,
+                  command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  create = root["create"].get<bool>();
+  blob_list = root["blob_list"].get<std::vector<ObjectID>>();
+  return Status::OK();
+}
+
+void WriteVineyardActivateRemoteFixedStreamReply(
+    std::string& msg, std::vector<std::shared_ptr<Payload>>& payload_list,
+    std::vector<int>& fds_to_send) {
+  json root;
+  root["type"] = command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REPLY;
+  json payloads = json::array();
+  for (size_t i = 0; i < payload_list.size(); ++i) {
+    json buffer_meta;
+    payload_list[i]->ToJSON(buffer_meta);
+    root[std::to_string(i)] = buffer_meta;
+    payloads.push_back(buffer_meta);
+  }
+  root["payloads"] = payloads;
+  root["fds"] = fds_to_send;
+  root["num"] = payload_list.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardActivateRemoteFixedStreamReply(const json& root,
+                                                  std::vector<Payload>& objects,
+                                                  std::vector<int>& fds_sent) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REPLY);
+  for (size_t i = 0; i < root["num"]; i++) {
+    json tree = root[std::to_string(i)];
+    Payload object;
+    object.FromJSON(tree);
+    objects.push_back(object);
+  }
+  fds_sent = root["fds"].get<std::vector<int>>();
+  return Status::OK();
+}
+
+void WriteVineyardActivateRemoteFixedStreamWithOffsetRequest(
+    ObjectID stream_id, std::vector<size_t>& offsets, std::string& msg) {
+  json root;
+  root["type"] =
+      command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REQUEST;
+  root["id"] = stream_id;
+  root["offsets"] = offsets;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardActivateRemoteFixedStreamWithOffsetRequest(
+    const json& root, ObjectID& stream_id, std::vector<size_t>& offsets) {
+  CHECK_IPC_ERROR(
+      root,
+      command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  offsets = root["offsets"].get<std::vector<size_t>>();
+  return Status::OK();
+}
+
+void WriteVineyardActivateRemoteFixedStreamWithOffsetReply(std::string& msg) {
+  json root;
+  root["type"] =
+      command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardActivateRemoteFixedStreamWithOffsetReply(const json& root) {
+  CHECK_IPC_ERROR(
+      root, command_t::VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REPLY);
+  return Status::OK();
+}
+
+void WriteVineyardCloseRemoteFixedStreamRequest(ObjectID stream_id,
+                                                std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REQUEST;
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardCloseRemoteFixedStreamRequest(const json& root,
+                                                 ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteVineyardCloseRemoteFixedStreamReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardCloseRemoteFixedStreamReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REPLY);
+  return Status::OK();
+}
+
+void WriteVineyardGetMetasByNamesRequest(std::vector<std::string>& names,
+                                         std::string rpc_endpoint,
+                                         std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_GET_METAS_BY_NAMES_REQUEST;
+  root["names"] = names;
+  root["rpc_endpoint"] = rpc_endpoint;
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardGetMetasByNamesRequest(const json& root,
+                                          std::vector<std::string>& names,
+                                          std::string& rpc_endpoint) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_GET_METAS_BY_NAMES_REQUEST);
+  names = root["names"].get<std::vector<std::string>>();
+  rpc_endpoint = root["rpc_endpoint"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteVineyardGetMetasByNamesReply(const std::vector<json>& contents,
+                                       std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_GET_METAS_BY_NAMES_REPLY;
+  root["contents"] = contents;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardGetMetasByNamesReply(const json& root,
+                                        std::vector<json>& contents) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_GET_METAS_BY_NAMES_REPLY);
+  contents = root["contents"].get<std::vector<json>>();
+  return Status::OK();
+}
+
+void WriteVineyardGetRemoteBlobsWithRDMARequest(
+    std::vector<std::vector<ObjectID>>& local_ids,
+    std::vector<std::vector<ObjectID>>& remote_ids, std::string& rpc_endpoint,
+    std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REQUEST;
+  root["local_ids"] = local_ids;
+  root["remote_ids"] = remote_ids;
+  root["rpc_endpoint"] = rpc_endpoint;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardGetRemoteBlobsWithRDMARequest(
+    const json& root, std::vector<std::vector<ObjectID>>& local_ids,
+    std::vector<std::vector<ObjectID>>& remote_ids, std::string& rpc_endpoint) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REQUEST);
+  local_ids = root["local_ids"].get<std::vector<std::vector<ObjectID>>>();
+  remote_ids = root["remote_ids"].get<std::vector<std::vector<ObjectID>>>();
+  rpc_endpoint = root["rpc_endpoint"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteVineyardGetRemoteBlobsWithRDMAReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardGetRemoteBlobsWithRDMAReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REPLY);
+  return Status::OK();
+}
+
+void WriteVineyardGetRemoteBlobsWithOffsetRequest(size_t batch_nums,
+                                                  size_t batch_size,
+                                                  std::string& rpc_endpoint,
+                                                  std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REQUEST;
+  root["batch_nums"] = batch_nums;
+  root["batch_size"] = batch_size;
+  root["rpc_endpoint"] = rpc_endpoint;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardGetRemoteBlobsWithOffsetRequest(const json& root,
+                                                   size_t& batch_nums,
+                                                   size_t& batch_size,
+                                                   std::string& rpc_endpoint) {
+  CHECK_IPC_ERROR(root,
+                  command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REQUEST);
+  batch_nums = root["batch_nums"].get<size_t>();
+  batch_size = root["batch_size"].get<size_t>();
+  rpc_endpoint = root["rpc_endpoint"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteVineyardGetRemoteBlobsWithOffsetReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardGetRemoteBlobsWithOffsetReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REPLY);
+  return Status::OK();
+}
+
+void WriteVineyardStopStreamRequest(ObjectID stream_id, bool failed,
+                                    std::string& msg) {
+  // TBD
+}
+
+Status ReadVineyardStopStreamRequest(const json& root, ObjectID& stream_id,
+                                     bool& failed) {
+  // TBD
+  return Status::NotImplemented("Not implemented yet");
+}
+
+void WriteVineyardStopStreamReply(std::string& msg) {
+  // TBD
+}
+
+Status ReadVineyardStopStreamReply(const json& root) {
+  // TBD
+  return Status::NotImplemented("Not implemented yet");
+}
+
+void WriteVineyardDropStreamRequest(ObjectID stream_id, std::string& msg) {
+  // TBD
+}
+
+Status ReadVineyardDropStreamRequest(const json& root, ObjectID& stream_id) {
+  // TBD
+  return Status::NotImplemented("Not implemented yet");
+}
+
+void WriteVineyardDropStreamReply(std::string& msg) {
+  // TBD
+}
+
+Status ReadVineyardDropStreamReply(const json& root) {
+  // TBD
+  return Status::NotImplemented("Not implemented yet");
+}
+
+void WriteVineyardAbortRemoteStreamRequest(ObjectID stream_id,
+                                           std::string& msg) {
+  json root;
+  root["type"] = command_t::VINEYARD_ABORT_REMOTE_STREAM_REQUEST;
+  root["id"] = stream_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardAbortRemoteStreamRequest(const json& root,
+                                            ObjectID& stream_id) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_ABORT_REMOTE_STREAM_REQUEST);
+  stream_id = root["id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteVineyardAbortRemoteStreamReply(std::string& msg, bool success) {
+  json root;
+  root["type"] = command_t::VINEYARD_ABORT_REMOTE_STREAM_REPLY;
+  root["success"] = success;
+
+  encode_msg(root, msg);
+}
+
+Status ReadVineyardAbortRemoteStreamReply(const json& root, bool& success) {
+  CHECK_IPC_ERROR(root, command_t::VINEYARD_ABORT_REMOTE_STREAM_REPLY);
+  success = root["success"].get<bool>();
+
+  return Status::OK();
+}
+
+void WritePutNameRequest(const ObjectID object_id, const std::string& name,
+                         bool overwrite, std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_NAME_REQUEST;
+  root["object_id"] = object_id;
+  root["name"] = name;
+  root["overwrite"] = overwrite;
+
+  encode_msg(root, msg);
+}
+
 Status ReadPutNameRequest(const json& root, ObjectID& object_id,
-                          std::string& name) {
+                          std::string& name, bool& overwrite) {
   CHECK_IPC_ERROR(root, command_t::PUT_NAME_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   name = root["name"].get_ref<std::string const&>();
+  overwrite = root.value("overwrite", true);
   return Status::OK();
 }
 
@@ -1749,6 +3034,39 @@ void WritePutNameReply(std::string& msg) {
 
 Status ReadPutNameReply(const json& root) {
   CHECK_IPC_ERROR(root, command_t::PUT_NAME_REPLY);
+  return Status::OK();
+}
+
+void WritePutNamesRequest(const std::vector<ObjectID> object_ids,
+                          const std::vector<std::string>& names, bool overwrite,
+                          std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_NAMES_REQUEST;
+  root["object_ids"] = object_ids;
+  root["names"] = names;
+  root["overwrite"] = overwrite;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutNamesRequest(const json& root, std::vector<ObjectID>& object_id,
+                           std::vector<std::string>& name, bool& overwrite) {
+  CHECK_IPC_ERROR(root, command_t::PUT_NAMES_REQUEST);
+  object_id = root["object_ids"].get<std::vector<ObjectID>>();
+  name = root["names"].get<std::vector<std::string>>();
+  overwrite = root.value("overwrite", true);
+  return Status::OK();
+}
+
+void WritePutNamesReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_NAMES_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutNamesReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::PUT_NAMES_REPLY);
   return Status::OK();
 }
 
@@ -1780,6 +3098,107 @@ void WriteGetNameReply(const ObjectID& object_id, std::string& msg) {
 Status ReadGetNameReply(const json& root, ObjectID& object_id) {
   CHECK_IPC_ERROR(root, command_t::GET_NAME_REPLY);
   object_id = root["object_id"].get<ObjectID>();
+  return Status::OK();
+}
+
+void WriteGetNamesRequest(const std::vector<std::string>& name, const bool wait,
+                          std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_NAMES_REQUEST;
+  root["names"] = name;
+  root["wait"] = wait;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetNamesRequest(const json& root, std::vector<std::string>& name,
+                           bool& wait) {
+  CHECK_IPC_ERROR(root, command_t::GET_NAMES_REQUEST);
+  name = root["names"].get<std::vector<std::string>>();
+  wait = root["wait"].get<bool>();
+  return Status::OK();
+}
+
+void WriteGetNamesReply(const std::vector<ObjectID>& object_id,
+                        std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_NAMES_REPLY;
+  root["object_ids"] = object_id;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetNamesReply(const json& root, std::vector<ObjectID>& object_id) {
+  CHECK_IPC_ERROR(root, command_t::GET_NAMES_REPLY);
+  object_id = root["object_ids"].get<std::vector<ObjectID>>();
+  return Status::OK();
+}
+
+void WriteGetObjectLocationRequest(const std::vector<std::string>& names,
+                                   std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_NAME_LOCATION_REQUEST;
+  root["names"] = names;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetObjectLocationRequest(const json& root,
+                                    std::vector<std::string>& names) {
+  CHECK_IPC_ERROR(root, command_t::GET_NAME_LOCATION_REQUEST);
+  names = root["names"].get<std::vector<std::string>>();
+  return Status::OK();
+}
+
+void WriteGetObjectLocationReply(
+    std::vector<std::vector<std::string>>& locations, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_NAME_LOCATION_REPLY;
+  root["locations"] = locations;
+
+  encode_msg(root, msg);
+}
+
+Status ReadGetObjectLocationReply(
+    const json& root, std::vector<std::vector<std::string>>& locations) {
+  CHECK_IPC_ERROR(root, command_t::GET_NAME_LOCATION_REPLY);
+  locations = root["locations"].get<std::vector<std::vector<std::string>>>();
+  return Status::OK();
+}
+
+void WritePutObjectLocationRequest(const std::vector<std::string>& names,
+                                   const std::vector<std::string>& locations,
+                                   int ttl_seconds, std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_NAME_LOCATION_REQUEST;
+  root["names"] = names;
+  root["locations"] = locations;
+  root["ttl_seconds"] = ttl_seconds;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutObjectLocationRequest(const json& root,
+                                    std::vector<std::string>& names,
+                                    std::vector<std::string>& locations,
+                                    int& ttl_seconds) {
+  CHECK_IPC_ERROR(root, command_t::PUT_NAME_LOCATION_REQUEST);
+  names = root["names"].get<std::vector<std::string>>();
+  locations = root["locations"].get<std::vector<std::string>>();
+  ttl_seconds = root.value("ttl_seconds", 300);
+
+  return Status::OK();
+}
+
+void WritePutObjectLocationReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::PUT_NAME_LOCATION_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadPutObjectLocationReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::PUT_NAME_LOCATION_REPLY);
   return Status::OK();
 }
 
@@ -1843,6 +3262,35 @@ void WriteDropNameReply(std::string& msg) {
 
 Status ReadDropNameReply(const json& root) {
   CHECK_IPC_ERROR(root, command_t::DROP_NAME_REPLY);
+  return Status::OK();
+}
+
+void WriteDropNamesRequest(const std::vector<std::string>& name,
+                           std::string& msg) {
+  json root;
+  root["type"] = command_t::DROP_NAMES_REQUEST;
+  // root["names"] = name;
+  root["name_num"] = name.size();
+
+  encode_msg(root, msg);
+}
+
+Status ReadDropNamesRequest(const json& root, std::vector<std::string>& name) {
+  CHECK_IPC_ERROR(root, command_t::DROP_NAMES_REQUEST);
+  // name = root["names"].get<std::vector<std::string>>();
+  name.resize(root["name_num"].get<size_t>());
+  return Status::OK();
+}
+
+void WriteDropNamesReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::DROP_NAMES_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadDropNamesReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::DROP_NAMES_REPLY);
   return Status::OK();
 }
 
@@ -2148,6 +3596,33 @@ void WriteIsInUseReply(const bool is_in_use, std::string& msg) {
 Status ReadIsInUseReply(json const& root, bool& is_in_use) {
   CHECK_IPC_ERROR(root, command_t::IS_IN_USE_REPLY);
   is_in_use = root["is_in_use"].get<bool>();
+  return Status::OK();
+}
+
+void WriteGetVineyardMmapFdRequest(std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_VINEYARD_MMAP_FD_REQUEST;
+  encode_msg(root, msg);
+}
+
+Status ReadGetVineyardMmapFdRequest(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::GET_VINEYARD_MMAP_FD_REQUEST);
+  return Status::OK();
+}
+
+void WriteGetVineyardMmapFdReply(size_t size, size_t offset, std::string& msg) {
+  json root;
+  root["type"] = command_t::GET_VINEYARD_MMAP_FD_REPLY;
+  root["size"] = size;
+  root["offset"] = offset;
+  encode_msg(root, msg);
+}
+
+Status ReadGetVineyardMmapFdReply(const json& root, size_t& size,
+                                  size_t& offset) {
+  CHECK_IPC_ERROR(root, command_t::GET_VINEYARD_MMAP_FD_REPLY);
+  size = root["size"].get<size_t>();
+  offset = root["offset"].get<size_t>();
   return Status::OK();
 }
 

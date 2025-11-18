@@ -21,6 +21,8 @@ import os
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
+from concurrent.futures import Future
+import threading
 from typing import Any
 from typing import Dict
 from typing import List
@@ -43,9 +45,67 @@ from vineyard._C import VineyardException
 from vineyard._C import _connect
 from vineyard.core.builder import BuilderContext
 from vineyard.core.builder import put
+from vineyard.core.resolver import get_current_resolvers
 from vineyard.core.resolver import ResolverContext
 from vineyard.core.resolver import get
 
+class AsyncFixedStreamChunk:
+    
+    def __init__(self, client, chunk_nums):
+        self.client = client
+        self._chunk_nums = chunk_nums
+        self.future : Optional[Future] = None
+        self._reader_index = 0
+        self._writer_index = 0
+        self._ready_list = []
+        self._exception : Optional[Exception] = None
+        self._lock = threading.RLock()
+        self._start_fetch()
+        
+
+    def _start_fetch(self):
+        self.future = self.client._async_task_thread_pool.submit(self._fetch)
+        self.future.add_done_callback(self._callback)
+    
+    def _fetch(self):
+        try:
+            try:
+                self._lock.release()
+            except Exception as e:
+                print("Error in AsyncFixedStreamChunk fetch release lock:", e)
+                pass
+
+            index = self.client.vineyard_get_next_fixed_stream_chunk()
+            with self._lock:
+                self._ready_list.append(index)
+                self._writer_index += 1
+        except Exception as e:
+            self._exception = e
+    
+    def _callback(self, future):
+        try:
+            future.result()
+        except Exception as e:
+            self._exception = e
+        finally:
+            with self._lock:
+                if self._writer_index < self._chunk_nums:
+                    self._start_fetch()
+    
+    def get(self) -> int:
+        if self._exception:
+            raise self._exception
+
+        try:
+            with self._lock:
+                self._ready_list.index(self._reader_index)
+                self._reader_index += 1
+                index = self._reader_index - 1
+                return index
+        except Exception as e:
+            print("Error in AsyncFixedStreamChunk get:", e)
+            pass
+        return -1
 
 def _apply_docstring(func):
     def _apply(fn):
@@ -168,6 +228,7 @@ class Client:
         session: int = None,
         username: str = None,
         password: str = None,
+        max_workers: int = 8,
         config: str = None,
     ):
         """Connects to the vineyard IPC socket and RPC socket.
@@ -211,6 +272,8 @@ class Client:
                       is enabled.
             password: Optional, the required password of vineyardd when authentication
                       is enabled.
+            max_workers: Optional, the maximum number of threads that can be used to
+                        asynchronously get/put objects from/to vineyard. Default is 8.
             config: Optional, can either be a path to a YAML configuration file or
                     a path to a directory containing the default config file
                     `vineyard-config.yaml`. Also, the environment variable
@@ -292,6 +355,10 @@ class Client:
 
         self._spread = False
         self._compression = True
+
+        # Initialize thread pool for lazy_get
+        self._async_task_thread_pool = ThreadPoolExecutor(max_workers=max_workers)
+
         if self._ipc_client is None and self._rpc_client is None:
             raise ConnectionError(
                 "Failed to connect to vineyard via both IPC and RPC connection. "
@@ -385,9 +452,27 @@ class Client:
     def open_stream(self, id: ObjectID, mode: str) -> None:
         return self.default_client().open_stream(id, mode)
 
+    @_apply_docstring(IPCClient.close_stream)
+    def close_stream(self, id: ObjectID) -> None:
+        return self.default_client().close_stream(id)
+    
+    @_apply_docstring(IPCClient.delete_stream)
+    def delete_stream(self, id: ObjectID) -> None:
+        return self.default_client().delete_stream(id)
+    
+    @_apply_docstring(IPCClient.create_fixed_stream)
+    def create_fixed_stream(self, stream_name: str, blob_num: int, size: int) -> ObjectID:
+        return self.default_client().create_fixed_stream(stream_name, blob_num, size)
+
     @_apply_docstring(IPCClient.push_chunk)
     def push_chunk(self, stream_id: ObjectID, chunk: ObjectID) -> None:
         return self.default_client().push_chunk(stream_id, chunk)
+
+    @_apply_docstring(IPCClient.push_next_stream_chunk_by_offset)
+    def push_next_stream_chunk_by_offset(
+        self, stream_id: ObjectID, offset: int
+    ) -> None:
+        return self.default_client().push_next_stream_chunk_by_offset(stream_id, offset)
 
     @_apply_docstring(IPCClient.next_chunk_id)
     def next_chunk_id(self, stream_id: ObjectID) -> ObjectID:
@@ -652,6 +737,47 @@ class Client:
     def next_buffer_chunk(self, stream: ObjectID) -> memoryview:
         return self.ipc_client.next_buffer_chunk(stream)
 
+    @_apply_docstring(IPCClient.vineyard_open_remote_fixed_stream_with_id)
+    def vineyard_open_remote_fixed_stream_with_id(self, remote_id: ObjectID, local_id: ObjectID, blob_nums: int, size: int, remote_endpoint: str, mode: str, wait: bool, timeout: int) -> int:
+        return self.ipc_client.vineyard_open_remote_fixed_stream_with_id(remote_id, local_id, blob_nums, size, remote_endpoint, mode, wait, timeout)
+    
+    @_apply_docstring(IPCClient.vineyard_open_remote_fixed_stream_with_name)
+    def vineyard_open_remote_fixed_stream_with_name(self, remote_name: str, local_id: ObjectID, blob_nums: int, size: int, remote_endpoint: str, mode: str, wait: bool, timeout: int) -> int:
+        return self.ipc_client.vineyard_open_remote_fixed_stream_with_name(remote_name, local_id, blob_nums, size, remote_endpoint, mode, wait, timeout)
+    
+    @_apply_docstring(IPCClient.vineyard_activate_remote_fixed_stream_with_offset)
+    def vineyard_activate_remote_fixed_stream_with_offset(self, stream_id: ObjectID, offsets: List[int]) -> None:
+        return self.ipc_client.vineyard_activate_remote_fixed_stream_with_offset(stream_id, offsets)
+    
+    # List[0]: fd, List[1]: size, List[2]: offset
+    @_apply_docstring(IPCClient.get_vineyard_mmap_fd)
+    def get_vineyard_mmap_fd(self) -> List[int]:
+        return self.ipc_client.get_vineyard_mmap_fd()
+
+    @_apply_docstring(IPCClient.vineyard_get_next_fixed_stream_chunk)
+    def vineyard_get_next_fixed_stream_chunk(self) -> int:
+        return self.ipc_client.vineyard_get_next_fixed_stream_chunk()
+    
+    @_apply_docstring(IPCClient.open_fixed_stream)
+    def open_fixed_stream(self, stream_id: ObjectID, mode: str) -> None:
+        return self.ipc_client.open_fixed_stream(stream_id, mode)
+
+    @_apply_docstring(IPCClient.vineyard_close_remote_fixed_stream)
+    def vineyard_close_remote_fixed_stream(self, stream_id: ObjectID) -> None:
+        return self.ipc_client.vineyard_close_remote_fixed_stream(stream_id)
+
+    @_apply_docstring(IPCClient.vineyard_abort_remote_stream)
+    def vineyard_abort_remote_stream(self, stream_id: ObjectID) -> bool:
+        return self.ipc_client.vineyard_abort_remote_stream(stream_id)
+
+    @_apply_docstring(IPCClient.abort_stream)
+    def abort_stream(self, stream_id: ObjectID) -> bool:
+        return self.ipc_client.abort_stream(stream_id)
+
+    @_apply_docstring(IPCClient.check_fixed_stream_received)
+    def check_fixed_stream_received(self, stream_id: ObjectID, index: int) -> bool:
+        return self.ipc_client.check_fixed_stream_received(stream_id, index)
+
     @_apply_docstring(IPCClient.allocated_size)
     def allocated_size(self, object_id: Union[Object, ObjectID]) -> int:
         return self.ipc_client.allocated_size(object_id)
@@ -874,5 +1000,7 @@ class Client:
         yield
         self.spread = tmp_spread
 
+    def vineyard_get_next_fixed_stream_chunk_async(self, nums) -> AsyncFixedStreamChunk:
+        return AsyncFixedStreamChunk(self, nums)
 
 __all__ = ['Client']

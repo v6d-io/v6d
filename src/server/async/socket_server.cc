@@ -15,6 +15,9 @@ limitations under the License.
 
 #include "server/async/socket_server.h"
 
+#include <fcntl.h>
+#include <sys/mman.h>
+
 #include <limits>
 #include <map>
 #include <memory>
@@ -25,13 +28,17 @@ limitations under the License.
 
 #include "common/memory/cuda_ipc.h"
 #include "common/memory/fling.h"
+#include "common/memory/memcpy.h"
 #include "common/util/callback.h"
 #include "common/util/functions.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"
+#include "common/util/sidecar.h"
 #include "server/server/vineyard_server.h"
 #include "server/util/metrics.h"
 #include "server/util/remote.h"
+
+#include "thread-pool/thread_pool.h"
 
 namespace vineyard {
 
@@ -44,11 +51,13 @@ constexpr size_t MESSAGE_HEADER_LIMIT = 256 * 1024 * 1024;  // 256M bytes
 
 SocketConnection::SocketConnection(
     stream_protocol::socket socket, std::shared_ptr<VineyardServer> server_ptr,
-    std::shared_ptr<SocketServer> socket_server_ptr, int conn_id)
+    std::shared_ptr<SocketServer> socket_server_ptr, int conn_id,
+    std::string host)
     : socket_(std::move(socket)),
       server_ptr_(server_ptr),
       socket_server_ptr_(socket_server_ptr),
-      conn_id_(conn_id) {
+      conn_id_(conn_id),
+      peer_host(std::move(host)) {
   // hold the references of bulkstore using `shared_from_this()`.
   auto bulk_store = server_ptr_->GetBulkStore();
   if (bulk_store != nullptr) {
@@ -60,7 +69,10 @@ SocketConnection::SocketConnection(
   }
   // initializing
   this->registered_.store(false);
+  this->trace_log_level_ = server_ptr_->GetTraceLogLevel();
 }
+
+bool SocketConnection::sendFd(int fd) { return send_fd(nativeHandle(), fd); }
 
 bool SocketConnection::Start() {
   running_.store(true);
@@ -111,6 +123,7 @@ void SocketConnection::doReadHeader() {
                        doReadBody();
                      } else {
                        doStop();
+                       //  ThrowException();
                      }
                    });
 }
@@ -119,6 +132,7 @@ void SocketConnection::doReadBody() {
   if (read_msg_header_ > MESSAGE_HEADER_LIMIT) {
     VLOG(10) << "invalid message header value: " << read_msg_header_;
     doStop();
+    // ThrowException();
     return;
   }
   read_msg_body_.resize(read_msg_header_ + 1);
@@ -130,10 +144,14 @@ void SocketConnection::doReadBody() {
                        bool exit = processMessage(read_msg_body_);
                        if (exit || ec == asio::error::eof) {
                          doStop();
+                         if (!exit) {
+                           //  ThrowException();
+                         }
                          return;
                        }
                      } else {
                        doStop();
+                       //  ThrowException();
                        return;
                      }
                    });
@@ -231,7 +249,13 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   auto self(shared_from_this());
 
   // DON'T let vineyardd crash when the client is malicious.
+  uint64_t start = std::chrono::duration_cast<std::chrono::microseconds>(
+                       std::chrono::system_clock::now().time_since_epoch())
+                       .count();
   TRY_READ_FROM_JSON(root = json::parse(message_in), message_in);
+  uint64_t end = std::chrono::duration_cast<std::chrono::microseconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
   if (!root.contains("type")) {
     RESPONSE_ON_ERROR(Status::Invalid("Invalid message: no 'type' field"));
   }
@@ -241,8 +265,16 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     RESPONSE_ON_ERROR(Status::Invalid(
         "The connection is not registered yet, command is: " + cmd));
   }
+
+  if (end - start > 500) {
+    LOG(INFO) << "parse cmd: " << cmd << " json time: " << (end - start)
+              << " us";
+  }
+
   if (cmd == command_t::REGISTER_REQUEST) {
     return doRegister(root);
+  } else if (cmd == command_t::REQUIRE_EXTRA_REQUEST_MEMORY_REQUEST) {
+    return doRequireExtraRequestMemory(root);
   } else if (cmd == command_t::EXIT_REQUEST) {
     return true;
   } else if (cmd == command_t::CREATE_BUFFER_REQUEST) {
@@ -275,6 +307,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doRelease(root);
   } else if (cmd == command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST) {
     return doDelDataWithFeedbacks(root);
+  } else if (cmd == command_t::DEL_HUGE_DATA_REQUEST) {
+    return doDelHugeData(root);
   } else if (cmd == command_t::CREATE_BUFFER_PLASMA_REQUEST) {
     return doCreateBufferByPlasma(root);
   } else if (cmd == command_t::GET_BUFFERS_PLASMA_REQUEST) {
@@ -285,12 +319,22 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doPlasmaRelease(root);
   } else if (cmd == command_t::PLASMA_DEL_DATA_REQUEST) {
     return doPlasmaDelData(root);
+  } else if (cmd == command_t::CREATE_USER_BUFFERS_REQUEST) {
+    return doCreateUserBuffers(root);
+  } else if (cmd == command_t::GET_USER_BUFFERS_REQUEST) {
+    return doGetUserBuffers(root);
+  } else if (cmd == command_t::DELETE_USER_BUFFERS_REQUEST) {
+    return doDeleteUserBuffers(root);
   } else if (cmd == command_t::CREATE_DATA_REQUEST) {
     return doCreateData(root);
   } else if (cmd == command_t::CREATE_DATAS_REQUEST) {
     return doCreateDatas(root);
+  } else if (cmd == command_t::CREATE_HUGE_DATAS_REQUEST) {
+    return doCreatehugeDatas(root);
   } else if (cmd == command_t::GET_DATA_REQUEST) {
     return doGetData(root);
+  } else if (cmd == command_t::GET_HUGE_DATA_REQUEST) {
+    return doGetHugeData(root);
   } else if (cmd == command_t::DELETE_DATA_REQUEST) {
     return doDelData(root);
   } else if (cmd == command_t::LIST_DATA_REQUEST) {
@@ -301,6 +345,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doPersist(root);
   } else if (cmd == command_t::IF_PERSIST_REQUEST) {
     return doIfPersist(root);
+  } else if (cmd == command_t::BATCH_PERSIST_REQUEST) {
+    return doBatchPersist(root);
   } else if (cmd == command_t::LABEL_REQUEST) {
     return doLabelObject(root);
   } else if (cmd == command_t::CLEAR_REQUEST) {
@@ -309,22 +355,72 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doMemoryTrim(root);
   } else if (cmd == command_t::CREATE_STREAM_REQUEST) {
     return doCreateStream(root);
+  } else if (cmd == command_t::CREATE_FIXED_STREAM_REQUEST) {
+    return doCreateFixedStream(root);
   } else if (cmd == command_t::OPEN_STREAM_REQUEST) {
     return doOpenStream(root);
   } else if (cmd == command_t::GET_NEXT_STREAM_CHUNK_REQUEST) {
     return doGetNextStreamChunk(root);
   } else if (cmd == command_t::PUSH_NEXT_STREAM_CHUNK_REQUEST) {
     return doPushNextStreamChunk(root);
+  } else if (cmd == command_t::PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REQUEST) {
+    return doPushNextStreamChunkByOffset(root);
   } else if (cmd == command_t::PULL_NEXT_STREAM_CHUNK_REQUEST) {
     return doPullNextStreamChunk(root);
+  } else if (cmd == command_t::CHECK_FIXED_STREAM_RECEIVED_REQUEST) {
+    return doCheckFixedStreamReceived(root);
   } else if (cmd == command_t::STOP_STREAM_REQUEST) {
     return doStopStream(root);
   } else if (cmd == command_t::DROP_STREAM_REQUEST) {
     return doDropStream(root);
+  } else if (cmd == command_t::ABORT_STREAM_REQUEST) {
+    return doAbortStream(root);
+  } else if (cmd == command_t::PUT_STREAM_NAME_REQUEST) {
+    return doPutStreamName(root);
+  } else if (cmd == command_t::GET_STREAM_ID_BY_NAME_REQUEST) {
+    return doGetStreamIDByName(root);
+  } else if (cmd == command_t::ACTIVATE_REMOTE_FIXED_STREAM_REQUEST) {
+    return doActivateRemoteFixedStream(root);
+  } else if (cmd ==
+             command_t::
+                 VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REQUEST) {
+    return doVineyardActivateRemoteFixedStreamWithOffset(root);
+  } else if (cmd == command_t::OPEN_FIXED_STREAM_REQUEST) {
+    return doOpenFixedStream(root);
+  } else if (cmd == command_t::CLOSE_STREAM_REQUEST) {
+    return doCloseStream(root);
+  } else if (cmd == command_t::DELETE_STREAM_REQUEST) {
+    return doDeleteStream(root);
+  } else if (cmd == command_t::VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST) {
+    return doVineyardOpenRemoteFixedStream(root);
+  } else if (cmd == command_t::VINEYARD_STOP_STREAM_REQUEST) {
+    return doVineyardStopStream(root);
+  } else if (cmd == command_t::VINEYARD_ABORT_REMOTE_STREAM_REQUEST) {
+    return doVineyardAbortRemoteStream(root);
+  } else if (cmd == command_t::VINEYARD_DROP_STREAM_REQUEST) {
+    return doVineyardDropStream(root);
+  } else if (cmd == command_t::VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REQUEST) {
+    return doVineyardCloseRemoteFixedStream(root);
+  } else if (cmd == command_t::VINEYARD_GET_METAS_BY_NAMES_REQUEST) {
+    return doVineyardGetMetasByNames(root);
+  } else if (cmd == command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REQUEST) {
+    return doVineyardGetRemoteBlobs(root);
+  } else if (cmd == command_t::VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REQUEST) {
+    return doVineyardGetRemoteBlobsWithOffset(root);
   } else if (cmd == command_t::PUT_NAME_REQUEST) {
     return doPutName(root);
+  } else if (cmd == command_t::PUT_NAMES_REQUEST) {
+    return doPutNames(root);
   } else if (cmd == command_t::GET_NAME_REQUEST) {
     return doGetName(root);
+  } else if (cmd == command_t::GET_NAME_LOCATION_REQUEST) {
+    return doGetObjectLocation(root);
+  } else if (cmd == command_t::PUT_NAME_LOCATION_REQUEST) {
+    return doPutObjectLocation(root);
+  } else if (cmd == command_t::GET_NAMES_REQUEST) {
+    return doGetNames(root);
+  } else if (cmd == command_t::DROP_NAMES_REQUEST) {
+    return doDropNames(root);
   } else if (cmd == command_t::LIST_NAME_REQUEST) {
     return doListName(root);
   } else if (cmd == command_t::DROP_NAME_REQUEST) {
@@ -349,6 +445,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doIsSpilled(root);
   } else if (cmd == command_t::IS_IN_USE_REQUEST) {
     return doIsInUse(root);
+  } else if (cmd == command_t::GET_VINEYARD_MMAP_FD_REQUEST) {
+    return doGetVineyardMmapFd(root);
   } else if (cmd == command_t::CLUSTER_META_REQUEST) {
     return doClusterMeta(root);
   } else if (cmd == command_t::INSTANCE_STATUS_REQUEST) {
@@ -406,6 +504,28 @@ bool SocketConnection::doRegister(const json& root) {
   return false;
 }
 
+bool SocketConnection::doRequireExtraRequestMemory(json const& root) {
+  auto self(shared_from_this());
+  size_t size = 0;
+  TRY_READ_REQUEST(ReadRequireExtraRequestMemoryRequest, root, size);
+  if (size == 0 || size > std::numeric_limits<size_t>::max() / 2) {
+    RESPONSE_ON_ERROR(Status::Invalid(
+        "require extra request memory: invalid size: " + std::to_string(size)));
+  }
+
+  int fd = -1;
+  RESPONSE_ON_ERROR(socket_server_ptr_->RequireExtraRequestMemory(
+      this->getConnId(), size, fd));
+  std::string message_out;
+  WriteRequireExtraRequestMemoryReply(message_out);
+  this->doWrite(message_out);
+  LOG(INFO) << "require extra request memory: size = " << size
+            << ", fd = " << fd;
+  sendFd(fd);
+
+  return false;
+}
+
 bool SocketConnection::doCreateBuffer(const json& root) {
   auto self(shared_from_this());
   size_t size;
@@ -427,7 +547,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      sendFd(fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 bulk_store_->Footprint());
@@ -473,7 +593,7 @@ bool SocketConnection::doCreateBuffers(const json& root) {
   this->doWrite(message_out, [this, self, fds_to_send](const Status& status) {
     for (auto const& fd_to_send : fds_to_send) {
       if (fd_to_send != -1) {
-        send_fd(self->nativeHandle(), fd_to_send);
+        sendFd(fd_to_send);
       }
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
@@ -511,7 +631,7 @@ bool SocketConnection::doCreateDiskBuffer(const json& root) {
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      sendFd(fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 bulk_store_->Footprint());
@@ -606,7 +726,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
    */
   this->doWrite(message_out, [self, objects, fd_to_send](const Status& status) {
     for (int store_fd : fd_to_send) {
-      send_fd(self->nativeHandle(), store_fd);
+      self->sendFd(store_fd);
     }
     return Status::OK();
   });
@@ -906,6 +1026,41 @@ bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
   return false;
 }
 
+bool SocketConnection::doDelHugeData(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool force, deep, memory_trim, fastpath;
+
+  size_t total_id = 0;
+  TRY_READ_REQUEST(ReadDelHugeDataRequest, root, total_id, force, deep,
+                   memory_trim, fastpath);
+  ids.resize(total_id);
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(
+      self->socket_server_ptr_->GetClientAttributeMsg(self->conn_id_, attr));
+  RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+      ids.data(), total_id * sizeof(ObjectID), this->getConnId()));
+
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, memory_trim, fastpath,
+      [self, attr](const Status& status) {
+        VLOG(2) << "Delete huge data request completed. Request id: "
+                << attr.req_name << ", status: " << status.ToString();
+        std::string message_out;
+        if (status.ok()) {
+          WriteDelHugeDataReply(message_out);
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString()
+                     << ". Request id: " << attr.req_name;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doCreateBufferByPlasma(json const& root) {
   auto self(shared_from_this());
   PlasmaID plasma_id;
@@ -934,7 +1089,7 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      self->sendFd(fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 plasma_bulk_store_->Footprint());
@@ -976,7 +1131,7 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
       if (data_size > 0 &&
           self->used_fds_.find(store_fd) == self->used_fds_.end()) {
         self->used_fds_.emplace(store_fd);
-        send_fd(self->nativeHandle(), store_fd);
+        self->sendFd(store_fd);
       }
     }
     return Status::OK();
@@ -1051,6 +1206,149 @@ bool SocketConnection::doCreateData(const json& root) {
   return false;
 }
 
+bool SocketConnection::doCreateUserBuffers(json const& root) {
+  auto self(shared_from_this());
+  size_t offsets_num = 0, sizes_num = 0;
+  TRY_READ_REQUEST(ReadCreateUserBuffersRequest, root, offsets_num, sizes_num);
+
+  boost::asio::post(
+      server_ptr_->GetIOContext(), [self, offsets_num, sizes_num]() {
+        std::vector<uint64_t> offsets(offsets_num);
+        std::vector<size_t> sizes(sizes_num);
+        uint64_t start = 0, end = 0;
+        start = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::system_clock::now().time_since_epoch())
+                    .count();
+
+        VINEYARD_DISCARD(
+            self->socket_server_ptr_->LseekExtraMsgReadPos(0, self->conn_id_));
+        ClientAttributes attr;
+        RESPONSE_ON_ERROR(self->socket_server_ptr_->GetClientAttributeMsg(
+            self->conn_id_, attr));
+        RESPONSE_ON_ERROR(self->socket_server_ptr_->ReadExtraMessage(
+            offsets.data(), offsets.size() * sizeof(size_t), self->conn_id_));
+        RESPONSE_ON_ERROR(self->socket_server_ptr_->ReadExtraMessage(
+            sizes.data(), sizes.size() * sizeof(size_t), self->conn_id_));
+        end = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ", doCreateUserBuffers read extra message time consumed = "
+            << (end - start) << " us";
+
+        start = end;
+        std::vector<ObjectID> object_ids;
+        object_ids.reserve(offsets.size());
+        for (size_t i = 0; i < offsets.size(); i++) {
+          ObjectID object_id;
+          std::shared_ptr<Payload> object;
+          Status status = self->server_ptr_->GetBulkStore()->CreateUserBlob(
+              offsets[i], sizes[i], object_id, object);
+          if (!status.ok()) {
+            for (auto const& object : object_ids) {
+              self->server_ptr_->GetBulkStore()->Delete(object);
+            }
+            RESPONSE_ON_ERROR(status);
+          }
+          object_ids.emplace_back(object_id);
+        }
+        end = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name << " create " << object_ids.size()
+            << " user buffers, time consumed = " << (end - start) << " us";
+
+        start = end;
+        std::string message_out;
+        WriteCreateUserBuffersReply(object_ids, message_out);
+        VINEYARD_DISCARD(
+            self->socket_server_ptr_->LseekExtraMsgWritePos(0, self->conn_id_));
+        RESPONSE_ON_ERROR(self->socket_server_ptr_->WriteExtraMessage(
+            object_ids.data(), object_ids.size() * sizeof(ObjectID),
+            self->conn_id_));
+        end = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ", doCreateUserBuffers write extra message time consumed = "
+            << (end - start) << " us";
+        self->doWrite(message_out);
+        return false;
+      });
+  return false;
+}
+
+bool SocketConnection::doGetUserBuffers(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> object_ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadGetUserBuffersRequest, root, object_ids);
+  for (auto const& object_id : object_ids) {
+    VLOG(2) << "GetUserBuffers: object_id = " << ObjectIDToString(object_id);
+  }
+  VLOG(2) << "GetUserBuffers: object_ids.size() = " << object_ids.size();
+  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(object_ids, true, objects));
+  WriteGetUserBuffersReply(objects, message_out);
+  self->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDeleteUserBuffers(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> object_ids;
+  TRY_READ_REQUEST(ReadDeleteUserBuffersRequest, root, object_ids);
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  VLOG(2) << "DeleteUserBuffers: object_ids.size() = " << object_ids.size();
+  uint64_t start = std::chrono::duration_cast<std::chrono::microseconds>(
+                       std::chrono::system_clock::now().time_since_epoch())
+                       .count();
+  RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+      object_ids.data(), object_ids.size() * sizeof(ObjectID), this->conn_id_));
+  boost::asio::post(self->server_ptr_->GetIOContext(), [self, object_ids,
+                                                        start]() {
+    std::string message_out;
+    std::vector<ObjectID> transmissions, non_transmissions;
+    std::vector<std::shared_ptr<Payload>> to_delete_user_buffers;
+    self->server_ptr_->GetBulkStore()->GetUnsafe(object_ids, true,
+                                                 to_delete_user_buffers);
+    for (auto const& object_id : object_ids) {
+      // make the user blob invisible.
+      VINEYARD_DISCARD(
+          self->server_ptr_->GetBulkStore()->DeleteUserBlob(object_id));
+    }
+    do {
+      transmissions.clear();
+      non_transmissions.clear();
+      std::unique_lock<std::mutex> lock =
+          self->server_ptr_->FindTransmissionObjects(object_ids, transmissions,
+                                                     non_transmissions);
+      if (!transmissions.empty()) {
+        // sleep
+        lock.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      } else {
+        self->server_ptr_->RemoveFromMigrationList(non_transmissions);
+        WriteDeleteUserBuffersReply(message_out);
+        self->doWrite(message_out);
+        uint64_t end = std::chrono::duration_cast<std::chrono::microseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+        VLOG(self->trace_log_level_)
+            << "delete " << object_ids.size()
+            << " user buffers, time consumed = " << (end - start) << " us";
+      }
+    } while (!transmissions.empty());
+  });
+  return false;
+}
+
 bool SocketConnection::doCreateDatas(const json& root) {
   auto self(shared_from_this());
   std::vector<json> tree;
@@ -1078,6 +1376,84 @@ bool SocketConnection::doCreateDatas(const json& root) {
   return false;
 }
 
+bool SocketConnection::doCreatehugeDatas(json const& root) {
+  auto self(shared_from_this());
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::vector<json> tree;
+  size_t total_json;
+  std::vector<size_t> json_lengths;
+  TRY_READ_REQUEST(ReadCreateHugeDatasRequest, root, total_json);
+  json_lengths.resize(total_json);
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+      json_lengths.data(), total_json * sizeof(size_t), this->getConnId()));
+  tree.resize(total_json);
+  for (size_t i = 0; i < total_json; i++) {
+    std::string json_str;
+    json_str.resize(json_lengths[i]);
+    RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+        &json_str[0], json_lengths[i], this->getConnId()));
+    tree[i] = json_from_buf(json_str.c_str(), json_str.size());
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name
+      << ". Read doCreatehugeDatas IPC msg cost:" << (end - start) << " us.";
+
+  start = end;
+  RESPONSE_ON_ERROR(server_ptr_->CreateData(
+      tree,
+      [self, start, attr](const Status& status, const std::vector<ObjectID> ids,
+                          const std::vector<Signature> signatures,
+                          const std::vector<InstanceID> instance_ids) {
+        uint64_t end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::system_clock::now().time_since_epoch())
+                            .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ". CreateData cost:" << (end_ - start) << " us.";
+
+        uint64_t start_ = end_;
+        std::string message_out;
+        if (status.ok()) {
+          VINEYARD_DISCARD(self->socket_server_ptr_->LseekExtraMsgWritePos(
+              0, self->conn_id_));
+          Status status_ = self->socket_server_ptr_->WriteExtraMessage(
+              ids.data(), ids.size() * sizeof(ObjectID), self->getConnId());
+          if (status_.ok()) {
+            WriteCreateHugeDatasReply(ids.size(), signatures[0],
+                                      instance_ids[0], message_out);
+          } else {
+            LOG(ERROR) << "Error: " << status_.ToString()
+                       << ". Request: " << attr.req_name;
+            WriteErrorReply(status_, message_out);
+          }
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString()
+                     << ". Request: " << attr.req_name;
+          WriteErrorReply(status, message_out);
+        }
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ". Write doCreatehugeDatas IPC reply cost:" << (end_ - start_)
+            << " us.";
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doGetData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -1100,6 +1476,75 @@ bool SocketConnection::doGetData(const json& root) {
         LOG_SUMMARY("data_request_duration_microseconds", "get",
                     (endTime - startTime) * 1000000);
         LOG_COUNTER("data_requests_total", "get");
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doGetHugeData(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  size_t ids_num;
+  bool sync_remote = false, wait = false;
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadGetHugeDataRequest, root, ids_num, sync_remote, wait);
+  ids.resize(ids_num);
+  json tree;
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+      ids.data(), ids_num * sizeof(ObjectID), this->getConnId()));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name
+      << ". Read doGetHugeData IPC msg cost:" << (end - start) << " us.";
+
+  start = end;
+  RESPONSE_ON_ERROR(server_ptr_->GetData(
+      ids, sync_remote, wait, [self]() { return self->running_.load(); },
+      [self, start, attr](const Status& status, const json& tree) {
+        uint64_t start_ = start, end_ = 0;
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ". GetData cost:" << (end_ - start_) << " us.";
+        start_ = end_;
+        std::string message_out;
+        if (status.ok()) {
+          std::string json_str = json_to_string(tree);
+          VINEYARD_DISCARD(self->socket_server_ptr_->LseekExtraMsgWritePos(
+              0, self->conn_id_));
+          Status status_ = self->socket_server_ptr_->WriteExtraMessage(
+              json_str.data(), json_str.size(), self->getConnId());
+          if (status_.ok()) {
+            WriteGetHugeDataReply(json_str.size(), message_out);
+          } else {
+            LOG(ERROR) << "Error: " << status_.ToString()
+                       << ". Request: " << attr.req_name;
+            WriteErrorReply(status_, message_out);
+          }
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString()
+                     << ". Request: " << attr.req_name;
+          WriteErrorReply(status, message_out);
+        }
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ". Write doGetHugeData IPC reply cost:" << (end_ - start_)
+            << " us.";
+
+        self->doWrite(message_out);
         return Status::OK();
       }));
   return false;
@@ -1181,6 +1626,33 @@ bool SocketConnection::doPersist(const json& root) {
         std::string message_out;
         if (status.ok()) {
           WritePersistReply(message_out);
+          self->doWrite(message_out);
+        } else if (status.IsEtcdError()) {
+          // retry on etcd error: reprocess the message
+          VLOG(100) << "Warning: "
+                    << "Retry persist on etcd error: " << status.ToString();
+          self->server_ptr_->GetIOContext().post(
+              [self, root]() { self->doPersist(root); });
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
+        }
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doBatchPersist(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  TRY_READ_REQUEST(ReadBatchPersistRequest, root, ids);
+
+  RESPONSE_ON_ERROR(
+      self->server_ptr_->Persist(ids, [self, root](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteBatchPersistReply(message_out);
           self->doWrite(message_out);
         } else if (status.IsEtcdError()) {
           // retry on etcd error: reprocess the message
@@ -1294,8 +1766,12 @@ bool SocketConnection::doMemoryTrim(const json& root) {
 bool SocketConnection::doCreateStream(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
+  bool fixed_size = false;
+  int nums = 0;
+  size_t size = 0;
   TRY_READ_REQUEST(ReadCreateStreamRequest, root, stream_id);
-  auto status = server_ptr_->GetStreamStore()->Create(stream_id);
+  auto status =
+      server_ptr_->GetStreamStore()->Create(stream_id, fixed_size, nums, size);
   std::string message_out;
   if (status.ok()) {
     WriteCreateStreamReply(message_out);
@@ -1307,20 +1783,99 @@ bool SocketConnection::doCreateStream(const json& root) {
   return false;
 }
 
+bool SocketConnection::doCreateFixedStream(json const& root) {
+  auto self(shared_from_this());
+  std::string stream_name;
+  int nums = 0;
+  size_t size = 0;
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadCreateFixedStreamRequest, root, stream_name, nums, size);
+  VLOG(2) << "Create fixed stream: " << stream_name << ", nums: " << nums
+          << ", size: " << size;
+  stream_id = GenerateObjectID(server_ptr_->instance_id());
+  if (stream_id == InvalidObjectID()) {
+    LOG(ERROR) << "Error: Failed to generate stream id";
+    std::string message_out;
+    WriteErrorReply(Status::Invalid("Failed to generate stream id"),
+                    message_out);
+    this->doWrite(message_out);
+    return false;
+  }
+
+  Status status =
+      server_ptr_->GetStreamStore()->Create(stream_id, true, nums, size);
+  if (!status.ok()) {
+    std::string message_out;
+    LOG(ERROR) << "Error: " << status.ToString();
+    WriteErrorReply(status, message_out);
+    this->doWrite(message_out);
+    return false;
+  }
+
+  if (!stream_name.empty()) {
+    status = server_ptr_->GetStreamStore()->PutName(stream_name, stream_id);
+  }
+  std::string message_out;
+  if (status.ok()) {
+    WriteCreateFixedStreamReply(message_out, stream_id);
+  } else {
+    LOG(ERROR) << "Error: " << status.ToString();
+    if (!server_ptr_->GetStreamStore()->Delete(stream_id).ok()) {
+      LOG(ERROR) << "Failed to cleanup stream: " << stream_id;
+    }
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  return false;
+}
+
 bool SocketConnection::doOpenStream(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
   int64_t mode;
-  TRY_READ_REQUEST(ReadOpenStreamRequest, root, stream_id, mode);
-  auto status = server_ptr_->GetStreamStore()->Open(stream_id, mode);
-  std::string message_out;
-  if (status.ok()) {
-    WriteOpenStreamReply(message_out);
+  std::string stream_name;
+  bool wait = false;
+  uint64_t timeout = 0;
+  TRY_READ_REQUEST(ReadOpenStreamRequest, root, stream_id, stream_name, mode,
+                   wait, timeout);
+  VLOG(2) << "Open stream: " << stream_id << ", name: " << stream_name
+          << ", mode: " << mode << ", wait: " << wait
+          << ", timeout: " << timeout;
+  std::string owner = StreamStore::BuildOwner(self->peer_host, self->conn_id_);
+  if (stream_id != InvalidObjectID()) {
+    RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Open(
+        stream_id, mode, owner, wait, timeout,
+        [self, stream_name, stream_id](Status& status, ObjectID id) {
+          VLOG(2) << "doOpenStream callback, stream_id:" << stream_id
+                  << " stream_name:" << stream_name
+                  << " status:" << status.ToString();
+          std::string message_out;
+          if (status.ok()) {
+            WriteOpenStreamReply(message_out, id);
+          } else {
+            LOG(ERROR) << "Error: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+        }));
   } else {
-    VLOG(100) << "Error: " << status.ToString();
-    WriteErrorReply(status, message_out);
+    RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Open(
+        stream_name, mode, owner, wait, timeout,
+        [self, stream_name, stream_id](Status& status, ObjectID id) {
+          VLOG(2) << "doOpenStream callback, stream_id:" << stream_id
+                  << " stream_name:" << stream_name
+                  << " status:" << status.ToString();
+          std::string message_out;
+          if (status.ok()) {
+            WriteOpenStreamReply(message_out, id);
+          } else {
+            LOG(ERROR) << "Error: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+        }));
   }
-  this->doWrite(message_out);
+
   return false;
 }
 
@@ -1346,7 +1901,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
           WriteGetNextStreamChunkReply(object, fd_to_send, message_out);
           self->doWrite(message_out, [self, fd_to_send](const Status& status) {
             if (fd_to_send != -1) {
-              send_fd(self->nativeHandle(), fd_to_send);
+              self->sendFd(fd_to_send);
             }
             return Status::OK();
           });
@@ -1379,6 +1934,35 @@ bool SocketConnection::doPushNextStreamChunk(const json& root) {
   return false;
 }
 
+bool SocketConnection::doPushNextStreamChunkByOffset(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  size_t offset;
+  TRY_READ_REQUEST(ReadPushNextStreamChunkByOffsetRequest, root, stream_id,
+                   offset);
+  ObjectID blob_id;
+  size_t size = 0;
+  int blob_nums;
+  std::shared_ptr<Payload> blob_payload;
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->GetFixedStreamSizeInfo(
+      stream_id, size, blob_nums));
+  RESPONSE_ON_ERROR(server_ptr_->GetBulkStore()->CreateUserBlob(
+      offset, size, blob_id, blob_payload));
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Push(
+      stream_id, blob_id, [self](const Status& status, const ObjectID) {
+        std::string message_out;
+        if (status.ok()) {
+          WritePushNextStreamChunkByOffsetReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doPullNextStreamChunk(const json& root) {
   auto self(shared_from_this());
   ObjectID stream_id;
@@ -1398,6 +1982,21 @@ bool SocketConnection::doPullNextStreamChunk(const json& root) {
         self->doWrite(message_out);
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doCheckFixedStreamReceived(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id = InvalidObjectID();
+  int index = -1;
+  TRY_READ_REQUEST(ReadCheckFixedStreamReceivedRequest, root, stream_id, index);
+  bool finished = false;
+  RESPONSE_ON_ERROR(self->server_ptr_->GetStreamStore()->CheckBlobReceived(
+      stream_id, index, finished));
+  std::string message_out;
+  WriteCheckFixedStreamReceivedReply(finished, message_out);
+  self->doWrite(message_out);
+
   return false;
 }
 
@@ -1426,19 +2025,676 @@ bool SocketConnection::doDropStream(const json& root) {
   return false;
 }
 
+bool SocketConnection::doAbortStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadAbortStreamRequest, root, stream_id);
+  /*
+   * Currently, abort only occurs before the stream is activated or after the
+   * stream is transferred. So we don't need to wait the transfer to be done.
+   */
+  bool success = false;
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Abort(stream_id, success));
+  std::string message_out;
+  WriteAbortStreamReply(message_out, success);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doPutStreamName(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  std::string name;
+  TRY_READ_REQUEST(ReadPutStreamNameRequest, root, stream_id, name);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->PutName(name, stream_id));
+  std::string message_out;
+  WritePutStreamNameReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doGetStreamIDByName(const json& root) {
+  auto self(shared_from_this());
+  std::string name;
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadGetStreamIDByNameRequest, root, name);
+  RESPONSE_ON_ERROR(
+      server_ptr_->GetStreamStore()->GetStreamIDByName(name, stream_id));
+
+  std::string message_out;
+  WriteGetStreamIDByNameReply(stream_id, message_out);
+  this->doWrite(message_out);
+
+  return false;
+}
+
+bool SocketConnection::doActivateRemoteFixedStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id = InvalidObjectID();
+  std::vector<std::vector<uint64_t>> recv_addr_list;
+  std::vector<std::vector<uint64_t>> rkeys_list;
+  std::vector<std::vector<size_t>> sizes_list;
+  std::string advice_device;
+  int port;
+  TRY_READ_REQUEST(ReadActivateRemoteFixedStreamRequest, root, stream_id,
+                   recv_addr_list, rkeys_list, sizes_list, advice_device, port);
+  VLOG(100) << "remote device:" << advice_device << " with port:" << port;
+
+  std::string message_out;
+  WriteActivateRemoteFixedStreamReply(message_out);
+  this->doWrite(message_out);
+
+  boost::asio::post(server_ptr_->GetIOContext(), [self, recv_addr_list,
+                                                  rkeys_list, sizes_list,
+                                                  advice_device, port,
+                                                  stream_id]() {
+    self->server_ptr_->GetStreamStore()->ActivateRemoteFixedStream(
+        stream_id, recv_addr_list, rkeys_list, sizes_list,
+        [self, advice_device, port, stream_id](
+            const Status& status_, ObjectID chunk,
+            std::vector<uint64_t> addr_list, std::vector<uint64_t> rkey_list,
+            std::vector<size_t> size_list, int index) {
+          std::string message_out;
+          Status status = status_;
+          if (!status.ok()) {
+            VLOG(100) << "Error: " << status.ToString();
+            self->server_ptr_->GetStreamStore()->SetErrorFlag(stream_id,
+                                                              status);
+            WriteErrorReply(status, message_out);
+            self->doWriteWithoutRead(message_out);
+            return status;
+          }
+
+          // RDMA write
+          uint64_t local_addr;
+          size_t size;
+          std::shared_ptr<Payload> object;
+          status = self->bulk_store_->GetUnsafe(chunk, true, object);
+          if (!status.ok()) {
+            VLOG(100) << "Error: failed to get object";
+            self->server_ptr_->GetStreamStore()->SetErrorFlag(stream_id,
+                                                              status);
+            WriteErrorReply(Status::KeyError("Failed to get object"),
+                            message_out);
+            self->doWriteWithoutRead(message_out);
+            return status;
+          }
+          self->server_ptr_->GetBulkStore()->DeleteUserBlob(chunk);
+          local_addr = reinterpret_cast<uint64_t>(object->pointer);
+          size = object->data_size;
+          void* base_addr = nullptr;
+          status = self->server_ptr_->GetBulkStoreMmapAddr(base_addr);
+          if (!status.ok()) {
+            VLOG(100) << "Error: failed to get bulk store mmap addr";
+            self->server_ptr_->GetStreamStore()->SetErrorFlag(stream_id,
+                                                              status);
+            WriteErrorReply(
+                Status::KeyError("Failed to get bulk store mmap addr"),
+                message_out);
+            self->doWriteWithoutRead(message_out);
+            return status;
+          }
+          uint64_t offset = local_addr - reinterpret_cast<uint64_t>(base_addr);
+          status = self->socket_server_ptr_->SendDataWithRDMA(
+              addr_list, local_addr, offset, size_list, size, rkey_list,
+              self->peer_host, port, advice_device);
+          if (!status.ok()) {
+            VLOG(100) << "Error: failed to send data with RDMA";
+            self->server_ptr_->GetStreamStore()->SetErrorFlag(stream_id,
+                                                              status);
+            WriteErrorReply(Status::IOError("Failed to send data with RDMA"),
+                            message_out);
+            self->doWriteWithoutRead(message_out);
+            return status;
+          }
+
+          VLOG(100) << "SendDataWithRDMA success, index:" << index;
+          self->server_ptr_->GetStreamStore()->SetBlobReceived(stream_id,
+                                                               index);
+          WriteStreamReadyAckReply(message_out, index);
+          bool finished = false;
+          status = self->server_ptr_->GetStreamStore()
+                       ->IsFixedStreamTransferFinished(stream_id, finished);
+          if (!status.ok()) {
+            VLOG(100)
+                << "Error: failed to check fixed stream transfer finished";
+            self->server_ptr_->GetStreamStore()->SetErrorFlag(stream_id,
+                                                              status);
+            WriteErrorReply(status, message_out);
+            self->doWriteWithoutRead(message_out);
+            return status;
+          }
+
+          self->doWriteWithoutRead(message_out);
+          return Status::OK();
+        });
+  });
+
+  return false;
+}
+
+bool SocketConnection::doOpenFixedStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  int64_t mode;
+  TRY_READ_REQUEST(ReadOpenFixedStreamRequest, root, stream_id, mode);
+  std::string owner = StreamStore::BuildOwner(self->peer_host, self->conn_id_);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Open(
+      stream_id, mode, owner, false, 0, [&](Status& status, ObjectID id) {
+        std::string message_out;
+        VLOG(100) << "Open stream return!";
+        int fd = -1;
+        if (status.ok()) {
+          if (!server_ptr_->GetStreamStore()->GetRecvFd(stream_id, fd).ok()) {
+            WriteErrorReply(Status::KeyError("Failed to get recv fd"),
+                            message_out);
+            VINEYARD_DISCARD(
+                server_ptr_->GetStreamStore()->Close(stream_id, owner));
+            this->doWrite(message_out);
+          } else {
+            WriteOpenFixedStreamReply(message_out);
+            this->doWrite(message_out);
+            self->sendFd(fd);
+          }
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+          this->doWrite(message_out);
+        }
+      }));
+
+  return false;
+}
+
+bool SocketConnection::doCloseStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadCloseStreamRequest, root, stream_id);
+  std::string owner = StreamStore::BuildOwner(self->peer_host, self->conn_id_);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Close(stream_id, owner));
+  std::string message_out;
+  WriteCloseStreamReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDeleteStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadDeleteStreamRequest, root, stream_id);
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Delete(stream_id));
+  std::string message_out;
+  WriteDeleteStreamReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doVineyardOpenRemoteFixedStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  std::string stream_name;
+  ObjectID local_id;
+  std::string endpoint;
+  uint64_t mode;
+  size_t size;
+  int blob_num;
+  bool wait = false;
+  uint64_t timeout = 0;
+  TRY_READ_REQUEST(ReadVineyardOpenRemoteFixedStreamRequest, root, stream_id,
+                   stream_name, local_id, blob_num, size, endpoint, mode, wait,
+                   timeout);
+  VLOG(2) << "Stream ID: " << ObjectIDToString(stream_id)
+          << ", Stream Name: " << stream_name
+          << ", Local ID: " << ObjectIDToString(local_id)
+          << ", Blob Num: " << blob_num << ", Size: " << size
+          << ", Endpoint: " << endpoint << ", Mode: " << mode
+          << ", Wait: " << wait << ", Timeout: " << timeout;
+  std::string owner = StreamStore::BuildOwner(self->peer_host, self->conn_id_);
+  RESPONSE_ON_ERROR(server_ptr_->VineyardOpenRemoteFixedStream(
+      stream_id, stream_name, local_id, blob_num, size, endpoint, mode, owner,
+      wait, timeout, [self, local_id](const Status& status) {
+        VLOG(2) << "VineyardOpenRemoteFixedStream done callback, local_id:"
+                << ObjectIDToString(local_id)
+                << ", status: " << status.ToString();
+        std::string message_out;
+        if (status.ok()) {
+          int fd = -1;
+          if (!self->server_ptr_->GetStreamStore()
+                   ->GetRecvFd(local_id, fd)
+                   .ok()) {
+            WriteErrorReply(Status::KeyError("Failed to get recv fd"),
+                            message_out);
+            VINEYARD_DISCARD(
+                self->server_ptr_->GetStreamStore()->Close(local_id, ""));
+            self->doWrite(message_out);
+          } else {
+            WriteVineyardOpenRemoteFixedStreamReply(message_out, local_id);
+            self->doWrite(message_out);
+            self->sendFd(fd);
+          }
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
+        }
+        return Status::OK();
+      }));
+
+  return false;
+}
+
+bool SocketConnection::doVineyardActivateRemoteFixedStreamWithOffset(
+    const json& root) {
+  auto self(shared_from_this());
+  std::vector<uint64_t> offset_list;
+  ObjectID stream_id = InvalidObjectID();
+  TRY_READ_REQUEST(ReadVineyardActivateRemoteFixedStreamWithOffsetRequest, root,
+                   stream_id, offset_list);
+  VLOG(2) << "Vineyard activate remote fixed stream with offset, local id: "
+          << ObjectIDToString(stream_id);
+
+  boost::asio::post(server_ptr_->GetIOContext(), [self, stream_id,
+                                                  offset_list]() {
+    VLOG(2) << "doVineyardActivateRemoteFixedStreamWithOffset post task";
+    std::vector<ObjectID> blob_list;
+    size_t size = 0;
+    int blob_num = 0;
+    RESPONSE_ON_ERROR(
+        self->server_ptr_->GetStreamStore()->GetFixedStreamSizeInfo(
+            stream_id, size, blob_num));
+    for (uint64_t offset : offset_list) {
+      ObjectID blob_id = InvalidObjectID();
+      std::shared_ptr<Payload> blob_payload;
+      Status status = self->server_ptr_->GetBulkStore()->CreateUserBlob(
+          offset, size, blob_id, blob_payload);
+      // currently, create user blob will never fail
+      if (!status.ok()) {
+        for (auto const& id : blob_list) {
+          self->server_ptr_->GetBulkStore()->DeleteUserBlob(id);
+        }
+        RESPONSE_ON_ERROR(status);
+      }
+      blob_list.push_back(blob_id);
+    }
+
+    RESPONSE_ON_ERROR(self->server_ptr_->VineyardActivateRemoteFixedStream(
+        stream_id, self->conn_id_, false, blob_list,
+        [self, blob_list, stream_id](
+            const Status& status,
+            std::vector<std::shared_ptr<Payload>>& payload_list) {
+          VLOG(2) << "VineyardActivateRemoteFixedStreamWithOffset done "
+                  << "callback, local_id:" << ObjectIDToString(stream_id)
+                  << ", status: " << status.ToString();
+          for (auto blob_id : blob_list) {
+            self->server_ptr_->GetBulkStore()->DeleteUserBlob(blob_id);
+          }
+          std::string message_out;
+          if (status.ok()) {
+            WriteVineyardActivateRemoteFixedStreamWithOffsetReply(message_out);
+          } else {
+            LOG(ERROR) << "Error: " << status.ToString();
+            WriteErrorReply(status, message_out);
+            // release the user blobs
+          }
+          self->doWrite(message_out);
+        }));
+    return false;
+  });
+  return false;
+}
+
+bool SocketConnection::doVineyardCloseRemoteFixedStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadVineyardCloseRemoteFixedStreamRequest, root, stream_id);
+  VLOG(2) << "Vineyard close remote fixed stream, local id: "
+          << ObjectIDToString(stream_id);
+  RESPONSE_ON_ERROR(server_ptr_->VineyardCloseRemoteFixedStream(
+      stream_id, [self, stream_id](const Status& status) {
+        VLOG(2) << "VineyardCloseRemoteFixedStream done callback, local_id:"
+                << ObjectIDToString(stream_id)
+                << ", status: " << status.ToString();
+        std::string message_out;
+        if (status.ok() || status.IsObjectNotExists()) {
+          // if the stream is not exists, it means that the remote node
+          // is restarted. So we need to close the stream in local node.
+          WriteVineyardCloseRemoteFixedStreamReply(message_out);
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        std::string owner =
+            StreamStore::BuildOwner(self->peer_host, self->conn_id_);
+        self->server_ptr_->GetStreamStore()->UnbindRemoteStream(stream_id);
+        self->server_ptr_->GetStreamStore()->Close(stream_id, owner);
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doVineyardGetMetasByNames(const json& root) {
+  auto self(shared_from_this());
+  uint64_t start = 0, end = 0;
+  std::vector<std::string> names;
+  std::string rpc_endpoint;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadVineyardGetMetasByNamesRequest, root, names,
+                   rpc_endpoint);
+  RESPONSE_ON_ERROR(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name
+      << ". Read get metas by names request cost: " << (end - start) << " us.";
+
+  start = end;
+  RESPONSE_ON_ERROR(server_ptr_->VineyardGetMetasByNames(
+      names, rpc_endpoint, attr,
+      [self, attr, start](const Status& status,
+                          const std::vector<json>& metas) {
+        uint64_t start_ = start, end_ = 0;
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ", get metas size: " << metas.size()
+            << ", get metas by names request cost: " << (end_ - start_)
+            << " us.";
+
+        VLOG(2) << "VineyardGetMetasByNames done callback"
+                << ", request:" << attr.req_name
+                << ", status: " << status.ToString()
+                << ", request id: " << attr.req_name;
+        start_ = end_;
+        std::string message_out;
+        if (status.ok()) {
+          WriteVineyardGetMetasByNamesReply(metas, message_out);
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString()
+                     << ", request: " << attr.req_name;
+          WriteErrorReply(status, message_out);
+        }
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ", write reply cost: " << (end_ - start_) << " us.";
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doVineyardGetRemoteBlobs(const json& root) {
+  auto self(shared_from_this());
+  std::vector<std::vector<ObjectID>> local_ids;
+  std::vector<std::vector<ObjectID>> remote_ids;
+  std::string rpc_endpoint;
+
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadVineyardGetRemoteBlobsWithRDMARequest, root, local_ids,
+                   remote_ids, rpc_endpoint);
+  RESPONSE_ON_ERROR(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+
+  // VLOG(2) << "Vineyard get remote blobs, local ids size: " <<
+  // local_ids.size()
+  //         << ", remote ids size: " << remote_ids.size()
+  //         << ", rpc endpoint: " << rpc_endpoint;
+  // for (size_t i = 0; i < local_ids.size(); i++) {
+  //   VLOG(3) << "layer " << i << " :";
+  //   for (size_t j = 0; j < local_ids[i].size(); ++j) {
+  //     VLOG(3) << "local id: " << ObjectIDToString(local_ids[i][j])
+  //             << ", remote id: " << ObjectIDToString(remote_ids[i][j]);
+  //   }
+  // }
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name
+      << ". Read get remote blobs request cost: " << (end - start) << " us.";
+  start = end;
+  RESPONSE_ON_ERROR(self->server_ptr_->VineyardGetRemoteBlobs(
+      local_ids, remote_ids, rpc_endpoint, attr,
+      [self, local_ids, start, attr](const Status& status, int fd) {
+        uint64_t start_ = 0, end_ = 0;
+        start_ = start;
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ", local_ids size: " << local_ids.size()
+            << ". Start get remote blobs request cost: " << (end_ - start_)
+            << " us.";
+        VLOG(2) << "VineyardGetRemoteBlobs ready callback, status: "
+                << status.ToString() << ", request: " << attr.req_name;
+
+        std::string message_out;
+        if (status.ok()) {
+          WriteVineyardGetRemoteBlobsWithRDMAReply(message_out);
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString()
+                     << ", request: " << attr.req_name;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        if (fd != -1) {
+          VLOG(2) << "Send fd: " << fd;
+          self->sendFd(fd);
+        } else {
+          VLOG(2) << "No fd to send";
+        }
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doVineyardGetRemoteBlobsWithOffset(const json& root) {
+  auto self(shared_from_this());
+  std::vector<std::vector<size_t>> local_offsets;
+  std::vector<std::vector<ObjectID>> remote_ids;
+  std::vector<std::vector<uint64_t>> sizes_vec;
+  size_t batch_nums = 0, batch_size = 0;
+  std::string rpc_endpoint;
+
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadVineyardGetRemoteBlobsWithOffsetRequest, root,
+                   batch_nums, batch_size, rpc_endpoint);
+  local_offsets.resize(batch_nums);
+  remote_ids.resize(batch_nums);
+  sizes_vec.resize(batch_nums);
+  RESPONSE_ON_ERROR(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  for (size_t i = 0; i < batch_nums; ++i) {
+    local_offsets[i].resize(batch_size);
+    remote_ids[i].resize(batch_size);
+    sizes_vec[i].resize(batch_size);
+    RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+        reinterpret_cast<char*>(local_offsets[i].data()),
+        sizeof(size_t) * batch_size, conn_id_));
+    RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+        reinterpret_cast<char*>(remote_ids[i].data()),
+        sizeof(ObjectID) * batch_size, conn_id_));
+    RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+        reinterpret_cast<char*>(sizes_vec[i].data()),
+        sizeof(uint64_t) * batch_size, conn_id_));
+    for (size_t j = 0; j < batch_size; ++j) {
+      local_offsets[i][j] =
+          reinterpret_cast<size_t>(
+              server_ptr_->GetBulkStore()->GetUserBasePointer()) +
+          local_offsets[i][j];
+    }
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name
+      << ". Read get remote blobs request cost: " << (end - start) << " us.";
+  start = end;
+  RESPONSE_ON_ERROR(self->server_ptr_->VineyardGetRemoteBlobsWithOffset(
+      local_offsets, remote_ids, sizes_vec, rpc_endpoint, attr,
+      [self, batch_nums, batch_size, start, attr](const Status& status,
+                                                  int fd) {
+        uint64_t start_ = 0, end_ = 0;
+        start_ = start;
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name
+            << ", buffer nums: " << batch_nums * batch_size
+            << ". Start get remote blobs request cost: " << (end_ - start_)
+            << " us.";
+        VLOG(2) << "VineyardGetRemoteBlobs ready callback, status: "
+                << status.ToString();
+
+        std::string message_out;
+        if (status.ok()) {
+          WriteVineyardGetRemoteBlobsWithOffsetReply(message_out);
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        if (fd != -1) {
+          VLOG(2) << "Send fd: " << fd << " for request: " << attr.req_name;
+          self->sendFd(fd);
+        } else {
+          VLOG(2) << "No fd to send for request: " << attr.req_name;
+        }
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doVineyardStopStream(const json& root) {
+  // TBD
+  return false;
+}
+
+bool SocketConnection::doVineyardDropStream(const json& root) {
+  // TBD
+  return false;
+}
+
+bool SocketConnection::doVineyardAbortRemoteStream(const json& root) {
+  auto self(shared_from_this());
+  ObjectID stream_id;
+  TRY_READ_REQUEST(ReadVineyardAbortRemoteStreamRequest, root, stream_id);
+  VLOG(2) << "Vineyard abort remote stream, local id: "
+          << ObjectIDToString(stream_id);
+  bool success;
+  RESPONSE_ON_ERROR(server_ptr_->GetStreamStore()->Abort(stream_id, success));
+  if (!success) {
+    std::string message_out;
+    WriteVineyardAbortRemoteStreamReply(message_out, success);
+    this->doWrite(message_out);
+    return false;
+  }
+  RESPONSE_ON_ERROR(server_ptr_->VineyardAbortRemoteStream(
+      stream_id, [self, stream_id](const Status& status, bool success) {
+        VLOG(2) << "VineyardAbortRemoteStream done callback, local_id:"
+                << ObjectIDToString(stream_id)
+                << ", status: " << status.ToString();
+        std::string message_out;
+        if (status.ok()) {
+          WriteVineyardAbortRemoteStreamReply(message_out, success);
+        } else {
+          LOG(ERROR) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doPutName(const json& root) {
   auto self(shared_from_this());
   ObjectID object_id;
   std::string name;
-  TRY_READ_REQUEST(ReadPutNameRequest, root, object_id, name);
+  bool overwrite = true;
+  TRY_READ_REQUEST(ReadPutNameRequest, root, object_id, name, overwrite);
   name = escape_json_pointer(name);
-  RESPONSE_ON_ERROR(
-      server_ptr_->PutName(object_id, name, [self](const Status& status) {
+  RESPONSE_ON_ERROR(server_ptr_->PutName(
+      object_id, name, overwrite, [self](const Status& status) {
         std::string message_out;
         if (status.ok()) {
           WritePutNameReply(message_out);
         } else {
           VLOG(100) << "Error: failed to put name: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doPutNames(const json& root) {
+  auto self(shared_from_this());
+  uint64_t start = 0, end = 0;
+  std::vector<ObjectID> object_id_vec;
+  std::vector<std::string> name_vec;
+  bool overwrite = true;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadPutNamesRequest, root, object_id_vec, name_vec,
+                   overwrite);
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  for (auto& name : name_vec) {
+    name = escape_json_pointer(name);
+  }
+
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name << ". Read put names reqest "
+      << "cost: " << (end - start) << " us.";
+  start = end;
+  RESPONSE_ON_ERROR(server_ptr_->PutNames(
+      object_id_vec, name_vec, overwrite,
+      [self, start, attr](const Status& status) {
+        uint64_t end = std::chrono::duration_cast<std::chrono::microseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name << ". Process put names "
+            << "request cost: " << (end - start) << " us.";
+        std::string message_out;
+        if (status.ok()) {
+          WritePutNamesReply(message_out);
+        } else {
+          LOG(ERROR) << "Error: failed to put names: " << status.ToString()
+                     << ", request: " << attr.req_name;
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -1469,6 +2725,134 @@ bool SocketConnection::doGetName(const json& root) {
         self->doWrite(message_out);
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doGetNames(const json& root) {
+  auto self(shared_from_this());
+  std::vector<std::string> name_vec;
+  bool wait;
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadGetNamesRequest, root, name_vec, wait);
+  // n.b.: no need for escape for `get`, as the translation has been handled
+  // by nlohmann/json when compare keys.
+  //
+  RESPONSE_ON_ERROR(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name << ". Read get names request "
+      << "cost: " << (end - start) << " us.";
+
+  start = end;
+  RESPONSE_ON_ERROR(server_ptr_->GetNames(
+      name_vec, wait, [self]() { return self->running_.load(); },
+      [self, start, attr](const Status& status,
+                          const std::vector<ObjectID>& object_id_vec) {
+        uint64_t start_ = start, end_ = 0;
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name << ". Process get names "
+            << "request cost: " << (end_ - start_) << " us.";
+        start_ = end_;
+        std::string message_out;
+        if (status.ok()) {
+          WriteGetNamesReply(object_id_vec, message_out);
+        } else {
+          VLOG(100) << "Error: failed to get name: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        end_ = std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name << ". Write get names "
+            << "reply cost: " << (end_ - start_) << " us.";
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doGetObjectLocation(const json& root) {
+  auto self(shared_from_this());
+  std::vector<std::string> names;
+  TRY_READ_REQUEST(ReadGetObjectLocationRequest, root, names);
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+
+  boost::asio::post(server_ptr_->GetIOContext(), [self, names]() {
+    self->server_ptr_->GetObjectLocation(
+        names, [self](const Status& status,
+                      std::vector<std::vector<std::string>>& locations_vector) {
+          std::string message_out;
+          if (status.ok()) {
+            WriteGetObjectLocationReply(locations_vector, message_out);
+          } else {
+            VLOG(100) << "Error: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          return Status::OK();
+        });
+  });
+  return false;
+}
+
+bool SocketConnection::doPutObjectLocation(const json& root) {
+  auto self(shared_from_this());
+  std::vector<std::string> names;
+  std::vector<std::string> locations;
+  int ttl_seconds = 300;
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  TRY_READ_REQUEST(ReadPutObjectLocationRequest, root, names, locations,
+                   ttl_seconds);
+  RESPONSE_ON_ERROR(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name << ". Read put object location "
+      << "request cost: " << (end - start) << " us.";
+  start = end;
+  boost::asio::post(server_ptr_->GetIOContext(), [self, names, locations,
+                                                  ttl_seconds, start]() {
+    self->server_ptr_->PutObjectLocation(
+        names, locations, ttl_seconds, [self, start](Status status) {
+          uint64_t end =
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+          VLOG(self->trace_log_level_)
+              << "Request: " << self->peer_host << ":" << self->conn_id_
+              << ". Process put object location request cost: " << (end - start)
+              << " us.";
+          std::string message_out;
+          if (status.ok()) {
+            WritePutObjectLocationReply(message_out);
+          } else {
+            VLOG(2) << "Error: " << status.ToString();
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          return Status::OK();
+        });
+  });
   return false;
 }
 
@@ -1522,6 +2906,57 @@ bool SocketConnection::doDropName(const json& root) {
   return false;
 }
 
+bool SocketConnection::doDropNames(const json& root) {
+  auto self(shared_from_this());
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::vector<std::string> name_vec;
+  TRY_READ_REQUEST(ReadDropNamesRequest, root, name_vec);
+
+  std::vector<size_t> name_lengths;
+  name_lengths.resize(name_vec.size());
+  VINEYARD_DISCARD(socket_server_ptr_->LseekExtraMsgReadPos(0, conn_id_));
+  ClientAttributes attr;
+  RESPONSE_ON_ERROR(socket_server_ptr_->GetClientAttributeMsg(conn_id_, attr));
+  RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+      name_lengths.data(), name_lengths.size() * sizeof(size_t), conn_id_));
+  for (size_t i = 0; i < name_vec.size(); ++i) {
+    name_vec[i].resize(name_lengths[i]);
+    RESPONSE_ON_ERROR(socket_server_ptr_->ReadExtraMessage(
+        name_vec[i].data(), name_lengths[i], conn_id_));
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(self->trace_log_level_)
+      << "Request: " << attr.req_name << ". Read drop names request "
+      << "cost: " << (end - start) << " us.";
+
+  start = end;
+  RESPONSE_ON_ERROR(server_ptr_->DropNames(
+      name_vec, [self, start, attr](const Status& status) {
+        uint64_t end = std::chrono::duration_cast<std::chrono::microseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+        VLOG(self->trace_log_level_)
+            << "Request: " << attr.req_name << ". Process drop names "
+            << "request cost: " << (end - start) << " us.";
+        std::string message_out;
+        if (status.ok()) {
+          WriteDropNamesReply(message_out);
+        } else {
+          LOG(ERROR) << "Error: failed to drop name: " << status.ToString()
+                     << " for request: " << attr.req_name;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doShallowCopy(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
@@ -1563,7 +2998,7 @@ bool SocketConnection::doMakeArena(const json& root) {
 
   this->doWrite(message_out, [self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      self->sendFd(fd_to_send);
     }
     return Status::OK();
   });
@@ -1770,6 +3205,29 @@ bool SocketConnection::doIsInUse(json const& root) {
   return false;
 }
 
+bool SocketConnection::doGetVineyardMmapFd(const json& root) {
+  auto self(shared_from_this());
+  TRY_READ_REQUEST(ReadGetVineyardMmapFdRequest, root);
+  int fd = -1;
+  size_t size = 0;
+  size_t offset;
+  std::string message_out;
+  fd = server_ptr_->GetBulkStore()->GetBaseFd();
+  size = server_ptr_->GetBulkStore()->GetBaseSize();
+  // offset = server_ptr_->GetBulkStore()->GetBaseOffset();
+  offset = server_ptr_->GetBulkStore()->GetUserOffset();
+
+  WriteGetVineyardMmapFdReply(size, offset, message_out);
+  this->doWrite(message_out, [self, fd](const Status& status) {
+    if (status.ok()) {
+      self->sendFd(fd);
+    }
+    return Status::OK();
+  });
+
+  return false;
+}
+
 bool SocketConnection::doClusterMeta(const json& root) {
   auto self(shared_from_this());
   TRY_READ_REQUEST(ReadClusterMetaRequest, root);
@@ -1921,8 +3379,22 @@ void SocketConnection::doWrite(std::string&& buf) {
   doAsyncWrite(std::move(buf));
 }
 
+void SocketConnection::doWriteWithoutRead(std::string& buf) {
+  std::string to_send;
+  size_t length = buf.size();
+  to_send.resize(length + sizeof(size_t));
+  char* ptr = &to_send[0];
+  memcpy(ptr, &length, sizeof(size_t));
+  ptr += sizeof(size_t);
+  memcpy(ptr, buf.data(), length);
+  doAsyncWriteWithoutRead(std::move(to_send));
+}
+
 void SocketConnection::doStop() {
   this->ClearLockedObjects();
+  this->socket_server_ptr_->ReleaseExtraRequestMemory(conn_id_);
+  this->server_ptr_->GetStreamStore()->CleanResource(
+      StreamStore::BuildOwner(this->peer_host, conn_id_));
   if (this->Stop()) {
     // drop connection
     socket_server_ptr_->RemoveConnection(conn_id_);
@@ -1940,6 +3412,21 @@ void SocketConnection::doAsyncWrite(std::string&& buf) {
           doReadHeader();
         } else {
           doStop();
+          // ThrowException();
+        }
+      });
+}
+
+void SocketConnection::doAsyncWriteWithoutRead(std::string&& buf) {
+  std::shared_ptr<std::string> payload =
+      std::make_shared<std::string>(std::move(buf));
+  auto self(shared_from_this());
+  asio::async_write(
+      socket_, boost::asio::buffer(payload->data(), payload->length()),
+      [this, self, payload](boost::system::error_code ec, std::size_t) {
+        if (ec) {
+          doStop();
+          // ThrowException();
         }
       });
 }
@@ -1960,9 +3447,11 @@ void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback,
                           }
                         } else {
                           doStop();
+                          // ThrowException();
                         }
                       } else {
                         doStop();
+                        // ThrowException();
                       }
                     });
 }
@@ -2011,6 +3500,13 @@ void SocketConnection::ClearLockedObjects() {
   server_ptr_->UnlockTransmissionObjects(ids);
 }
 
+void SocketConnection::ThrowException() {
+  LOG(ERROR) << "Connection closed unexpected from " << peer_host
+             << ", conn_id: " << conn_id_;
+  throw std::runtime_error("Connection closed unexpected from " + peer_host +
+                           ", conn_id: " + std::to_string(conn_id_));
+}
+
 SocketServer::SocketServer(std::shared_ptr<VineyardServer> vs_ptr)
     : vs_ptr_(vs_ptr), next_conn_id_(0) {}
 
@@ -2033,6 +3529,13 @@ void SocketServer::Stop() {
     pair.second->Stop();
   }
   connections_.clear();
+
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  for (auto& item : conn_id_to_extra_request_mem_) {
+    munmap(item.second.addr_, item.second.size_);
+    close(item.second.fd_);
+  }
 }
 
 void SocketServer::Close() { closable_.store(true); }
@@ -2074,6 +3577,142 @@ void SocketServer::CloseConnection(int conn_id) {
 size_t SocketServer::AliveConnections() const {
   std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
   return connections_.size();
+}
+
+Status SocketServer::RequireExtraRequestMemory(int conn_id, size_t size,
+                                               int& fd) {
+  {
+    std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
+    auto conn = connections_.find(conn_id);
+    if (conn == connections_.end()) {
+      return Status::Invalid("connection id is not exists:" +
+                             std::to_string(conn_id));
+    }
+  }
+
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  if (conn_id_to_extra_request_mem_.find(conn_id) ==
+      conn_id_to_extra_request_mem_.end()) {
+    std::string name = "/vineyard_big_request_" + std::to_string(conn_id);
+    fd = memfd_create(name.c_str(), 0);
+    if (fd == -1) {
+      return Status::IOError("fail to create memfd for big request");
+    }
+    if (ftruncate(fd, size) == -1) {
+      close(fd);
+      return Status::IOError("fail to truncate memfd for big request");
+    }
+    void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (addr == MAP_FAILED) {
+      close(fd);
+      return Status::IOError("fail to mmap memfd for big request");
+    }
+    conn_id_to_extra_request_mem_[conn_id] = {addr, size, fd};
+  } else {
+    return Status::Invalid(
+        "big request memory has been allocated for conn_id: " +
+        std::to_string(conn_id));
+  }
+  return Status::OK();
+}
+
+Status SocketServer::ReleaseExtraRequestMemory(int conn_id) {
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  auto it = conn_id_to_extra_request_mem_.find(conn_id);
+  if (it != conn_id_to_extra_request_mem_.end()) {
+    munmap(it->second.addr_, it->second.size_);
+    close(it->second.fd_);
+    conn_id_to_extra_request_mem_.erase(it);
+  }
+  return Status::OK();
+}
+
+Status SocketServer::ReadExtraMessage(void* data, size_t size, int conn_id) {
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  auto it = conn_id_to_extra_request_mem_.find(conn_id);
+  if (it == conn_id_to_extra_request_mem_.end()) {
+    return Status::Invalid(
+        "big request memory has not been allocated for conn_id: " +
+        std::to_string(conn_id));
+  }
+  if (it->second.read_pos_ + size > it->second.size_) {
+    return Status::Invalid("big request memory overflow for conn_id: " +
+                           std::to_string(conn_id));
+  }
+  memory::concurrent_memcpy(
+      data, reinterpret_cast<char*>(it->second.addr_) + it->second.read_pos_,
+      size);
+  it->second.read_pos_ += size;
+  return Status::OK();
+}
+
+Status SocketServer::WriteExtraMessage(const void* data, size_t size,
+                                       int conn_id) {
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  auto it = conn_id_to_extra_request_mem_.find(conn_id);
+  if (it == conn_id_to_extra_request_mem_.end()) {
+    return Status::Invalid(
+        "big request memory has not been allocated for conn_id: " +
+        std::to_string(conn_id));
+  }
+  if (it->second.write_pos_ + size > it->second.size_) {
+    return Status::Invalid("big request memory overflow for conn_id: " +
+                           std::to_string(conn_id));
+  }
+  memory::concurrent_memcpy(
+      reinterpret_cast<char*>(it->second.addr_) + it->second.write_pos_, data,
+      size);
+  it->second.write_pos_ += size;
+  return Status::OK();
+}
+
+Status SocketServer::LseekExtraMsgWritePos(uint64_t offset, int conn_id) {
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  auto it = conn_id_to_extra_request_mem_.find(conn_id);
+  if (it == conn_id_to_extra_request_mem_.end()) {
+    return Status::Invalid(
+        "big request memory has not been allocated for conn_id: " +
+        std::to_string(conn_id));
+  }
+  if (offset > it->second.size_) {
+    return Status::Invalid("big request memory overflow for conn_id: " +
+                           std::to_string(conn_id));
+  }
+  it->second.write_pos_ = offset;
+  return Status::OK();
+}
+
+Status SocketServer::LseekExtraMsgReadPos(uint64_t offset, int conn_id) {
+  std::lock_guard<std::recursive_mutex> lock(
+      conn_id_to_extra_request_mem_mutex_);
+  auto it = conn_id_to_extra_request_mem_.find(conn_id);
+  if (it == conn_id_to_extra_request_mem_.end()) {
+    return Status::Invalid(
+        "big request memory has not been allocated for conn_id: " +
+        std::to_string(conn_id));
+  }
+  if (offset > it->second.size_) {
+    return Status::Invalid("big request memory overflow for conn_id: " +
+                           std::to_string(conn_id));
+  }
+  it->second.read_pos_ = offset;
+  return Status::OK();
+}
+
+Status SocketServer::GetClientAttributeMsg(uint64_t conn_id,
+                                           ClientAttributes& attr) {
+  size_t length;
+  std::string attr_str;
+  RETURN_ON_ERROR(ReadExtraMessage(&length, sizeof(size_t), conn_id));
+  attr_str.resize(length);
+  RETURN_ON_ERROR(ReadExtraMessage(attr_str.data(), length, conn_id));
+  attr = ClientAttributes::FromJsonString(attr_str);
+  return Status::OK();
 }
 
 }  // namespace vineyard

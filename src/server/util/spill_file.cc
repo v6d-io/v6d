@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "server/util/spill_file.h"
-
 #include <limits>
 #include <memory>
 #include <string>
@@ -24,6 +22,9 @@ limitations under the License.
 #include "common/util/uuid.h"
 #include "server/memory/memory.h"
 #include "server/util/file_io_adaptor.h"
+
+#ifdef BUILD_VINEYARDD_SPILLING
+#include "server/util/spill_file.h"
 
 namespace vineyard {
 namespace io {
@@ -112,3 +113,5 @@ Status SpillFileReader::Delete_(const ObjectID id) {
 
 }  // namespace io
 }  // namespace vineyard
+
+#endif  // BUILD_VINEYARDD_SPILLING

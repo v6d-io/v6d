@@ -14,19 +14,32 @@
 #  LIBUNWIND_LIBRARIES   - The libraries needed to use libunwind
 #  LIBUNWIND_INCLUDE_DIR - Location of unwind.h and libunwind.h
 
-FIND_PATH(LIBUNWIND_INCLUDE_DIR libunwind.h)
-if(NOT LIBUNWIND_INCLUDE_DIR)
-  message(STATUS "failed to find libunwind.h")
-elseif(NOT EXISTS "${LIBUNWIND_INCLUDE_DIR}/unwind.h")
-  message(STATUS "libunwind.h was found, but unwind.h was not found in that directory.")
-  SET(LIBUNWIND_INCLUDE_DIR "")
-endif()
+set(UNWIND_HOME $ENV{UNWIND_HOME})
 
-FIND_LIBRARY(LIBUNWIND_GENERIC_LIBRARY "unwind")
-if(NOT LIBUNWIND_GENERIC_LIBRARY)
-    MESSAGE(STATUS "failed to find unwind generic library")
+if (UNWIND_HOME)
+    find_path (LIBUNWIND_INCLUDE_DIR
+        NAMES libunwind.h
+        PATHS ${UNWIND_HOME}/include
+    )
+    find_library (LIBUNWIND_LIBRARIES
+        NAMES unwind
+        PATHS ${UNWIND_HOME}/lib
+    )
+else()
+    FIND_PATH(LIBUNWIND_INCLUDE_DIR libunwind.h)
+    if(NOT LIBUNWIND_INCLUDE_DIR)
+        message(STATUS "failed to find libunwind.h")
+    elseif(NOT EXISTS "${LIBUNWIND_INCLUDE_DIR}/unwind.h")
+        message(STATUS "libunwind.h was found, but unwind.h was not found in that directory.")
+        SET(LIBUNWIND_INCLUDE_DIR "")
+    endif()
+
+    FIND_LIBRARY(LIBUNWIND_GENERIC_LIBRARY "unwind")
+    if(NOT LIBUNWIND_GENERIC_LIBRARY)
+        MESSAGE(STATUS "failed to find unwind generic library")
+    endif()
+    SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_GENERIC_LIBRARY})
 endif()
-SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_GENERIC_LIBRARY})
 
 # For some reason, we have to link to two libunwind shared object files:
 # one arch-specific and one not.
@@ -41,15 +54,32 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
 endif()
 
 if(LIBUNWIND_ARCH)
-    FIND_LIBRARY(LIBUNWIND_SPECIFIC_LIBRARY "unwind-${LIBUNWIND_ARCH}")
-    if(NOT LIBUNWIND_SPECIFIC_LIBRARY)
-        MESSAGE(STATUS "failed to find unwind-${LIBUNWIND_ARCH}")
-    endif()
-    if(LIBUNWIND_SPECIFIC_LIBRARY)
-        SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_LIBRARIES} ${LIBUNWIND_SPECIFIC_LIBRARY})
+    if (UNWIND_HOME)
+        find_library (LIBUNWIND_SPECIFIC_LIBRARY
+            NAMES unwind-${LIBUNWIND_ARCH}
+            PATHS ${UNWIND_HOME}/lib
+        )
+        if (NOT LIBUNWIND_SPECIFIC_LIBRARY)
+            message(STATUS "failed to find unwind-${LIBUNWIND_ARCH}")
+        endif()
+        if (LIBUNWIND_SPECIFIC_LIBRARY)
+            SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_LIBRARIES} ${LIBUNWIND_SPECIFIC_LIBRARY})
+        else()
+            if(APPLE)
+                SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_LIBRARIES})
+            endif()
+        endif()
     else()
-        if(APPLE)
-            SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_LIBRARIES})
+        FIND_LIBRARY(LIBUNWIND_SPECIFIC_LIBRARY "unwind-${LIBUNWIND_ARCH}")
+        if(NOT LIBUNWIND_SPECIFIC_LIBRARY)
+            MESSAGE(STATUS "failed to find unwind-${LIBUNWIND_ARCH}")
+        endif()
+        if(LIBUNWIND_SPECIFIC_LIBRARY)
+            SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_LIBRARIES} ${LIBUNWIND_SPECIFIC_LIBRARY})
+        else()
+            if(APPLE)
+                SET(LIBUNWIND_LIBRARIES ${LIBUNWIND_LIBRARIES})
+            endif()
         endif()
     endif()
 endif(LIBUNWIND_ARCH)

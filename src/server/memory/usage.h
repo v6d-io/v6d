@@ -30,13 +30,16 @@ limitations under the License.
 #include "libcuckoo/cuckoohash_map.hh"
 
 #include "common/memory/payload.h"
-#include "common/util/arrow.h"
 #include "common/util/lifecycle.h"
 #include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/status.h"
 #include "server/memory/allocator.h"
+
+#ifdef BUILD_VINEYARDD_SPILLING
+#include "common/util/arrow.h"
 #include "server/util/file_io_adaptor.h"
 #include "server/util/spill_file.h"
+#endif  // BUILD_VINEYARDD_SPILLING
 
 namespace vineyard {
 
@@ -398,10 +401,12 @@ class ColdObjectTracker
 
   ColdObjectTracker() {}
   ~ColdObjectTracker() {
+#ifdef BUILD_VINEYARDD_SPILLING
     if (!spill_path_.empty()) {
       io::FileIOAdaptor io_adaptor(spill_path_);
       DISCARD_ARROW_ERROR(io_adaptor.DeleteDir());
     }
+#endif  // BUILD_VINEYARDD_SPILLING
   }
 
   /**
@@ -619,6 +624,7 @@ class ColdObjectTracker
 
  protected:
   Status SpillPayload(const std::shared_ptr<P>& payload) {
+#ifdef BUILD_VINEYARDD_SPILLING
     if (!payload->is_sealed) {
       return Status::ObjectNotSealed(
           "payload is not sealed and cannot be spilled: " +
@@ -637,9 +643,13 @@ class ColdObjectTracker
     payload->pointer = nullptr;
     payload->is_spilled = true;
     return Status::OK();
+#else
+    return Status::Invalid("Spilling is not enabled");
+#endif  // BUILD_VINEYARDD_SPILLING
   }
 
   Status ReloadPayload(const ID id, const std::shared_ptr<P>& payload) {
+#ifdef BUILD_VINEYARDD_SPILLING
     if (!payload->is_spilled) {
       return Status::ObjectNotSpilled(payload->object_id);
     }
@@ -649,15 +659,21 @@ class ColdObjectTracker
     }
     payload->is_spilled = false;
     return this->DeletePayloadFile(id);
+#else
+    return Status::Invalid("Spilling is not enabled");
+#endif  // BUILD_VINEYARDD_SPILLING
   }
 
   Status DeletePayloadFile(const ID id) {
+#ifdef BUILD_VINEYARDD_SPILLING
     io::FileIOAdaptor io_adaptor(spill_path_);
     RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path_ + std::to_string(id)));
+#endif  // BUILD_VINEYARDD_SPILLING
     return Status::OK();
   }
 
   void SetSpillPath(const std::string& spill_path) {
+#ifdef BUILD_VINEYARDD_SPILLING
     spill_path_ = spill_path;
     if (spill_path.empty()) {
       LOG(INFO) << "No spill path set, spill has been disabled ...";
@@ -676,6 +692,7 @@ class ColdObjectTracker
           << "' doesn't exist, or vineyardd doesn't have the write permission";
       spill_path_.clear();
     }
+#endif  // BUILD_VINEYARDD_SPILLING
   }
 
  private:

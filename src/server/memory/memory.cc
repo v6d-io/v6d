@@ -317,6 +317,10 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id,
         if (object->IsSpilled()) {
           return true;
         }
+        if (object->IsUserCreated()) {
+          // Object created by user, delete it directly
+          return true;
+        }
         if (object->IsGPU()) {
           // DeleteGPU() will deal with GPU object
           return false;
@@ -522,6 +526,8 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
   auto payload = std::make_shared<P>(
       object_id, size, static_cast<uint8_t*>(pointer), fd, map_size, offset);
   payload->is_sealed = true;
+  // TODO: what if offset is large than 4096?
+  payload->user_offset = 4096;
   objects_.insert(object_id, payload);
   return Status::OK();
 }
@@ -639,6 +645,80 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
   objects_.insert(object_id, object);
   DVLOG(10) << "after allocate: " << IDToString<ObjectID>(object_id) << ": "
             << Footprint() << "(" << FootprintLimit() << ")";
+  return Status::OK();
+}
+
+Status BulkStore::CreateUserBlob(uint64_t offset, size_t size,
+                                 ObjectID& object_id,
+                                 std::shared_ptr<Payload>& object) {
+  if (size == 0) {
+    object_id = EmptyBlobID<ObjectID>();
+    object = Payload::MakeEmpty();
+    return Status::OK();
+  }
+
+  bool insert_success = false;
+  int times = 0;
+  while (!insert_success) {
+    if (times > retry_times) {
+      break;
+    }
+
+    int fd = -1;
+    ptrdiff_t ptrdiff = 0;
+    int64_t map_size = 0;
+    uint64_t base_addr = reinterpret_cast<uint64_t>(GetUserBasePointer());
+    object_id = GenerateBlobID<ObjectID>(base_addr + offset);
+    GetMallocMapInfo(reinterpret_cast<void*>(base_addr + offset), &fd,
+                     &map_size, &ptrdiff);
+    object = std::make_shared<Payload>(
+        object_id, size, reinterpret_cast<uint8_t*>(base_addr + offset), fd,
+        map_size, ptrdiff);
+    object->user_offset = offset;
+    object->is_user_created = true;
+    try {
+      insert_success = objects_.insert(object_id, object);
+    } catch (const std::exception& e) {
+      LOG(ERROR) << "Failed to insert user blob: " << e.what();
+      return Status::Invalid("Failed to insert blob to the object store.");
+    }
+    times++;
+  }
+
+  if (!insert_success) {
+    return Status::Invalid("Failed to allocated a unique user blob id.");
+  }
+
+  static uint64_t count = 0;
+  if (count % 2000 == 0) {
+    VLOG(3) << "Current map size:" << objects_.size();
+  }
+  count++;
+  VLOG(3) << "Created user blob with id: " << IDToString<ObjectID>(object_id)
+          << ", size: " << size << ", offset: " << offset;
+
+  return Status::OK();
+}
+
+Status BulkStore::DeleteUserBlob(ObjectID id) {
+  if (id == EmptyBlobID<ObjectID>()) {
+    return Status::OK();
+  }
+
+  if (id == InvalidObjectID()) {
+    return Status::OK();
+  }
+
+  if (objects_.contains(id) && objects_.find(id)->is_user_created) {
+    objects_.erase(id);
+  }
+
+  static uint64_t count = 0;
+  if (count % 2000 == 0) {
+    VLOG(3) << "Current map size:" << objects_.size();
+  }
+  count++;
+
   return Status::OK();
 }
 

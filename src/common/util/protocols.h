@@ -37,6 +37,8 @@ struct command_t {
   static const std::string REGISTER_REPLY;
   static const std::string EXIT_REQUEST;
   static const std::string EXIT_REPLY;
+  static const std::string REQUIRE_EXTRA_REQUEST_MEMORY_REQUEST;
+  static const std::string REQUIRE_EXTRA_REQUEST_MEMORY_REPLY;
 
   // Blobs APIs
   static const std::string CREATE_BUFFER_REQUEST;
@@ -57,6 +59,8 @@ struct command_t {
   static const std::string DROP_BUFFER_REPLY;
   static const std::string SHRINK_BUFFER_REQUEST;
   static const std::string SHRINK_BUFFER_REPLY;
+  static const std::string GET_USER_BUFFERS_REQUEST;
+  static const std::string GET_USER_BUFFERS_REPLY;
 
   static const std::string REQUEST_FD_REQUEST;
   static const std::string REQUEST_FD_REPLY;
@@ -71,6 +75,8 @@ struct command_t {
   static const std::string RELEASE_REPLY;
   static const std::string DEL_DATA_WITH_FEEDBACKS_REQUEST;
   static const std::string DEL_DATA_WITH_FEEDBACKS_REPLY;
+  static const std::string DEL_HUGE_DATA_REQUEST;
+  static const std::string DEL_HUGE_DATA_REPLY;
 
   static const std::string CREATE_BUFFER_PLASMA_REQUEST;
   static const std::string CREATE_BUFFER_PLASMA_REPLY;
@@ -82,6 +88,14 @@ struct command_t {
   static const std::string PLASMA_RELEASE_REPLY;
   static const std::string PLASMA_DEL_DATA_REQUEST;
   static const std::string PLASMA_DEL_DATA_REPLY;
+
+  static const std::string CREATE_USER_BUFFERS_REQUEST;
+  static const std::string CREATE_USER_BUFFERS_REPLY;
+  static const std::string DELETE_USER_BUFFERS_REQUEST;
+  static const std::string DELETE_USER_BUFFERS_REPLY;
+
+  static const std::string GET_REMOTE_BLOBS_WITH_RDMA_REQUEST;
+  static const std::string GET_REMOTE_BLOBS_WITH_RDMA_REPLY;
 
   // Metadata APIs
   static const std::string CREATE_DATA_REQUEST;
@@ -108,6 +122,12 @@ struct command_t {
   static const std::string MEMORY_TRIM_REPLY;
   static const std::string RELEASE_BLOBS_WITH_RDMA_REQUEST;
   static const std::string RELEASE_BLOBS_WITH_RDMA_REPLY;
+  static const std::string BATCH_PERSIST_REQUEST;
+  static const std::string BATCH_PERSIST_REPLY;
+  static const std::string CREATE_HUGE_DATAS_REQUEST;
+  static const std::string CREATE_HUGE_DATAS_REPLY;
+  static const std::string GET_HUGE_DATA_REQUEST;
+  static const std::string GET_HUGE_DATA_REPLY;
 
   // Stream APIs
   static const std::string CREATE_STREAM_REQUEST;
@@ -118,12 +138,58 @@ struct command_t {
   static const std::string GET_NEXT_STREAM_CHUNK_REPLY;
   static const std::string PUSH_NEXT_STREAM_CHUNK_REQUEST;
   static const std::string PUSH_NEXT_STREAM_CHUNK_REPLY;
+  static const std::string PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REQUEST;
+  static const std::string PUSH_NEXT_STREAM_CHUNK_BY_OFFSET_REPLY;
   static const std::string PULL_NEXT_STREAM_CHUNK_REQUEST;
   static const std::string PULL_NEXT_STREAM_CHUNK_REPLY;
   static const std::string STOP_STREAM_REQUEST;
   static const std::string STOP_STREAM_REPLY;
   static const std::string DROP_STREAM_REQUEST;
   static const std::string DROP_STREAM_REPLY;
+  static const std::string ABORT_STREAM_REQUEST;
+  static const std::string ABORT_STREAM_REPLY;
+  static const std::string PUT_STREAM_NAME_REQUEST;
+  static const std::string PUT_STREAM_NAME_REPLY;
+  static const std::string GET_STREAM_ID_BY_NAME_REQUEST;
+  static const std::string GET_STREAM_ID_BY_NAME_REPLY;
+  static const std::string ACTIVATE_REMOTE_FIXED_STREAM_REQUEST;
+  static const std::string ACTIVATE_REMOTE_FIXED_STREAM_REPLY;
+  static const std::string STREAM_READY_ACK;
+  static const std::string CREATE_FIXED_STREAM_REQUEST;
+  static const std::string CREATE_FIXED_STREAM_REPLY;
+  static const std::string OPEN_FIXED_STREAM_REQUEST;
+  static const std::string OPEN_FIXED_STREAM_REPLY;
+  static const std::string CLOSE_STREAM_REQUEST;
+  static const std::string CLOSE_STREAM_REPLY;
+  static const std::string DELETE_STREAM_REQUEST;
+  static const std::string DELETE_STREAM_REPLY;
+  static const std::string CHECK_FIXED_STREAM_RECEIVED_REQUEST;
+  static const std::string CHECK_FIXED_STREAM_RECEIVED_REPLY;
+
+  // sidecar api
+  static const std::string VINEYARD_OPEN_REMOTE_FIXED_STREAM_REQUEST;
+  static const std::string VINEYARD_OPEN_REMOTE_FIXED_STREAM_REPLY;
+  static const std::string VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REQUEST;
+  static const std::string VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_REPLY;
+  static const std::string
+      VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REQUEST;
+  static const std::string
+      VINEYARD_ACTIVATE_REMOTE_FIXED_STREAM_WITH_OFFSET_REPLY;
+  static const std::string VINEYARD_STOP_STREAM_REQUEST;
+  static const std::string VINEYARD_STOP_STREAM_REPLY;
+  static const std::string VINEYARD_DROP_STREAM_REQUEST;
+  static const std::string VINEYARD_DROP_STREAM_REPLY;
+  static const std::string VINEYARD_ABORT_REMOTE_STREAM_REQUEST;
+  static const std::string VINEYARD_ABORT_REMOTE_STREAM_REPLY;
+  static const std::string VINEYARD_STREAM_READY_ACK;
+  static const std::string VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REQUEST;
+  static const std::string VINEYARD_CLOSE_REMOTE_FIXED_STREAM_REPLY;
+  static const std::string VINEYARD_GET_METAS_BY_NAMES_REQUEST;
+  static const std::string VINEYARD_GET_METAS_BY_NAMES_REPLY;
+  static const std::string VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REQUEST;
+  static const std::string VINEYARD_GET_REMOTE_BLOBS_WITH_RDMA_REPLY;
+  static const std::string VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REQUEST;
+  static const std::string VINEYARD_GET_REMOTE_BLOBS_WITH_OFFSET_REPLY;
 
   // Names APIs
   static const std::string PUT_NAME_REQUEST;
@@ -134,6 +200,18 @@ struct command_t {
   static const std::string LIST_NAME_REPLY;
   static const std::string DROP_NAME_REQUEST;
   static const std::string DROP_NAME_REPLY;
+  static const std::string GET_NAME_LOCATION_REQUEST;
+  static const std::string GET_NAME_LOCATION_REPLY;
+  static const std::string GET_METAS_BY_NAMES_REQUEST;
+  static const std::string GET_METAS_BY_NAMES_REPLY;
+  static const std::string PUT_NAME_LOCATION_REQUEST;
+  static const std::string PUT_NAME_LOCATION_REPLY;
+  static const std::string GET_NAMES_REQUEST;
+  static const std::string GET_NAMES_REPLY;
+  static const std::string DROP_NAMES_REQUEST;
+  static const std::string DROP_NAMES_REPLY;
+  static const std::string PUT_NAMES_REQUEST;
+  static const std::string PUT_NAMES_REPLY;
 
   // Arena APIs
   static const std::string MAKE_ARENA_REQUEST;
@@ -163,6 +241,8 @@ struct command_t {
   static const std::string IS_IN_USE_REPLY;
 
   // Meta APIs
+  static const std::string GET_VINEYARD_MMAP_FD_REQUEST;
+  static const std::string GET_VINEYARD_MMAP_FD_REPLY;
   static const std::string CLUSTER_META_REQUEST;
   static const std::string CLUSTER_META_REPLY;
   static const std::string INSTANCE_STATUS_REQUEST;
@@ -180,6 +260,8 @@ struct command_t {
   static const std::string RELEASE_LOCK_REQUEST;
   static const std::string RELEASE_LOCK_REPLY;
 };
+
+extern std::map<std::string, int> CommandMap;
 
 enum class StoreType {
   kDefault = 1,
@@ -213,6 +295,14 @@ Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
                          bool& store_match, bool& support_rpc_compression);
 
 void WriteExitRequest(std::string& msg);
+
+void WriteRequireExtraRequestMemoryRequest(const size_t size, std::string& msg);
+
+Status ReadRequireExtraRequestMemoryRequest(const json& root, size_t& size);
+
+void WriteRequireExtraRequestMemoryReply(std::string& msg);
+
+Status ReadRequireExtraRequestMemoryReply(const json& root);
 
 void WriteCreateBufferRequest(const size_t size, std::string& msg);
 
@@ -290,6 +380,15 @@ Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
 
 Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
                            std::vector<int>& fd_sent, bool& compress);
+
+void WriteGetUserBuffersRequest(std::vector<ObjectID>& ids, std::string& msg);
+
+Status ReadGetUserBuffersRequest(const json& root, std::vector<ObjectID>& ids);
+
+void WriteGetUserBuffersReply(
+    const std::vector<std::shared_ptr<Payload>>& objects, std::string& msg);
+
+Status ReadGetUserBuffersReply(const json& root, std::vector<Payload>& objects);
 
 void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
                                std::string& msg);
@@ -403,6 +502,17 @@ void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
 Status ReadDelDataWithFeedbacksReply(json const& root,
                                      std::vector<ObjectID>& deleted_bids);
 
+void WriteDelHugeDataRequest(const size_t id_num, const bool force,
+                             const bool deep, const bool memory_trim,
+                             const bool fastpath, std::string& msg);
+
+Status ReadDelHugeDataRequest(json const& root, size_t& id_num, bool& force,
+                              bool& deep, bool& memory_trim, bool& fastpath);
+
+void WriteDelHugeDataReply(std::string& msg);
+
+Status ReadDelHugeDataReply(json const& root);
+
 void WriteCreateBufferByPlasmaRequest(PlasmaID const plasma_id,
                                       size_t const size,
                                       size_t const plasma_size,
@@ -461,6 +571,38 @@ void WritePlasmaDelDataReply(std::string& msg);
 
 Status ReadPlasmaDelDataReply(json const& root);
 
+void WriteCreateUserBuffersRequest(const std::vector<uint64_t>& offsets,
+                                   const std::vector<size_t>& sizes,
+                                   std::string& msg);
+
+Status ReadCreateUserBuffersRequest(const json& root, size_t& offsets_num,
+                                    size_t& sizes_num);
+
+void WriteCreateUserBuffersReply(const std::vector<ObjectID>& ids,
+                                 std::string& msg);
+
+Status ReadCreateUserBuffersReply(const json& root, std::vector<ObjectID>& ids);
+
+void WriteDeleteUserBuffersRequest(const std::vector<uint64_t>& ids,
+                                   std::string& msg);
+
+Status ReadDeleteUserBuffersRequest(const json& root,
+                                    std::vector<uint64_t>& ids);
+
+void WriteDeleteUserBuffersReply(std::string& msg);
+
+Status ReadDeleteUserBuffersReply(const json& root);
+
+void WriteGetRemoteBlobsWithRDMARequest(
+    std::vector<std::vector<ObjectID>>& remote_ids, std::string& msg);
+
+Status ReadGetRemoteBlobsWithRDMARequest(
+    const json& root, std::vector<std::vector<ObjectID>>& remote_ids);
+
+void WriteGetRemoteBlobsWithRDMAReply(std::string& msg, int index);
+
+Status ReadGetRemoteBlobsWithRDMAReply(const json& root, int& index);
+
 void WriteCreateDataRequest(const json& content, std::string& msg);
 
 Status ReadCreateDataRequest(const json& root, json& content);
@@ -502,6 +644,28 @@ Status ReadGetDataReply(const json& root, json& content);
 Status ReadGetDataReply(const json& root,
                         std::unordered_map<ObjectID, json>& content);
 
+void WriteCreateHugeDatasRequest(const size_t& json_num, std::string& msg);
+
+Status ReadCreateHugeDatasRequest(const json& root, size_t& json_num);
+
+void WriteCreateHugeDatasReply(const size_t& ids_num,
+                               const Signature& signature,
+                               const InstanceID& instance_id, std::string& msg);
+
+Status ReadCreateHugeDatasReply(const json& root, size_t& ids_num,
+                                Signature& signatures,
+                                InstanceID& instance_ids);
+
+void WriteGetHugeDataRequest(const size_t id_num, const bool sync_remote,
+                             const bool wait, std::string& msg);
+
+Status ReadGetHugeDataRequest(const json& root, size_t& id_num,
+                              bool& sync_remote, bool& wait);
+
+void WriteGetHugeDataReply(size_t json_length, std::string& msg);
+
+Status ReadGetHugeDataReply(const json& root, size_t& json_length);
+
 void WriteListDataRequest(std::string const& pattern, bool const regex,
                           size_t const limit, std::string& msg);
 
@@ -539,6 +703,15 @@ Status ReadPersistRequest(const json& root, ObjectID& id);
 void WritePersistReply(std::string& msg);
 
 Status ReadPersistReply(const json& root);
+
+void WriteBatchPersistRequest(const std::vector<ObjectID>& ids,
+                              std::string& msg);
+
+Status ReadBatchPersistRequest(const json& root, std::vector<ObjectID>& ids);
+
+void WriteBatchPersistReply(std::string& msg);
+
+Status ReadBatchPersistReply(const json& root);
 
 void WriteIfPersistRequest(const ObjectID id, std::string& msg);
 
@@ -593,6 +766,18 @@ void WriteReleaseBlobsWithRDMAReply(std::string& msg);
 
 Status ReadReleaseBlobsWithRDMAReply(const json& root);
 
+void WriteGetMetasByNamesRequest(const std::vector<std::string>& names,
+                                 std::string& msg);
+
+Status ReadGetMetasByNamesRequest(const json& root,
+                                  std::vector<std::string>& names);
+
+void WriteGetMetasByNamesReply(std::vector<ObjectID>& ids, json& contents,
+                               std::string& msg);
+
+Status ReadGetMetasByNamesReply(const json& root, std::vector<ObjectID>& ids,
+                                json& contents);
+
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 
 Status ReadCreateStreamRequest(const json& root, ObjectID& object_id);
@@ -601,15 +786,27 @@ void WriteCreateStreamReply(std::string& msg);
 
 Status ReadCreateStreamReply(const json& root);
 
-void WriteOpenStreamRequest(const ObjectID& object_id, const int64_t& mode,
-                            std::string& msg);
+void WriteCreateFixedStreamRequest(std::string stream_name, int blob_nums,
+                                   size_t blob_size, std::string& msg);
+
+Status ReadCreateFixedStreamRequest(const json& root, std::string& stream_name,
+                                    int& blob_nums, size_t& blob_size);
+
+void WriteCreateFixedStreamReply(std::string& msg, ObjectID& stream_id);
+
+Status ReadCreateFixedStreamReply(const json& root, ObjectID& stream_id);
+
+void WriteOpenStreamRequest(const ObjectID& object_id,
+                            const std::string stream_name, const int64_t& mode,
+                            bool wait, uint64_t timeout, std::string& msg);
 
 Status ReadOpenStreamRequest(const json& root, ObjectID& object_id,
-                             int64_t& mode);
+                             std::string& stream_name, int64_t& mode,
+                             bool& wait, uint64_t& timeout);
 
-void WriteOpenStreamReply(std::string& msg);
+void WriteOpenStreamReply(std::string& msg, ObjectID& ret_id);
 
-Status ReadOpenStreamReply(const json& root);
+Status ReadOpenStreamReply(const json& root, ObjectID& ret_id);
 
 void WriteGetNextStreamChunkRequest(const ObjectID stream_id, const size_t size,
                                     std::string& msg);
@@ -633,6 +830,18 @@ void WritePushNextStreamChunkReply(std::string& msg);
 
 Status ReadPushNextStreamChunkReply(const json& root);
 
+void WritePushNextStreamChunkByOffsetRequest(const ObjectID stream_id,
+                                             const size_t offset,
+                                             std::string& msg);
+
+Status ReadPushNextStreamChunkByOffsetRequest(const json& root,
+                                              ObjectID& stream_id,
+                                              size_t& offset);
+
+void WritePushNextStreamChunkByOffsetReply(std::string& msg);
+
+Status ReadPushNextStreamChunkByOffsetReply(const json& root);
+
 void WritePullNextStreamChunkRequest(const ObjectID stream_id,
                                      std::string& msg);
 
@@ -641,6 +850,16 @@ Status ReadPullNextStreamChunkRequest(const json& root, ObjectID& stream_id);
 void WritePullNextStreamChunkReply(ObjectID const chunk, std::string& msg);
 
 Status ReadPullNextStreamChunkReply(const json& root, ObjectID& chunk);
+
+void WriteCheckFixedStreamReceivedRequest(const ObjectID stream_id, int index,
+                                          std::string& msg);
+
+Status ReadCheckFixedStreamReceivedRequest(const json& root,
+                                           ObjectID& stream_id, int& index);
+
+void WriteCheckFixedStreamReceivedReply(bool finished, std::string& msg);
+
+Status ReadCheckFixedStreamReceivedReply(bool& finished, const json& root);
 
 void WriteStopStreamRequest(const ObjectID stream_id, const bool failed,
                             std::string& msg);
@@ -660,15 +879,245 @@ void WriteDropStreamReply(std::string& msg);
 
 Status ReadDropStreamReply(const json& root);
 
+void WriteAbortStreamRequest(const ObjectID stream_id, std::string& msg);
+
+Status ReadAbortStreamRequest(const json& root, ObjectID& stream_id);
+
+void WriteAbortStreamReply(std::string& msg, bool success);
+
+Status ReadAbortStreamReply(const json& root, bool& success);
+
+void WritePutStreamNameRequest(const ObjectID stream_id, std::string name,
+                               std::string& msg);
+
+Status ReadPutStreamNameRequest(const json& root, ObjectID& stream_id,
+                                std::string& name);
+
+void WritePutStreamNameReply(std::string& msg);
+
+Status ReadPutStreamNameReply(const json& root);
+
+void WriteGetStreamIDByNameRequest(const std::string name, std::string& msg);
+
+Status ReadGetStreamIDByNameRequest(const json& root, std::string& name);
+
+void WriteGetStreamIDByNameReply(const ObjectID stream_id, std::string& msg);
+
+Status ReadGetStreamIDByNameReply(const json& root, ObjectID& stream_id);
+
+void WriteActivateRemoteFixedStreamRequest(ObjectID stream_id,
+                                           std::vector<uint64_t>& buffer_list,
+                                           std::vector<uint64_t>& rkeys,
+                                           std::string& msg);
+
+Status ReadActivateRemoteFixedStreamRequest(const json& root,
+                                            ObjectID& stream_id,
+                                            std::vector<uint64_t>& buffer_list,
+                                            std::vector<uint64_t>& rkeys);
+
+void WriteActivateRemoteFixedStreamReply(std::string& msg);
+
+Status ReadActivateRemoteFixedStreamReply(const json& root);
+
+void WriteStreamReadyAckReply(std::string& msg, int index);
+
+Status ReadStreamReadyAckReply(const json& root, int& index);
+
+void WriteActivateRemoteFixedStreamRequest(
+    ObjectID stream_id, std::vector<std::vector<uint64_t>>& buffer_list,
+    std::vector<std::vector<uint64_t>>& rkeys_list,
+    std::vector<std::vector<size_t>>& sizes, std::string advice_device,
+    int port, std::string& msg);
+
+Status ReadActivateRemoteFixedStreamRequest(
+    const json& root, ObjectID& stream_id,
+    std::vector<std::vector<uint64_t>>& buffer_list,
+    std::vector<std::vector<uint64_t>>& rkeys,
+    std::vector<std::vector<size_t>>& sizes_list, std::string& advice_device,
+    int& port);
+
+void WriteActivateRemoteFixedStreamRequest(ObjectID stream_id,
+                                           std::vector<uint64_t>& buffer_list,
+                                           std::vector<size_t>& sizes,
+                                           std::string& msg);
+
+Status ReadActivateRemoteFixedStreamRequest(const json& root,
+                                            ObjectID& stream_id,
+                                            std::vector<uint64_t>& buffer_list,
+                                            std::vector<size_t>& sizes_list);
+
+void WriteActivateRemoteFixedStreamReply(std::string& msg);
+
+Status ReadActivateRemoteFixedStreamReply(const json& root);
+
+Status WriteOpenFixedStreamRequest(const ObjectID stream_id,
+                                   const uint64_t mode, std::string& msg);
+
+Status ReadOpenFixedStreamRequest(const json& root, ObjectID& stream_id,
+                                  int64_t& mode);
+
+void WriteOpenFixedStreamReply(std::string& msg);
+
+Status ReadOpenFixedStreamReply(const json& root);
+
+void WriteCloseStreamRequest(ObjectID stream_id, std::string& msg);
+
+Status ReadCloseStreamRequest(const json& root, ObjectID& stream_id);
+
+void WriteCloseStreamReply(std::string& msg);
+
+Status ReadCloseStreamReply(const json& root);
+
+void WriteDeleteStreamRequest(ObjectID stream_id, std::string& msg);
+
+Status ReadDeleteStreamRequest(const json& root, ObjectID& stream_id);
+
+void WriteDeleteStreamReply(std::string& msg);
+
+Status ReadDeleteStreamReply(const json& root);
+
+void WriteVineyardOpenRemoteFixedStreamRequest(
+    ObjectID const remote_id, std::string stream_name, ObjectID local_id,
+    int blob_nums, size_t size, std::string remote_endpoint, uint64_t mode,
+    bool wait, uint64_t timeout, std::string& msg);
+
+Status ReadVineyardOpenRemoteFixedStreamRequest(
+    const json& root, ObjectID& remote_id, std::string& remote_stream_name,
+    ObjectID& local_id, int& blob_nums, size_t& size,
+    std::string& remote_endpoint, uint64_t& mode, bool& wait,
+    uint64_t& timeout);
+
+void WriteVineyardOpenRemoteFixedStreamReply(std::string& msg,
+                                             ObjectID const local_stream_id);
+
+Status ReadVineyardOpenRemoteFixedStreamReply(const json& root,
+                                              ObjectID& local_id);
+
+void WriteVineyardActivateRemoteFixedStreamRequest(
+    ObjectID stream_id, bool create, std::vector<ObjectID>& blob_list,
+    std::string& msg);
+
+Status ReadVineyardActivateRemoteFixedStreamRequest(
+    const json& root, ObjectID& stream_id, bool& create,
+    std::vector<ObjectID>& blob_list);
+
+void WriteVineyardActivateRemoteFixedStreamReply(
+    std::string& msg, std::vector<std::shared_ptr<Payload>>& payload_list,
+    std::vector<int>& fds_to_send);
+
+Status ReadVineyardActivateRemoteFixedStreamReply(const json& root,
+                                                  std::vector<Payload>& objects,
+                                                  std::vector<int>& fds_sent);
+
+void WriteVineyardActivateRemoteFixedStreamWithOffsetRequest(
+    ObjectID stream_id, std::vector<size_t>& offsets, std::string& msg);
+
+Status ReadVineyardActivateRemoteFixedStreamWithOffsetRequest(
+    const json& root, ObjectID& stream_id, std::vector<size_t>& offsets);
+
+void WriteVineyardActivateRemoteFixedStreamWithOffsetReply(std::string& msg);
+
+Status ReadVineyardActivateRemoteFixedStreamWithOffsetReply(const json& root);
+
+void WriteVineyardCloseRemoteFixedStreamRequest(ObjectID stream_id,
+                                                std::string& msg);
+
+Status ReadVineyardCloseRemoteFixedStreamRequest(const json& root,
+                                                 ObjectID& stream_id);
+
+void WriteVineyardCloseRemoteFixedStreamReply(std::string& msg);
+
+Status ReadVineyardCloseRemoteFixedStreamReply(const json& root);
+
+void WriteVineyardGetMetasByNamesRequest(std::vector<std::string>& names,
+                                         std::string rpc_endpoint,
+                                         std::string& msg);
+
+Status ReadVineyardGetMetasByNamesRequest(const json& root,
+                                          std::vector<std::string>& names,
+                                          std::string& rpc_endpoint);
+
+void WriteVineyardGetMetasByNamesReply(const std::vector<json>& contents,
+                                       std::string& msg);
+
+Status ReadVineyardGetMetasByNamesReply(const json& root,
+                                        std::vector<json>& contents);
+
+void WriteVineyardGetRemoteBlobsWithRDMARequest(
+    std::vector<std::vector<ObjectID>>& local_ids,
+    std::vector<std::vector<ObjectID>>& remote_ids, std::string& rpc_endpoint,
+    std::string& msg);
+
+Status ReadVineyardGetRemoteBlobsWithRDMARequest(
+    const json& root, std::vector<std::vector<ObjectID>>& local_ids,
+    std::vector<std::vector<ObjectID>>& remote_ids, std::string& rpc_endpoint);
+
+void WriteVineyardGetRemoteBlobsWithRDMAReply(std::string& msg);
+
+Status ReadVineyardGetRemoteBlobsWithRDMAReply(const json& root);
+
+void WriteVineyardGetRemoteBlobsWithOffsetRequest(size_t batch_nums,
+                                                  size_t batch_size,
+                                                  std::string& rpc_endpoint,
+                                                  std::string& msg);
+
+Status ReadVineyardGetRemoteBlobsWithOffsetRequest(const json& root,
+                                                   size_t& batch_nums,
+                                                   size_t& batch_size,
+                                                   std::string& rpc_endpoint);
+
+void WriteVineyardGetRemoteBlobsWithOffsetReply(std::string& msg);
+
+Status ReadVineyardGetRemoteBlobsWithOffsetReply(const json& root);
+
+void WriteVineyardStopStreamRequest(ObjectID stream_id, bool failed,
+                                    std::string& msg);
+
+Status ReadVineyardStopStreamRequest(const json& root, ObjectID& stream_id,
+                                     bool& failed);
+
+void WriteVineyardStopStreamReply(std::string& msg);
+
+Status ReadVineyardStopStreamReply(const json& root);
+
+void WriteVineyardDropStreamRequest(ObjectID stream_id, std::string& msg);
+
+Status ReadVineyardDropStreamRequest(const json& root, ObjectID& stream_id);
+
+void WriteVineyardDropStreamReply(std::string& msg);
+
+Status ReadVineyardDropStreamReply(const json& root);
+
+void WriteVineyardAbortRemoteStreamRequest(ObjectID stream_id,
+                                           std::string& msg);
+
+Status ReadVineyardAbortRemoteStreamRequest(const json& root,
+                                            ObjectID& stream_id);
+
+void WriteVineyardAbortRemoteStreamReply(std::string& msg, bool success);
+
+Status ReadVineyardAbortRemoteStreamReply(const json& root, bool& success);
+
 void WritePutNameRequest(const ObjectID object_id, const std::string& name,
-                         std::string& msg);
+                         bool overwrite, std::string& msg);
 
 Status ReadPutNameRequest(const json& root, ObjectID& object_id,
-                          std::string& name);
+                          std::string& name, bool& overwrite);
 
 void WritePutNameReply(std::string& msg);
 
 Status ReadPutNameReply(const json& root);
+
+void WritePutNamesRequest(const std::vector<ObjectID> object_ids,
+                          const std::vector<std::string>& names, bool overwrite,
+                          std::string& msg);
+
+Status ReadPutNamesRequest(const json& root, std::vector<ObjectID>& object_id,
+                           std::vector<std::string>& name, bool& overwrite);
+
+void WritePutNamesReply(std::string& msg);
+
+Status ReadPutNamesReply(const json& root);
 
 void WriteGetNameRequest(const std::string& name, const bool wait,
                          std::string& msg);
@@ -678,6 +1127,17 @@ Status ReadGetNameRequest(const json& root, std::string& name, bool& wait);
 void WriteGetNameReply(const ObjectID& object_id, std::string& msg);
 
 Status ReadGetNameReply(const json& root, ObjectID& object_id);
+
+void WriteGetNamesRequest(const std::vector<std::string>& name, const bool wait,
+                          std::string& msg);
+
+Status ReadGetNamesRequest(const json& root, std::vector<std::string>& name,
+                           bool& wait);
+
+void WriteGetNamesReply(const std::vector<ObjectID>& object_id,
+                        std::string& msg);
+
+Status ReadGetNamesReply(const json& root, std::vector<ObjectID>& object_id);
 
 void WriteListNameRequest(std::string const& pattern, bool const regex,
                           size_t const limit, std::string& msg);
@@ -698,6 +1158,40 @@ Status ReadDropNameRequest(const json& root, std::string& name);
 void WriteDropNameReply(std::string& msg);
 
 Status ReadDropNameReply(const json& root);
+
+void WriteDropNamesRequest(const std::vector<std::string>& name,
+                           std::string& msg);
+
+Status ReadDropNamesRequest(const json& root, std::vector<std::string>& name);
+
+void WriteDropNamesReply(std::string& msg);
+
+Status ReadDropNamesReply(const json& root);
+
+void WriteGetObjectLocationRequest(const std::vector<std::string>& names,
+                                   std::string& msg);
+
+Status ReadGetObjectLocationRequest(const json& root,
+                                    std::vector<std::string>& names);
+
+void WriteGetObjectLocationReply(
+    std::vector<std::vector<std::string>>& locations, std::string& msg);
+
+Status ReadGetObjectLocationReply(
+    const json& root, std::vector<std::vector<std::string>>& locations);
+
+void WritePutObjectLocationRequest(const std::vector<std::string>& names,
+                                   const std::vector<std::string>& locations,
+                                   int ttl_seconds, std::string& msg);
+
+Status ReadPutObjectLocationRequest(const json& root,
+                                    std::vector<std::string>& names,
+                                    std::vector<std::string>& locations,
+                                    int& ttl_seconds);
+
+void WritePutObjectLocationReply(std::string& msg);
+
+Status ReadPutObjectLocationReply(const json& root);
 
 void WriteMakeArenaRequest(const size_t size, std::string& msg);
 
@@ -793,6 +1287,15 @@ Status ReadIsInUseRequest(json const& root, ObjectID& id);
 void WriteIsInUseReply(const bool is_in_use, std::string& msg);
 
 Status ReadIsInUseReply(json const& root, bool& is_in_use);
+
+void WriteGetVineyardMmapFdRequest(std::string& msg);
+
+Status ReadGetVineyardMmapFdRequest(const json& root);
+
+void WriteGetVineyardMmapFdReply(size_t size, size_t offset, std::string& msg);
+
+Status ReadGetVineyardMmapFdReply(const json& root, size_t& size,
+                                  size_t& offset);
 
 void WriteClusterMetaRequest(std::string& msg);
 

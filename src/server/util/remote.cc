@@ -55,16 +55,6 @@ Status RemoteClient::StopRDMA() {
   }
   rdma_connected_ = false;
 
-  void* msg;
-  RETURN_ON_ERROR(rdma_client_->GetTXFreeMsgBuffer(msg));
-  VineyardMsg* vmsg = reinterpret_cast<VineyardMsg*>(msg);
-  vmsg->type = VINEYARD_MSG_CLOSE;
-  RETURN_ON_ERROR(rdma_client_->Send(msg, sizeof(VineyardMsg), nullptr));
-  RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
-
-  RETURN_ON_ERROR(rdma_client_->Stop());
-  RETURN_ON_ERROR(rdma_client_->Close());
-  RETURN_ON_ERROR(RDMAClientCreator::Release(rdma_endpoint_));
   return Status::OK();
 }
 
@@ -91,16 +81,6 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
   } else {
     rdma_host = rdma_endpoint.substr(0, pos);
     rdma_port = rdma_endpoint.substr(pos + 1);
-  }
-
-  Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
-  if (status.ok()) {
-    rdma_endpoint_ = rdma_host + ":" + rdma_port;
-    VLOG(100) << "Connect to RDMA server successfully. RDMA host:" << rdma_host
-              << ", port:" << rdma_port;
-  } else {
-    VLOG(100) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
-              << status.message();
   }
 
   return Status::OK();
@@ -169,6 +149,7 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
 
   VLOG(100) << "Try to connect to RDMA server " << host << ":" << port << "...";
   RETURN_ON_ERROR(this->rdma_client_->Connect());
+
   this->rdma_connected_ = true;
   return Status::OK();
 }
@@ -180,9 +161,18 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
   }
 
   asio::ip::tcp::resolver resolver(context_);
-  int retries = 0, max_connect_retries = 10;
+  int retries = 0;
+  std::string retry_times_env_str =
+      read_env("VINEYARD_REMOTE_CONNECT_RETRIES", "1");
+  std::string retry_interval_ms_env_str =
+      read_env("VINEYARD_REMOTE_CONNECT_INTERVAL_MS", "100");
+  int retry_times = std::stoi(retry_times_env_str);
+  int retry_interval_ms = std::stoi(retry_interval_ms_env_str);
+  LOG(INFO) << "Connecting to remote server at " << host << ":" << port
+            << " with " << retry_times << " retries and " << retry_interval_ms
+            << " ms interval";
   boost::system::error_code ec;
-  while (retries < max_connect_retries) {
+  while (retries < retry_times) {
 #if BOOST_VERSION >= 106600
     asio::connect(remote_tcp_socket_,
                   resolver.resolve(host, std::to_string(port)), ec);
@@ -192,19 +182,22 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
                       host, std::to_string(port))),
                   ec);
 #endif
-    if (ec) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+    if (ec && retries < retry_times - 1) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_ms));
       retries += 1;
     } else {
       break;
     }
   }
   if (ec) {
+    LOG(ERROR) << "Failed to connect to peer after " +
+                      std::to_string(retry_times) + " retries: " + ec.message();
     return Status::IOError("Failed to connect to peer after " +
-                           std::to_string(max_connect_retries) +
+                           std::to_string(retry_times) +
                            " retries: " + ec.message());
   }
   socket_ = std::move(remote_tcp_socket_);
+  socket_.set_option(asio::ip::tcp::no_delay(true));
 
   std::string message_out;
   WriteRegisterRequest(message_out, StoreType::kDefault, session_id);
@@ -219,6 +212,10 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
       message_in, ipc_socket_value, rpc_endpoint_value, remote_instance_id_,
       session_id_, server_version_, store_match, support_rpc_compression));
   this->connected_ = true;
+  VLOG(2) << "Connected to remote server at " << host << ":" << port
+          << ", instance id: " << remote_instance_id_
+          << ", session id: " << session_id_
+          << ", server version: " << server_version_;
   return Status::OK();
 }
 
@@ -291,6 +288,74 @@ Status RemoteClient::MigrateObject(const ObjectID object_id, const json& meta,
   return Status::OK();
 }
 
+Status RemoteClient::OpenRemoteStream(ObjectID remote_id,
+                                      std::string stream_name, ObjectID& ret_id,
+                                      uint64_t mode, bool wait,
+                                      uint64_t timeout) {
+  TRY_ACQUIRE_CONNECTION(this);
+  std::string message_out;
+  VLOG(100) << "Remote client open stream: " << remote_id
+            << ", name:" << stream_name << ", mode:" << mode;
+  WriteOpenStreamRequest(remote_id, stream_name, mode, wait, timeout,
+                         message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadOpenStreamReply(message_in, ret_id));
+  VLOG(100) << "Get remote stream id: " << ret_id;
+  return Status::OK();
+}
+
+Status ActivateRemoteFixedStream(ObjectID remote_id,
+                                 std::vector<uint64_t> buffers,
+                                 size_t buffer_size,
+                                 std::vector<uint64_t>& local_buffers,
+                                 int conn_id, callback_t<int> callback) {
+  callback(Status::NotImplemented("Without is not implemented yet"), -1);
+  return Status::OK();
+}
+
+Status RemoteClient::ActivateRemoteFixedStream(
+    ObjectID remote_id, std::vector<uint64_t> buffers, size_t buffer_size,
+    std::vector<uint64_t>& local_buffers, int conn_id) {
+  return Status::NotImplemented("Without is not implemented yet");
+}
+
+Status RemoteClient::GetNextFixedStreamChunk(int& index) {
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadStreamReadyAckReply(message_in, index));
+  if (index < 0) {
+    return Status::Invalid("Invalid index: " + std::to_string(index));
+  }
+  return Status::OK();
+}
+
+Status RemoteClient::CloseRemoteStream(ObjectID stream_id) {
+  TRY_ACQUIRE_CONNECTION(this);
+  std::string message_out;
+  WriteCloseStreamRequest(stream_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCloseStreamReply(message_in));
+  return Status::OK();
+}
+
+Status RemoteClient::AbortRemoteStream(ObjectID stream_id, bool& success) {
+  TRY_ACQUIRE_CONNECTION(this);
+  std::string message_out;
+  WriteAbortStreamRequest(stream_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadAbortStreamReply(message_in, success));
+  return Status::OK();
+}
+
 Status RemoteClient::collectRemoteBlobs(const json& tree,
                                         std::set<ObjectID>& blobs) {
   if (tree.empty()) {
@@ -346,6 +411,7 @@ Status RemoteClient::recreateMetadata(
 Status RemoteClient::migrateBuffers(
     const std::set<ObjectID> blobs,
     callback_t<const std::map<ObjectID, ObjectID>&> callback) {
+  TRY_ACQUIRE_CONNECTION(this);
   std::vector<Payload> payloads;
   std::vector<int> fd_sent;
   bool compress = server_ptr_->GetSpec().value(
@@ -511,9 +577,15 @@ Status RemoteClient::doWrite(const std::string& message_out) {
   boost::system::error_code ec;
   size_t length = message_out.length();
   asio::write(socket_, asio::const_buffer(&length, sizeof(size_t)), ec);
+  if (ec) {
+    this->connected_ = false;
+  }
   RETURN_ON_ASIO_ERROR(ec);
   asio::write(socket_,
               asio::const_buffer(message_out.data(), message_out.length()), ec);
+  if (ec) {
+    this->connected_ = false;
+  }
   RETURN_ON_ASIO_ERROR(ec);
   return Status::OK();
 }
@@ -522,6 +594,9 @@ Status RemoteClient::doRead(std::string& message_in) {
   boost::system::error_code ec;
   size_t length = std::numeric_limits<size_t>::max();
   asio::read(socket_, asio::buffer(&length, sizeof(size_t)), ec);
+  if (ec) {
+    this->connected_ = false;
+  }
   RETURN_ON_ASIO_ERROR(ec);
   if (length > 64 * 1024 * 1024) {  // 64M bytes
     return Status::IOError("Invalid message header value: " +
@@ -531,6 +606,9 @@ Status RemoteClient::doRead(std::string& message_in) {
   asio::read(socket_,
              asio::mutable_buffer(const_cast<char*>(message_in.data()), length),
              ec);
+  if (ec) {
+    this->connected_ = false;
+  }
   RETURN_ON_ASIO_ERROR(ec);
   return Status::OK();
 }

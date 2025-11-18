@@ -24,6 +24,7 @@ Payload::Payload()
       store_fd(-1),
       arena_fd(-1),
       data_offset(0),
+      user_offset(0),
       data_size(0),
       map_size(0),
       ref_cnt(0),
@@ -41,6 +42,7 @@ Payload::Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd,
       store_fd(fd),
       arena_fd(-1),
       data_offset(offset),
+      user_offset(0),
       data_size(size),
       map_size(msize),
       ref_cnt(0),
@@ -58,6 +60,7 @@ Payload::Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd,
       store_fd(fd),
       arena_fd(arena_fd),
       data_offset(offset),
+      user_offset(0),
       data_size(size),
       map_size(msize),
       ref_cnt(0),
@@ -74,6 +77,8 @@ Payload::Payload(const Payload& payload) {
   store_fd = payload.store_fd;
   arena_fd = payload.arena_fd;
   data_offset = payload.data_offset;
+  user_offset = payload.user_offset;
+  is_user_created = payload.is_user_created;
   data_size = payload.data_size;
   map_size = payload.map_size;
   ref_cnt = payload.ref_cnt;
@@ -90,6 +95,8 @@ Payload& Payload::operator=(const Payload& payload) {
   store_fd = payload.store_fd;
   arena_fd = payload.arena_fd;
   data_offset = payload.data_offset;
+  user_offset = payload.user_offset;
+  is_user_created = payload.is_user_created;
   data_size = payload.data_size;
   map_size = payload.map_size;
   ref_cnt = payload.ref_cnt;
@@ -122,6 +129,7 @@ void Payload::ToJSON(json& tree) const {
   tree["object_id"] = object_id;
   tree["store_fd"] = store_fd;
   tree["data_offset"] = data_offset;
+  tree["user_offset"] = user_offset;
   tree["data_size"] = data_size;
   tree["map_size"] = map_size;
   tree["pointer"] = reinterpret_cast<uintptr_t>(pointer);
@@ -134,6 +142,7 @@ void Payload::FromJSON(const json& tree) {
   object_id = tree["object_id"].get<ObjectID>();
   store_fd = tree["store_fd"].get<int>();
   data_offset = tree["data_offset"].get<ptrdiff_t>();
+  user_offset = tree["user_offset"].get<uint64_t>();
   data_size = tree["data_size"].get<int64_t>();
   map_size = tree["map_size"].get<int64_t>();
   pointer = reinterpret_cast<uint8_t*>(tree["pointer"].get<uintptr_t>());
@@ -160,6 +169,7 @@ void PlasmaPayload::ToJSON(json& tree) const {
   tree["plasma_size"] = plasma_size;
   tree["store_fd"] = store_fd;
   tree["data_offset"] = data_offset;
+  tree["user_offset"] = user_offset;
   tree["data_size"] = data_size;
   tree["map_size"] = map_size;
   tree["ref_cnt"] = ref_cnt;
@@ -174,6 +184,7 @@ void PlasmaPayload::FromJSON(const json& tree) {
   plasma_size = tree["plasma_size"].get<int64_t>();
   store_fd = tree["store_fd"].get<int>();
   data_offset = tree["data_offset"].get<ptrdiff_t>();
+  user_offset = tree["user_offset"].get<uint64_t>();
   data_size = tree["data_size"].get<int64_t>();
   map_size = tree["map_size"].get<int64_t>();
   ref_cnt = tree["ref_cnt"].get<int64_t>();

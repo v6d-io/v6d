@@ -35,6 +35,7 @@ struct Payload {
   int store_fd;
   int arena_fd;
   ptrdiff_t data_offset;
+  uint64_t user_offset;
   int64_t data_size;
   int64_t map_size;
   int64_t ref_cnt;
@@ -42,7 +43,9 @@ struct Payload {
   bool is_sealed;
   bool is_owner;
   bool is_spilled;
-  bool is_gpu;  // indicate if the blob is on the GPU
+  bool is_gpu;           // indicate if the blob is on the GPU
+  bool is_user_created;  // if the object pointer is created by user(means that
+                         // the object is not created by vineyard)
 
   std::atomic_int pinned;  // indicate if the blob is spillable
 
@@ -84,6 +87,8 @@ struct Payload {
   bool IsSpilled() { return is_spilled; }
 
   inline bool IsGPU() { return is_gpu; }
+
+  bool IsUserCreated() { return is_user_created; }
 
   /**
    * @brief Pin the payload, return true is the payload is already pinned.

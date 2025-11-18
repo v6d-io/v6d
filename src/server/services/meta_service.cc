@@ -96,6 +96,7 @@ Status IMetaService::Start(bool create_new_instance) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   RETURN_ON_ERROR(s);
+#if defined(BUILD_VINEYARDD_ETCD)
   auto self(shared_from_this());
   requestValues(
       "", [self](const Status& status, const json& meta, unsigned rev) {
@@ -119,6 +120,9 @@ Status IMetaService::Start(bool create_new_instance) {
         }
         return status;
       });
+#else
+  Ready();
+#endif
   return Status::OK();
 }
 
@@ -517,6 +521,7 @@ void IMetaService::CloneRef(ObjectID const target, ObjectID const mirror) {
   }
 }
 
+#if defined(BUILD_VINEYARDD_ETCD)
 void IMetaService::registerToEtcd() {
   auto self(shared_from_this());
   RequestToPersist(
@@ -597,7 +602,9 @@ void IMetaService::registerToEtcd() {
         return status;
       });
 }
+#endif  // defined(BUILD_VINEYARDD_ETCD)
 
+#if defined(BUILD_VINEYARDD_ETCD)
 void IMetaService::checkInstanceStatus(
     std::shared_ptr<IMetaService> const& self,
     callback_t<> callback_after_finish) {
@@ -720,6 +727,7 @@ Status IMetaService::startHeartbeat(std::shared_ptr<IMetaService> const& self,
       });
   return Status::OK();
 }
+#endif  // defined(BUILD_VINEYARDD_ETCD)
 
 void IMetaService::requestValues(const std::string& prefix,
                                  callback_t<const json&, unsigned> callback) {
@@ -1064,10 +1072,12 @@ void IMetaService::metaUpdate(const RangeT& ops, const bool from_remote,
       continue;
     }
 
-    // update instance status
+// update instance status
+#if defined(BUILD_VINEYARDD_ETCD)
     if (boost::algorithm::starts_with(op.kv.key, "/instances/")) {
       instanceUpdate(op, from_remote);
     }
+#endif
 
 #ifndef NDEBUG
     if (from_remote) {
@@ -1182,6 +1192,7 @@ void IMetaService::metaUpdate(const RangeT& ops, const bool from_remote,
   VINEYARD_SUPPRESS(server_ptr_->ProcessDeferred(meta_));
 }
 
+#if defined(BUILD_VINEYARDD_ETCD)
 void IMetaService::instanceUpdate(const op_t& op, const bool from_remote) {
   std::vector<std::string> key_segments;
   boost::split(key_segments, op.kv.key, boost::is_any_of("/"));
@@ -1290,5 +1301,6 @@ Status IMetaService::UpdateEtcdEndpoint() {
       },
       Status::OK());
 }
+#endif  // defined(BUILD_VINEYARDD_ETCD)
 
 }  // namespace vineyard

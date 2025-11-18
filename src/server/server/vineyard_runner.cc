@@ -31,7 +31,9 @@ namespace vineyard {
 
 VineyardRunner::VineyardRunner(const json& spec)
     : spec_template_(spec),
-      concurrency_(std::thread::hardware_concurrency()),
+      concurrency_(std::stoi(
+          read_env("VINEYARD_CONCURRENCY",
+                   std::to_string(std::thread::hardware_concurrency())))),
       context_(concurrency_),
       meta_context_(),
       io_context_(concurrency_),
@@ -45,6 +47,11 @@ VineyardRunner::VineyardRunner(const json& spec)
       io_guard_(asio::make_work_guard(io_context_))
 #endif
 {
+  LOG(INFO) << "Vineyard runner is created with concurrency: " << concurrency_
+            << ", means context threads: " << concurrency_
+            << ", meta context threads: " << 1
+            << ", io context threads: " << concurrency_ / 2
+            << ", spec: " << spec_template_.dump();
 }
 
 std::shared_ptr<VineyardRunner> VineyardRunner::Get(const json& spec) {

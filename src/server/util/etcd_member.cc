@@ -13,12 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "server/util/etcd_member.h"
-
 #include <memory>
 #include <string>
 #include <vector>
-#include "etcd/Response.hpp"
 
 #if defined(BUILD_VINEYARDD_ETCD)
 
@@ -26,6 +23,9 @@ limitations under the License.
 
 #include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/status.h"
+#include "server/util/etcd_member.h"
+
+#include "etcd/Response.hpp"
 
 namespace vineyard {
 

@@ -153,6 +153,15 @@ int64_t parse_memory_size(std::string const& nbytes);
  */
 int64_t read_physical_memory_limit();
 
+class VineyardEnv {
+ public:
+  static std::string GetVineyardTraceLogLevel();
+
+  static std::string GetVineyardStreamIdleTimeoutMS();
+
+  static std::string GetVineyardRPCCallTimeoutMS();
+};
+
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_ENV_H_

@@ -39,6 +39,9 @@ struct stream_type {
 template <typename T>
 using stream_type_t = typename stream_type<T>::type;
 
+#define STREAM_PAGE_SIZE 4096
+#define STREAM_ERROR_LENGTH 256
+
 template <typename T>
 class Stream : public Object {
  public:

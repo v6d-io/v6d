@@ -82,14 +82,6 @@ class BulkStoreBase {
 
   object_map_t& List() { return objects_; }
 
-  void* GetBasePointer() {
-    return objects_.find(PlaceholderBlobID<ID>())->pointer;
-  }
-
-  uint64_t GetBaseSize() {
-    return objects_.find(PlaceholderBlobID<ID>())->data_size;
-  }
-
   bool MemoryTrim();
 
   size_t Footprint() const;
@@ -146,6 +138,8 @@ class BulkStoreBase {
 
   int64_t mem_spill_upper_bound_;
   int64_t mem_spill_lower_bound_;
+
+  int retry_times = 10;
 };
 
 class BulkStore
@@ -158,6 +152,11 @@ class BulkStore
    */
   Status Create(const size_t size, ObjectID& object_id,
                 std::shared_ptr<Payload>& object);
+
+  Status CreateUserBlob(uint64_t offset, size_t size, ObjectID& object_id,
+                        std::shared_ptr<Payload>& object);
+
+  Status DeleteUserBlob(ObjectID id);
 
   /*
    * @brief Decrease the reference count of a blob, when its reference count
@@ -183,6 +182,31 @@ class BulkStore
    * Not support on GPU for now
    */
   Status Release_GPU(ObjectID const& id, int conn);
+
+  void* GetBasePointer() {
+    return objects_.find(PlaceholderBlobID<ObjectID>())->pointer;
+  }
+
+  void* GetUserBasePointer() {
+    auto object = objects_.find(PlaceholderBlobID<ObjectID>());
+    return object->pointer + object->user_offset - object->data_offset;
+  }
+
+  uint64_t GetBaseSize() {
+    return objects_.find(PlaceholderBlobID<ObjectID>())->data_size;
+  }
+
+  int GetBaseFd() {
+    return objects_.find(PlaceholderBlobID<ObjectID>())->store_fd;
+  }
+
+  int64_t GetBaseOffset() {
+    return objects_.find(PlaceholderBlobID<ObjectID>())->data_offset;
+  }
+
+  int64_t GetUserOffset() {
+    return objects_.find(PlaceholderBlobID<ObjectID>())->user_offset;
+  }
 
  protected:
   /**

@@ -104,6 +104,21 @@ class Buffer {
   Buffer& operator=(Buffer&&) = delete;
 };
 
+class UserBuffer : public Buffer {
+ public:
+  UserBuffer(size_t offset, const int64_t size) : Buffer(0, size, true) {
+    is_mutable_ = false;
+    offset_ = offset;
+  }
+
+  size_t offset() const { return offset_; }
+
+ protected:
+  UserBuffer() : Buffer(nullptr, 0, true) {}
+
+  size_t offset_ = 0;
+};
+
 class MutableBuffer : public Buffer {
  public:
   MutableBuffer(uint8_t* data, const int64_t size) : Buffer(data, size) {
@@ -416,6 +431,8 @@ class BlobWriter : public ObjectBuilder {
   void Dump() const;
 
  protected:
+  BlobWriter() = default;
+
   Status _Seal(Client& client, std::shared_ptr<Object>& object) override;
 
  private:
@@ -436,6 +453,62 @@ class BlobWriter : public ObjectBuilder {
   friend class Client;
   friend class PlasmaClient;
   friend class RPCClient;
+};
+
+class UserBlob : public Registered<UserBlob> {
+ public:
+  size_t size() const { return size_; }
+
+  const size_t offset() const { return offset_; }
+
+  void Construct(ObjectMeta const& meta) override;
+
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<UserBlob>{new UserBlob()});
+  }
+
+ private:
+  UserBlob() {
+    this->id_ = InvalidObjectID();
+    this->size_ = std::numeric_limits<size_t>::max();
+    this->offset_ = 0;
+  }
+
+  size_t size_ = 0;
+  size_t offset_ = 0;
+  std::shared_ptr<UserBuffer> buffer_ = nullptr;
+
+  friend class Client;
+  friend class UserBlobBuilder;
+  friend class ObjectMeta;
+};
+
+class UserBlobBuilder : public ObjectBuilder {
+ public:
+  uint64_t offset() const { return offset_; }
+
+  size_t size() const { return size_; }
+
+  ObjectID id() const { return object_id_; }
+
+ protected:
+  Status _Seal(Client& client, std::shared_ptr<Object>& object) override;
+
+ private:
+  Status Build(Client& client) override { return Status::OK(); };
+
+  UserBlobBuilder(ObjectID const object_id, const size_t size,
+                  const size_t offset)
+      : object_id_(object_id), size_(size), offset_(offset) {}
+
+  ObjectID object_id_;
+  std::shared_ptr<UserBuffer> buffer_;
+  uint64_t size_ = 0;
+  uint64_t offset_ = 0;
+  std::unordered_map<std::string, std::string> metadata_;
+
+  friend class Client;
 };
 
 /**

@@ -60,6 +60,8 @@ constexpr int64_t kMmapRegionsGap = sizeof(size_t);
 DEFINE_bool(reserve_memory, false,
             "Reserving enough physical memory pages for vineyardd");
 
+DEFINE_bool(2M_alignment, false, "Align the mmap address to 2M");
+
 std::unordered_map<void*, MmapRecord> mmap_records;
 
 static void* pointer_advance(void* p, ptrdiff_t n) {
@@ -260,11 +262,44 @@ void* mmap_buffer(int fd, int64_t size, bool gap, bool* is_committed,
 #endif
   }
 
-  void* pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, mmap_flag, fd, 0);
-  if (pointer == MAP_FAILED) {
-    LOG(ERROR) << "mmap failed with error: " << strerror(errno);
-    return pointer;
+  void* pointer = nullptr;
+  if (FLAGS_2M_alignment) {
+    // 2M alignment
+    const size_t size2MB = 1UL << 21;
+    void* addr = mmap(NULL, (size + size2MB), PROT_READ | PROT_WRITE,
+                      MAP_SHARED | MAP_ANON, -1, 0);
+    if (addr == MAP_FAILED) {
+      LOG(ERROR) << "mmap failed with error: " << strerror(errno);
+      return addr;
+    }
+
+    if (munmap(addr, (size + size2MB)) != 0) {
+      LOG(ERROR) << "munmap failed with error: " << strerror(errno);
+      return nullptr;
+    }
+    addr = reinterpret_cast<void*>((uintptr_t(addr) + size2MB - 1) &
+                                   ~(size2MB - 1));
+
+    pointer = mmap(addr, size, PROT_READ | PROT_WRITE,
+                   mmap_flag | MAP_FIXED_NOREPLACE, fd, 0);
+    if (pointer == MAP_FAILED) {
+      LOG(ERROR) << "mmap failed with error: " << strerror(errno);
+      return pointer;
+    }
+    if (pointer != addr) {
+      LOG(ERROR) << "mmap failed with error: " << strerror(errno);
+      munmap(pointer, size);
+      return nullptr;
+    }
+  } else {
+    pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, mmap_flag, fd, 0);
+    if (pointer == MAP_FAILED) {
+      LOG(ERROR) << "mmap failed with error: " << strerror(errno);
+      return pointer;
+    }
   }
+  LOG(INFO) << "mmap addr:" << reinterpret_cast<void*>(pointer)
+            << ", size:" << size;
 
   MmapRecord& record = mmap_records[pointer];
   record.fd = fd;

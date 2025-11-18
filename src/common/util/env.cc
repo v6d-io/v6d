@@ -354,4 +354,19 @@ int64_t read_physical_memory_limit() {
   return limit_in_bytes;
 }
 
+std::string VineyardEnv::GetVineyardTraceLogLevel() {
+  static std::string log_level = read_env("VINEYARD_TRACE_LOG_LEVEL", "100");
+  return log_level;
+}
+
+std::string VineyardEnv::GetVineyardStreamIdleTimeoutMS() {
+  static std::string timeout = read_env("VINEYARD_STREAM_IDLE_TIMEOUT_MS", "0");
+  return timeout;
+}
+
+std::string VineyardEnv::GetVineyardRPCCallTimeoutMS() {
+  static std::string timeout = read_env("VINEYARD_RPC_TIMEOUT_MS", "5000");
+  return timeout;
+}
+
 }  // namespace vineyard

@@ -814,6 +814,8 @@ class ObjectMeta {
   friend class Blob;
   friend class RemoteBlob;
   friend class BlobWriter;
+  friend class UserBlob;
+  friend class UserBlobBuilder;
 };
 
 template <>

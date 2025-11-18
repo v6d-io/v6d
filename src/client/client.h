@@ -32,14 +32,20 @@ limitations under the License.
 #include "common/util/lifecycle.h"
 #include "common/util/protocols.h"
 #include "common/util/status.h"
+#include "common/util/trace.h"
 #include "common/util/uuid.h"
+
+#include "thread-pool/thread_pool.h"
 
 namespace vineyard {
 
 class Blob;
 class BlobWriter;
+class UserBlob;
+class UserBlobBuilder;
 class Buffer;
 class MutableBuffer;
+class UserBuffer;
 
 namespace detail {
 
@@ -248,10 +254,10 @@ class PlasmaClient;
  *        vineyard server. Vineyard's IPC Client talks to vineyard server
  *        and manipulate objects in vineyard.
  */
-class Client final : public BasicIPCClient,
-                     protected detail::UsageTracker<ObjectID, Payload, Client> {
+class Client : public BasicIPCClient,
+               protected detail::UsageTracker<ObjectID, Payload, Client> {
  public:
-  Client() {}
+  Client() { logger_ = Logger(stoi(VineyardEnv::GetVineyardTraceLogLevel())); }
 
   ~Client() override;
 
@@ -357,6 +363,9 @@ class Client final : public BasicIPCClient,
   Status FetchAndGetMetaData(const ObjectID id, ObjectMeta& meta_data,
                              const bool sync_remote = false);
 
+  Status CreateHugeMetaData(std::vector<ObjectMeta>& meta_datas,
+                            std::vector<ObjectID>& ids, std::string& req_flag);
+
   /**
    * @brief Obtain multiple metadatas from vineyard server.
    *
@@ -370,6 +379,11 @@ class Client final : public BasicIPCClient,
    */
   Status GetMetaData(const std::vector<ObjectID>& ids, std::vector<ObjectMeta>&,
                      const bool sync_remote = false);
+
+  Status GetHugeMetaData(const std::vector<ObjectID>& ids,
+                         std::vector<ObjectMeta>& metas, std::string& req_flag,
+                         const bool sync_remote = false,
+                         bool fast_path = false);
 
   /**
    * @brief Create a blob in vineyard server. When creating a blob, vineyard
@@ -398,6 +412,15 @@ class Client final : public BasicIPCClient,
   Status CreateBlobs(const std::vector<size_t>& sizes,
                      std::vector<std::unique_ptr<BlobWriter>>& blobs);
 
+  Status CreateUserBlobs(const std::vector<uint64_t>& offsets,
+                         const std::vector<size_t>& sizes,
+                         std::vector<std::unique_ptr<UserBlobBuilder>>& blobs,
+                         std::string& req_flag);
+
+  Status GetUserBlobs(std::vector<ObjectID>& ids,
+                      std::vector<std::shared_ptr<UserBlob>>& blobs);
+
+  Status DeleteUserBlobs(std::vector<ObjectID>& ids, std::string& req_flag);
   /**
    * @brief Get a blob from vineyard server.
    *
@@ -488,6 +511,62 @@ class Client final : public BasicIPCClient,
    * @return Status that indicates whether the polling has succeeded.
    */
   Status PullNextStreamChunk(ObjectID const id, std::unique_ptr<Buffer>& chunk);
+
+  Status AbortStream(ObjectID const id, bool& success);
+
+  Status VineyardOpenRemoteFixedStream(ObjectID remote_id, ObjectID local_id,
+                                       int& fd, int blob_nums, size_t size,
+                                       std::string remote_endpoint,
+                                       StreamOpenMode mode, bool wait = false,
+                                       uint64_t timeout = 0);
+
+  Status VineyardOpenRemoteFixedStream(std::string remote_stream_name,
+                                       ObjectID local_id, int& fd,
+                                       int blob_nums, size_t size,
+                                       std::string remote_endpoint,
+                                       StreamOpenMode mode, bool wait = false,
+                                       uint64_t timeout = 0);
+
+  Status VineyardActivateRemoteFixedStream(ObjectID local_id,
+                                           std::vector<void*>& buffers);
+
+  Status VineyardActivateRemoteFixedStream(ObjectID local_id,
+                                           std::vector<ObjectID>& buffer_list);
+
+  Status VineyardActivateRemoteFixedStreamWithOffset(
+      ObjectID local_id, std::vector<uint64_t>& offset_list);
+
+  Status VineyardCloseRemoteFixedStream(ObjectID local_id);
+
+  Status OpenFixedStream(ObjectID stream_id, StreamOpenMode mode, int& fd);
+
+  Status VineyardStopStream(ObjectID local_id);
+
+  Status VineyardDropStream(ObjectID local_id);
+
+  Status VineyardAbortRemoteStream(ObjectID local_id, bool& success);
+
+  Status VineyardGetNextFixedStreamChunk(int& index);
+
+  Status VineyardGetMetasByNames(std::vector<std::string>& names,
+                                 std::string rpc_encpoint,
+                                 std::vector<ObjectMeta>& metas,
+                                 std::string req_flag);
+
+  virtual Status VineyardGetRemoteBlobs(
+      std::vector<std::vector<ObjectID>> local_id_vec,
+      std::vector<std::vector<ObjectID>> remote_id_vec,
+      std::string rpc_endpoint, int& fd, std::string& req_flag);
+
+  virtual Status VineyardGetRemoteBlobsWithOffset(
+      std::vector<std::vector<size_t>>& local_offset_vec,
+      std::vector<std::vector<ObjectID>>& remote_id_vec,
+      std::vector<std::vector<size_t>>& size_vec, std::string rpc_endpoint,
+      int& fd, std::string& req_flag);
+
+  Status GetVineyardMmapFd(int& fd, size_t& size, size_t& offset);
+
+  Status CheckFixedStreamReceived(ObjectID const id, int index, bool& finished);
 
   /**
    * @brief Get an object from vineyard. The ObjectFactory will be used to
@@ -777,6 +856,23 @@ class Client final : public BasicIPCClient,
   Status ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
                      PlasmaClient& source_client);
 
+  Status GetObjectLocation(const std::vector<std::string>& names,
+                           std::vector<std::set<std::string>>& locations,
+                           std::string& req_flag);
+
+  Status PutObjectLocation(const std::vector<std::string>& names,
+                           const std::vector<std::string>& locations,
+                           int ttl_seconds, std::string& req_flag);
+
+  Status PutNames(const std::vector<ObjectID>& ids,
+                  const std::vector<std::string>& names, std::string& req_flag,
+                  const bool overwrite = true);
+
+  Status GetNames(const std::vector<std::string>& name_vec,
+                  std::vector<ObjectID>& id_vec, std::string& req_flag);
+
+  Status DropNames(std::vector<std::string>& names, std::string& req_flag);
+
   /**
    * @brief Decrease the reference count of the object. It will trigger
    * `OnRelease` behavior when reference count reaches zero. See UsageTracker.
@@ -823,6 +919,10 @@ class Client final : public BasicIPCClient,
 
   Status DelData(const std::vector<ObjectID>& ids, const bool force,
                  const bool deep, const bool memory_trim);
+
+  Status DelHugeData(const std::vector<ObjectID>& ids,
+                     const bool release_blob = true, const bool force = false,
+                     const bool deep = true, std::string req_flag = "");
 
   /**
    * @brief Create a GPU buffer on vineyard server. See also `CreateBuffer`.
@@ -876,6 +976,8 @@ class Client final : public BasicIPCClient,
    * @return Status that indicates whether the unlock process succeeds.
    */
   Status TryReleaseLock(std::string key, bool& result) override;
+
+  Status RequireExtraRequestMemory(size_t size);
 
  protected:
   /**
@@ -968,6 +1070,8 @@ class Client final : public BasicIPCClient,
    */
   Status Seal(ObjectID const& object_id);
 
+  Status SealUserBlob(ObjectID const& object_id);
+
   /**
    * @brief Check if the client is an IPC client.
    *
@@ -982,8 +1086,28 @@ class Client final : public BasicIPCClient,
   Status GetBufferSizes(const std::set<ObjectID>& ids, const bool unsafe,
                         std::map<ObjectID, size_t>& sizes);
 
+  Status WriteExtraMsg(const void* data, size_t size);
+
+  Status ReadExtraMsg(void* data, size_t size);
+
+  Status LseekExtraMsgWritePos(uint64_t offset);
+
+  Status LseekExtraMsgReadPos(uint64_t offset);
+
+  Status AttachReqFlag(const std::string& req_flag);
+
+  std::string LogPrefix();
+
+  void* extra_request_memory_addr_ = nullptr;
+  size_t extra_request_mem_size_ = 0;
+  uint64_t write_pos_ = 0;
+  uint64_t read_pos_ = 0;
+  Logger logger_;
+
   friend class Blob;
   friend class BlobWriter;
+  friend class UserBlob;
+  friend class UserBlobBuilder;
   friend class ObjectBuilder;
   friend class detail::UsageTracker<ObjectID, Payload, Client>;
 };
