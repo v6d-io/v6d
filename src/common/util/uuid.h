@@ -155,14 +155,18 @@ class IDGenerator {
     auto instance_id = id & 0x3FFUL;
     uint64_t sequence = sequence_.fetch_add(1) & sequence_mask;
 
-    return ((timestamp << timestamp_shift) |
-            (instance_id << instance_id_shift) | sequence);
+    // instance_id | sequence | timestamp
+    return ((instance_id & instance_id_mask) << instance_id_shift) |
+           ((sequence & sequence_mask) << sequence_shift) |
+           (timestamp & timestamp_mask);
   }
 
  private:
-  const uint64_t timestamp_shift = 22;     // 41 bits for timestamp
-  const uint64_t instance_id_shift = 12;   // 10 bits for instance id
-  const uint64_t sequence_mask = 0xFFFUL;  // 12 bits for sequence number
+  const uint64_t instance_id_shift = 53;
+  const uint64_t sequence_shift = 41;
+  const uint64_t instance_id_mask = 0x3FFUL;  // 10 bits for instance id
+  const uint64_t sequence_mask = 0xFFFUL;     // 12 bits for sequence number
+  const uint64_t timestamp_mask = 0x1FFFFFFFFFFUL;  // 41 bits for timestamp
 
   std::atomic<uint64_t> sequence_{0};
 
@@ -183,12 +187,13 @@ class IDGenerator {
  * (0x8000000000000000UL,0xFFFFFFFFFFFFFFFFUL) exclusively.
  */
 inline ObjectID GenerateBlobID(const uintptr_t ptr) {
-  static IDGenerator& idGenerator = IDGenerator::getInstance();
   if (ptr == 0x8000000000000000UL ||
       ptr == std::numeric_limits<uintptr_t>::max()) {
     return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
-  return (idGenerator.GenerateID() | 0x8000000000000000UL);
+  auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
+  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(ts)) |
+         0x8000000000000000UL;
 }
 
 inline SessionID GenerateSessionID() {

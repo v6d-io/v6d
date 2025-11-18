@@ -224,6 +224,11 @@ inline std::string unescape_json_pointer(std::string& s) {
   return s;
 }
 
+inline json json_from_buf(const void* buf, size_t request_length) {
+  return json::parse(reinterpret_cast<const uint8_t*>(buf),
+                     reinterpret_cast<const uint8_t*>(buf) + request_length);
+}
+
 }  //  namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_JSON_H_

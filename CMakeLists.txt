@@ -32,15 +32,18 @@ project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
+option(LINK_STATIC_LIBC "Link with static libstdc++ if the BUILD_SHARED_LIBS is OFF and the compiler is gcc" ON)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
 option(USE_EXTERNAL_REDIS_LIBS "Build with external redis-plus-plus library rather than the submodule one" ON)
 option(USE_EXTERNAL_HIREDIS_LIBS "Build with external hiredis library rather than the submodule one" ON)
+option(USE_EXTERNAL_METASERVICE_LIBS "Use external MetaService libraries" OFF)
 option(VINEYARD_USE_ASAN "Using address sanitizer to check memory accessing" OFF)
 option(VINEYARD_USE_LTO "Using IPO/LTO support for link-time optimization" OFF)
 option(USE_LIBUNWIND "Using libunwind to retrieve the stack backtrace when exception occurs" ON)
 option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
 option(USE_CUDA "Enabling GPU (CUDA) support" OFF)
+option(ENABLE_VINEYARD_MONITOR "Enable vineyard monitor" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_SERVER_REDIS "Enable redis as the metadata backend" OFF)
@@ -70,6 +73,9 @@ option(BUILD_VINEYARD_BENCHMARKS "Generate make targets for vineyard benchmarks"
 option(BUILD_VINEYARD_BENCHMARKS_ALL "Include make targets for vineyard benchmarks to ALL" OFF)
 option(BUILD_VINEYARD_COVERAGE "Build vineyard with coverage information, requires build with Debug" OFF)
 option(BUILD_VINEYARD_PROFILING "Build vineyard with profiling information" OFF)
+option(BUILD_ENV_RUNC "Build vineyard in runc env" OFF)
+option(BUILD_FABRIC_RDMA "Build vineyard fabric with RDMA support" OFF)
+option(BUILD_VLLM_CACHE "Build vineyard with vllm cache support" OFF)
 
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
@@ -493,6 +499,7 @@ endmacro()
 macro(find_cuda)
     # find cuda runtime library
     set(CUDA_USE_STATIC_CUDA_RUNTIME ON)
+    enable_language(CUDA)
     find_package(CUDA REQUIRED)
 endmacro(find_cuda)
 
@@ -675,7 +682,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     endif()
     set(FABRIC_MAKEFILE "${CMAKE_SOURCE_DIR}/thirdparty/libfabric/Makefile")
 
-    if(IBVERBS_LIB AND RDMACM_LIB)
+    if(BUILD_FABRIC_RDMA AND IBVERBS_LIB AND RDMACM_LIB)
         set(RDMA_LIBS ${RDMACM_LIB} ${IBVERBS_LIB} ${RT_LIB})
         
         add_custom_command(
@@ -696,6 +703,8 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                                 --disable-perf
                                 --disable-efa
                                 --disable-mrail
+								--disable-uffd-monitor
+                                --with-cuda=no
                                 --enable-verbs > /dev/null
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
         )
@@ -719,6 +728,8 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                                 --disable-perf
                                 --disable-efa
                                 --disable-mrail
+                                --with-cuda=no
+								--disable-uffd-monitor
                                 --disable-verbs > /dev/null
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/thirdparty/libfabric
         )
@@ -751,9 +762,21 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libfabric.a)
 endif()
 
+if (BUILD_VINEYARD_TESTS)
+    include("cmake/FindGTest.cmake")
+endif()
+
 # boost is only required by some components
 if(BUILD_VINEYARD_SERVER OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_GRAPH)
     find_boost()
+endif()
+
+if(BUILD_VINEYARD_LLM_CACHE)
+    find_gflags()
+endif()
+
+if (ENABLE_VINEYARD_MONITOR)
+    add_definitions(-DENABLE_VINEYARD_MONITOR)
 endif()
 
 # build vineyardd
@@ -844,8 +867,13 @@ if(BUILD_VINEYARD_SERVER)
     install_vineyard_target(vineyardd)
     if(NOT BUILD_SHARED_LIBS)
         if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-            target_compile_options(vineyardd PRIVATE -static-libgcc -static-libstdc++ -Os)
-            target_add_link_options(vineyardd PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
+            if (LINK_STATIC_LIBC)
+                target_compile_options(vineyardd PRIVATE -static-libgcc -static-libstdc++ -Os)
+                target_add_link_options(vineyardd PRIVATE OPTIONS -static-libgcc -static-libstdc++ -Os)
+            else()
+                target_compile_options(vineyardd PRIVATE -Os)
+                target_add_link_options(vineyardd PRIVATE OPTIONS -Os)
+            endif()
         endif()
         target_link_libraries(vineyardd PRIVATE ${GRPC_GRPC++_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
     endif()
@@ -1070,6 +1098,11 @@ endif()
 if(BUILD_VINEYARD_LLM_CACHE)
     add_subdirectory(modules/llm-cache)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_llm_cache)
+endif()
+
+if(BUILD_VLLM_CACHE)
+    include("cmake/FindAIO.cmake")
+    add_subdirectory(modules/vllm-kv-cache)
 endif()
 
 if(BUILD_VINEYARD_TESTS)

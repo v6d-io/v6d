@@ -26,12 +26,15 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "common/memory/memcpy.h"
 #include "common/util/uuid.h"
 #include "gulrak/filesystem.hpp"
 
+#include <boost/algorithm/string.hpp>
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"  // IWYU pragma: keep
+#include "common/util/sidecar.h"
 #include "server/async/ipc_server.h"
 #include "server/async/rpc_server.h"
 #include "server/services/meta_service.h"
@@ -67,6 +70,12 @@ bool DeferredReq::TestThenCall(const json& meta) const {
   return false;
 }
 
+std::vector<std::string> SplitString(const std::string& input) {
+  std::vector<std::string> result;
+  boost::split(result, input, boost::is_any_of(","));
+  return result;
+}
+
 VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
                                std::shared_ptr<VineyardRunner> runner,
                                asio::io_context& context,
@@ -80,7 +89,9 @@ VineyardServer::VineyardServer(const json& spec, const SessionID& session_id,
       io_context_(io_context),
       callback_(callback),
       runner_(runner),
-      ready_(0) {}
+      ready_(0) {
+  this->trace_log_level_ = stoi(VineyardEnv::GetVineyardTraceLogLevel());
+}
 
 template <>
 std::shared_ptr<BulkStore> VineyardServer::GetBulkStore<ObjectID>() {
@@ -95,10 +106,16 @@ std::shared_ptr<PlasmaBulkStore> VineyardServer::GetBulkStore<PlasmaID>() {
 Status VineyardServer::Serve(StoreType const& bulk_store_type,
                              const bool create_new_instance) {
   stopped_.store(false);
+  char* ld_library_path = getenv("LD_LIBRARY_PATH");
+  LOG(INFO) << "LD_LIBRARY_PATH: "
+            << (ld_library_path == nullptr ? "nullptr"
+                                           : std::string(ld_library_path));
+
   this->bulk_store_type_ = bulk_store_type;
 
   this->meta_service_ptr_ = IMetaService::Get(shared_from_this());
-  RETURN_ON_ERROR(this->meta_service_ptr_->Start(create_new_instance));
+  RETURN_ON_ERROR(this->meta_service_ptr_->Start(
+      create_new_instance));  // temporary solution
 
   // Initialize the ipc/rpc server ptr after the meta service.
   // It's useful to probe whether the vineyardd and meta service are both
@@ -109,6 +126,8 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type,
     // of "Register" request in RPC server the session will be set as the
     // request session as expected.
     rpc_server_ptr_ = std::make_shared<RPCServer>(shared_from_this());
+    remote_client_pool_ =
+        std::make_shared<RemoteClientPool>(shared_from_this(), rpc_server_ptr_);
   }
 
   auto memory_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
@@ -151,7 +170,8 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type,
     // setup stream store
     stream_store_ = std::make_shared<StreamStore>(
         shared_from_this(), bulk_store_,
-        spec_["bulkstore_spec"]["stream_threshold"].get<size_t>());
+        spec_["bulkstore_spec"]["stream_threshold"].get<size_t>(),
+        GetIOContext());
   }
 
   BulkReady();
@@ -664,6 +684,47 @@ Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
   return Status::OK();
 }
 
+Status VineyardServer::Persist(const std::vector<ObjectID>& ids,
+                               callback_t<> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  for (auto& id : ids) {
+    RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be persisted");
+  }
+  meta_service_ptr_->RequestToPersist(
+      [self, ids](const Status& status, const json& meta,
+                  std::vector<meta_tree::op_t>& ops) {
+        if (status.ok()) {
+          for (auto const& id : ids) {
+            Status s;
+            VCATCH_JSON_ERROR(
+                meta, s,
+                meta_tree::PersistOps(meta, self->instance_name(), id, ops));
+            if (s.ok() && !ops.empty() &&
+                self->spec_["sync_crds"].get<bool>()) {
+              json tree;
+              Status s;
+              VCATCH_JSON_ERROR(
+                  meta, s,
+                  meta_tree::GetData(meta, self->instance_name(), id, tree));
+              if (s.ok() && tree.is_object() && !tree.empty()) {
+                auto kube = std::make_shared<Kubectl>(self->GetMetaContext());
+                kube->CreateObject(meta["instances"], tree);
+                kube->Finish();
+              }
+            }
+            RETURN_ON_ERROR(s);
+          }
+          return Status::OK();
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          return status;
+        }
+      },
+      callback);
+  return Status::OK();
+}
+
 Status VineyardServer::IfPersist(const ObjectID id,
                                  callback_t<const bool> callback) {
   ENSURE_VINEYARDD_READY();
@@ -868,12 +929,13 @@ Status VineyardServer::DeleteAllAt(const json& meta,
 }
 
 Status VineyardServer::PutName(const ObjectID object_id,
-                               const std::string& name, callback_t<> callback) {
+                               const std::string& name, bool overwrite,
+                               callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
   auto self(shared_from_this());
   meta_service_ptr_->RequestToPersist(
-      [object_id, name](const Status& status, const json& meta,
-                        std::vector<meta_tree::op_t>& ops) {
+      [object_id, name, overwrite](const Status& status, const json& meta,
+                                   std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           // TODO: do proper validation:
           // 1. global objects can have name, local ones cannot.
@@ -909,10 +971,85 @@ Status VineyardServer::PutName(const ObjectID object_id,
                 "transient objects cannot have name, please persist it first");
           }
 
+          if (!overwrite &&
+              meta.contains(json::json_pointer("/names/" + name))) {
+            return Status::Invalid("name already exists, name: " + name);
+          }
           ops.emplace_back(meta_tree::op_t::Put("/names/" + name, object_id));
           ops.emplace_back(meta_tree::op_t::Put(
               "/data/" + ObjectIDToString(object_id) + "/__name",
               meta_tree::EncodeValue(name)));
+          return Status::OK();
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          return status;
+        }
+      },
+      callback);
+  return Status::OK();
+}
+
+Status VineyardServer::PutNames(const std::vector<ObjectID>& object_ids,
+                                const std::vector<std::string>& names,
+                                bool overwrite, callback_t<> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  RETURN_ON_ASSERT(object_ids.size() == names.size(),
+                   "object_ids and names should have the same size");
+  meta_service_ptr_->RequestToPersist(
+      [object_ids, names, overwrite](const Status& status, const json& meta,
+                                     std::vector<meta_tree::op_t>& ops) {
+        if (status.ok()) {
+          // TODO: do proper validation:
+          // 1. global objects can have name, local ones cannot.
+          // 2. the name-object_id mapping shouldn't be overwrite.
+
+          // blob cannot have name
+          for (size_t i = 0; i < object_ids.size(); ++i) {
+            std::string name = names[i];
+            ObjectID object_id = object_ids[i];
+            if (IsBlob(object_id)) {
+              return Status::Invalid("blobs cannot have name");
+            }
+
+            bool exists = false;
+            {
+              Status s;
+              VCATCH_JSON_ERROR(meta, s,
+                                meta_tree::Exists(meta, object_id, exists));
+              VINEYARD_DISCARD(s);
+            }
+            if (!exists) {
+              return Status::ObjectNotExists("failed to put name: object " +
+                                             ObjectIDToString(object_id) +
+                                             " doesn't exist");
+            }
+
+            bool persist = false;
+            {
+              Status s;
+              VCATCH_JSON_ERROR(meta, s,
+                                meta_tree::IfPersist(meta, object_id, persist));
+              VINEYARD_DISCARD(s);
+            }
+            // FIXME: add a new type for meta(user defined blob need not
+            // persist) if (!persist) {
+            //   return Status::Invalid(
+            //       "transient objects cannot have name, please persist it
+            //       first");
+            // }
+
+            // if one name exists and overwrite is not permitted, all the
+            // operation will be aborted.
+            if (!overwrite &&
+                meta.contains(json::json_pointer("/names/" + name))) {
+              return Status::Invalid("name already exists, name: " + name);
+            }
+            ops.emplace_back(meta_tree::op_t::Put("/names/" + name, object_id));
+            ops.emplace_back(meta_tree::op_t::Put(
+                "/data/" + ObjectIDToString(object_id) + "/__name",
+                meta_tree::EncodeValue(name)));
+          }
           return Status::OK();
         } else {
           VLOG(100) << "Error: " << status.ToString();
@@ -933,16 +1070,17 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
                                                 const json& meta) {
     if (status.ok()) {
       auto test_task = [name](const json& meta) -> bool {
-        auto names = meta.value("names", json(nullptr));
-        if (names.is_object()) {
-          return names.contains(name);
+        auto names_iter = meta.find("names");
+        if (names_iter != meta.end() && names_iter->is_object()) {
+          return names_iter->contains(name);
         }
         return false;
       };
       auto eval_task = [name, callback](const json& meta) -> Status {
-        auto names = meta.value("names", json(nullptr));
-        if (names.is_object() && names.contains(name)) {
-          auto entry = names[name];
+        auto names_iter = meta.find("names");
+        if (names_iter != meta.end() && names_iter->is_object() &&
+            names_iter->contains(name)) {
+          auto entry = (*names_iter)[name];
           if (!entry.is_null()) {
             return callback(Status::OK(), entry.get<ObjectID>());
           }
@@ -964,6 +1102,48 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
   return Status::OK();
 }
 
+Status VineyardServer::GetNames(
+    const std::vector<std::string>& name_vec, const bool wait,
+    DeferredReq::alive_t alive,  // if connection is still alive
+    callback_t<std::vector<ObjectID>> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  meta_service_ptr_->RequestToGetData(true, [self, name_vec, wait, alive,
+                                             callback](const Status& status,
+                                                       const json& meta) {
+    if (status.ok()) {
+      auto eval_task = [name_vec, callback](const json& meta) -> Status {
+        std::vector<ObjectID> object_ids(name_vec.size(), InvalidObjectID());
+        auto names_iter = meta.find("names");
+        if (names_iter != meta.end() && names_iter->is_object()) {
+          for (size_t i = 0; i < name_vec.size(); ++i) {
+            if (names_iter != meta.end() && names_iter->is_object() &&
+                names_iter->contains(name_vec[i])) {
+              auto entry = (*names_iter)[name_vec[i]];
+              if (!entry.is_null()) {
+                // return callback(Status::OK(), entry.get<ObjectID>());
+                object_ids[i] = entry.get<ObjectID>();
+              }
+            }
+          }
+        }
+        return callback(Status::OK(), object_ids);
+      };
+      if (!wait) {
+        return eval_task(meta);
+      } else {
+        VINEYARD_ASSERT(false,
+                        "GetNames should not be used with wait=true, "
+                        "otherwise it will not work with deferred requests.");
+      }
+    } else {
+      VLOG(100) << "Error: " << status.ToString();
+      return status;
+    }
+  });
+  return Status::OK();
+}
+
 Status VineyardServer::DropName(const std::string& name,
                                 callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
@@ -972,10 +1152,10 @@ Status VineyardServer::DropName(const std::string& name,
       [name](const Status& status, const json& meta,
              std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
-          auto names = meta.value("names", json(nullptr));
-          if (names.is_object()) {
-            auto iter = names.find(name);
-            if (iter != names.end()) {
+          auto names_iter = meta.find("names");
+          if (names_iter != meta.end() && names_iter->is_object()) {
+            auto iter = names_iter->find(name);
+            if (iter != names_iter->end()) {
               ops.emplace_back(
                   meta_tree::op_t::Del("/names/" + escape_json_pointer(name)));
               auto object_id = iter->get<ObjectID>();
@@ -1001,6 +1181,111 @@ Status VineyardServer::DropName(const std::string& name,
         }
       },
       callback);
+  return Status::OK();
+}
+
+Status VineyardServer::DropNames(std::vector<std::string>& name_vec,
+                                 callback_t<> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  meta_service_ptr_->RequestToPersist(
+      [name_vec_ = std::move(name_vec)](const Status& status, const json& meta,
+                                        std::vector<meta_tree::op_t>& ops) {
+        if (status.ok()) {
+          auto names_iter = meta.find("names");
+          if (names_iter != meta.end() && names_iter->is_object()) {
+            for (size_t i = 0; i < name_vec_.size(); ++i) {
+              auto const& name = name_vec_[i];
+              auto iter = names_iter->find(name);
+              if (iter != names_iter->end()) {
+                ops.emplace_back(meta_tree::op_t::Del(
+                    "/names/" + escape_json_pointer(name)));
+                auto object_id = iter->get<ObjectID>();
+                // delete the name in the object meta as well.
+                bool exists = false;
+                {
+                  Status s;
+                  VCATCH_JSON_ERROR(meta, s,
+                                    meta_tree::Exists(meta, object_id, exists));
+                  VINEYARD_DISCARD(s);
+                }
+
+                if (exists) {
+                  ops.emplace_back(meta_tree::op_t::Del(
+                      "/data/" + ObjectIDToString(object_id) + "/__name"));
+                } else {
+                  LOG(WARNING) << "Object " << ObjectIDToString(object_id)
+                               << " does not exist when dropping name " << name;
+                }
+              }
+            }
+          }
+          return Status::OK();
+        } else {
+          LOG(ERROR) << "Drop name failed!Error: " << status.ToString();
+          return status;
+        }
+      },
+      callback);
+  return Status::OK();
+}
+
+Status VineyardServer::GetObjectLocation(
+    const std::vector<std::string>& names,
+    callback_t<std::vector<std::vector<std::string>>&> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+
+  // Create a vector with just the name we're looking for
+  meta_service_ptr_->DirectGetFromMetaService(
+      names, [self, names, callback](const Status& status, const json& result) {
+        std::vector<std::vector<std::string>> locations;
+        if (status.ok()) {
+          for (auto const& name : names) {
+            auto iter = result.find(name);
+            if (iter != result.end()) {
+              auto entry =
+                  iter->get<std::vector<std::pair<std::string, double>>>();
+              std::vector<std::string> location;
+              for (auto const& pair : entry) {
+                location.emplace_back(pair.first);
+              }
+              locations.emplace_back(location);
+            } else {
+              locations.emplace_back(std::vector<std::string>());
+            }
+          }
+          return callback(status, locations);
+        } else {
+          // Propagate any errors from RequestToMetaService
+          VLOG(100) << "Error: " << status.ToString();
+          return callback(status, locations);
+        }
+      });
+
+  return Status::OK();
+}
+
+Status VineyardServer::PutObjectLocation(
+    const std::vector<std::string>& names,
+    const std::vector<std::string>& locations, int ttl_seconds,
+    callback_t<> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+
+  // Create a vector with just the name we're looking for
+  meta_service_ptr_->DirectPutToMetaService(
+      names, locations, ttl_seconds,
+      [self, names, callback](const Status& status) {
+        if (status.ok()) {
+          return callback(status);
+        } else {
+          // Propagate any errors from RequestToMetaService
+          VLOG(100) << "Error: " << status.ToString();
+          return callback(status);
+        }
+      });
+
   return Status::OK();
 }
 
@@ -1060,7 +1345,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
           std::string rdma_endpoint = "";
           if ((*instance).contains("rdma_endpoint") &&
               !(*instance)["rdma_endpoint"].is_null()) {
-            std::string rdma_endpoint =
+            rdma_endpoint =
                 (*instance)["rdma_endpoint"].get_ref<std::string const&>();
           }
 
@@ -1424,6 +1709,335 @@ Status VineyardServer::Verify(const std::string& username,
     }
   }
   return callback(Status::IOError(m.str()));
+}
+
+Status VineyardServer::VineyardOpenRemoteFixedStream(
+    ObjectID remote_id, std::string stream_name, ObjectID local_id,
+    int blob_nums, size_t size, std::string& endpoint, uint64_t mode,
+    std::string owner, bool wait, uint64_t timeout, callback_t<> callback) {
+  if (local_id == InvalidObjectID()) {
+    return Status::Invalid("Invalid local id");
+  }
+
+  // get remote client
+  auto self(shared_from_this());
+  std::shared_ptr<RemoteClient> remote;
+  Status status = remote_client_pool_->BorrowClient(endpoint, remote);
+  if (!status.ok()) {
+    return callback(status);
+  }
+
+  // call open stream
+  boost::asio::post(GetIOContext(), [remote_id, stream_name, local_id,
+                                     blob_nums, size, endpoint, mode, owner,
+                                     wait, timeout, callback, remote, self]() {
+    ObjectID ret_id = InvalidObjectID();
+    Status status = remote->OpenRemoteStream(remote_id, stream_name, ret_id,
+                                             mode, wait, timeout);
+    LOG(INFO) << "Open done, remote_id is:" << remote_id
+              << ", local_id is:" << local_id << ", ret_id is:" << ret_id
+              << ", endpoint is:" << endpoint;
+
+    if (!status.ok()) {
+      callback(status);
+      return;
+    }
+
+    status = self->GetStreamStore()->Open(local_id, mode, owner);
+    if (!status.ok()) {
+      callback(status);
+      status = remote->CloseRemoteStream(remote_id);
+      if (!status.ok()) {
+        LOG(ERROR)
+            << "Open local stream error and fail to close remote stream: "
+            << status.ToString()
+            << ", remote_id is:" << ObjectIDToString(remote_id)
+            << ". May cause resource leak.";
+      }
+      return;
+    }
+    status = self->GetStreamStore()->BindRemoteStream(local_id, ret_id,
+                                                      endpoint, remote);
+    if (!status.ok()) {
+      callback(status);
+      status = remote->CloseRemoteStream(remote_id);
+      if (!status.ok()) {
+        LOG(ERROR)
+            << "Open local stream error and fail to close remote stream: "
+            << status.ToString()
+            << ", remote_id is:" << ObjectIDToString(remote_id)
+            << ". May cause resource leak.";
+      }
+      self->GetStreamStore()->Close(local_id, owner);
+      self->GetStreamStore()->UnbindRemoteStream(local_id);
+      return;
+    }
+
+    callback(Status::OK());
+  });
+
+  // return result
+  return Status::OK();
+}
+
+Status VineyardServer::VineyardCloseRemoteFixedStream(ObjectID stream_id,
+                                                      callback_t<> callback) {
+  VLOG(2) << "VineyardCloseRemoteFixedStream, stream_id: "
+          << ObjectIDToString(stream_id);
+  auto self(shared_from_this());
+  std::shared_ptr<RemoteClient> remote;
+  ObjectID remote_id = InvalidObjectID();
+  std::string endpoint;
+  RETURN_ON_ERROR(self->GetStreamStore()->GetRemoteInfo(stream_id, remote_id,
+                                                        endpoint, remote));
+
+  if (remote_id == InvalidObjectID()) {
+    // Remote stream is already closed.
+    callback(Status::OK());
+  }
+
+  boost::asio::post(GetIOContext(), [remote_id, remote, callback]() {
+    callback(remote->CloseRemoteStream(remote_id));
+  });
+
+  return Status::OK();
+}
+
+Status VineyardServer::VineyardAbortRemoteStream(ObjectID stream_id,
+                                                 callback_t<bool> callback) {
+  VLOG(2) << "VineyardAbortRemoteStream, stream_id: "
+          << ObjectIDToString(stream_id);
+  auto self(shared_from_this());
+  std::shared_ptr<RemoteClient> remote;
+  ObjectID remote_id = InvalidObjectID();
+  std::string endpoint;
+  RETURN_ON_ERROR(self->GetStreamStore()->GetRemoteInfo(stream_id, remote_id,
+                                                        endpoint, remote));
+
+  if (remote_id == InvalidObjectID()) {
+    LOG(ERROR) << "Abort remote stream error: stream id is invalid, please "
+                  "check if the stream is opened as fork stream of remote "
+                  "stream.";
+    return Status::Invalid(
+        "Stream id is invalid, please check if the stream is opened as fork "
+        "stream of remote stream.");
+  }
+
+  bool success = false;
+  Status status = remote->AbortRemoteStream(remote_id, success);
+  if ((!status.ok()) &&
+      ((!remote->IsConnected()) || status.IsObjectNotExists())) {
+    // If the remote is not connected, we consider the remote node is down.
+    callback(Status::OK(), true);
+  } else {
+    callback(status, success);
+  }
+
+  return Status::OK();
+}
+
+Status VineyardServer::VineyardGetMetasByNames(
+    std::vector<std::string>& names, std::string rpc_endpoint,
+    ClientAttributes attr, callback_t<const std::vector<json>&> callback) {
+  Status status =
+      Status::NotImplemented("VineyardGetMetasByNames is not implemented yet.");
+  std::vector<json> json;
+  callback(status, json);
+  return Status::OK();
+}
+
+Status VineyardServer::VineyardGetRemoteBlobs(
+    std::vector<std::vector<ObjectID>> local_id_vec,
+    std::vector<std::vector<ObjectID>> remote_id_vec, std::string rpc_endpoint,
+    ClientAttributes attr, callback_t<int> callback) {
+  VLOG(2) << "Vineyard get remote blob from:" << rpc_endpoint
+          << ", local_id_vec size: " << local_id_vec.size()
+          << ", remote_id_vec size: " << remote_id_vec.size()
+          << ", request name: " << attr.req_name;
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  RETURN_ON_ASSERT(local_id_vec.size() == remote_id_vec.size(),
+                   "local_id_vec and remote_id_vec size not match");
+  // fetch local blobs
+  std::vector<std::vector<uint64_t>> local_buffer_vec;
+  std::vector<std::vector<uint64_t>> sizes_vec;
+  for (const auto& local_ids : local_id_vec) {
+    std::vector<uint64_t> local_buffers;
+    std::vector<uint64_t> sizes;
+    for (const auto& local_id : local_ids) {
+      std::shared_ptr<Payload> payload;
+      RETURN_ON_ERROR(GetBulkStore()->GetUnsafe(local_id, true, payload));
+      if (payload->pointer == nullptr) {
+        LOG(ERROR) << "Local blob is invalid, id: "
+                   << ObjectIDToString(local_id);
+        return Status::Invalid("Local blob is invalid, id: " +
+                               ObjectIDToString(local_id));
+      }
+      local_buffers.push_back(reinterpret_cast<uint64_t>(payload->pointer));
+      sizes.push_back(payload->data_size);
+    }
+    local_buffer_vec.push_back(local_buffers);
+    sizes_vec.push_back(sizes);
+  }
+
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  VLOG(trace_log_level_) << "Request: " << attr.req_name
+                         << ", Prepare data for GetRemoteBlobs, time cost: "
+                         << (end - start) << " us";
+
+  return VineyardGetRemoteBlobsWithOffset(
+      local_buffer_vec, remote_id_vec, sizes_vec, rpc_endpoint, attr, callback);
+}
+
+Status VineyardServer::VineyardActivateRemoteFixedStream(
+    ObjectID stream_id, int conn_id, bool create_buffer,
+    std::vector<ObjectID>& blob_list,
+    void_callback_t<Status&, std::vector<std::shared_ptr<Payload>>&> callback) {
+  auto self(shared_from_this());
+  boost::asio::post(GetIOContext(), [stream_id, conn_id, callback, self,
+                                     create_buffer, blob_list]() {
+    std::vector<std::shared_ptr<Payload>> payload_list;
+    size_t blob_size = 0;
+    int blob_nums = 0;
+    std::string endpoint;
+    ObjectID remote_id = InvalidObjectID();
+    std::shared_ptr<RemoteClient> remote;
+    Status status = self->GetStreamStore()->GetRemoteInfo(stream_id, remote_id,
+                                                          endpoint, remote);
+    if (!status.ok()) {
+      LOG(ERROR) << "Get remote info error: " << status.ToString()
+                 << ", stream_id is:" << ObjectIDToString(stream_id);
+      callback(status, payload_list);
+      return;
+    }
+
+    VLOG(2) << "Get remote info done, remote_id is:"
+            << ObjectIDToString(remote_id) << ", endpoint is:" << endpoint;
+
+    status = self->GetStreamStore()->GetFixedStreamSizeInfo(
+        stream_id, blob_size, blob_nums);
+    if (!status.ok()) {
+      callback(status, payload_list);
+      return;
+    }
+    VLOG(2) << "Get fixed stream size info done, sizes is:" << blob_size;
+
+    std::vector<uint64_t> addr_list;
+    // for RUNC
+    std::vector<uint64_t> local_buffers;
+    if (create_buffer) {
+      VLOG(2) << "Create bulk object is needed.";
+      for (int i = 0; i < blob_nums; i++) {
+        ObjectID blob_id;
+        std::shared_ptr<Payload> object;
+        status = self->GetBulkStore()->Create(blob_size, blob_id, object);
+        if (!status.ok()) {
+          for (std::shared_ptr<Payload> payload : payload_list) {
+            self->GetBulkStore()->Delete(payload->id());
+          }
+          callback(status, payload_list);
+          return;
+        }
+        payload_list.push_back(object);
+        // TODO: send fd
+      }
+      VLOG(100) << "Create bulk object done, payload list size:"
+                << payload_list.size() << " addr_list is:";
+      for (auto payload : payload_list) {
+        VLOG(100) << reinterpret_cast<uint64_t>(payload->pointer);
+        addr_list.push_back(reinterpret_cast<uint64_t>(payload->pointer));
+      }
+    } else {
+      VLOG(2) << "Create bulk object not needed.";
+      for (ObjectID blob_id : blob_list) {
+        std::shared_ptr<Payload> object;
+        status = self->GetBulkStore()->GetUnsafe(blob_id, true, object);
+        if (!status.ok()) {
+          LOG(ERROR) << "Get bulk object error: " << status.ToString()
+                     << ", blob_id is:" << ObjectIDToString(blob_id);
+          callback(status, payload_list);
+          return;
+        }
+        addr_list.push_back(reinterpret_cast<uint64_t>(object->pointer));
+      }
+    }
+
+    // prepare done
+    VLOG(2) << "Activate remote fixed stream done, vineyard will listen on ack";
+    callback(status, payload_list);
+
+    // add a new task of receiving ack
+    boost::asio::post(self->GetIOContext(), [remote, self, stream_id, remote_id,
+                                             addr_list, blob_size, blob_nums,
+                                             local_buffers, create_buffer,
+                                             conn_id, endpoint]() {
+      VLOG(2) << "VineyardActivateRemoteFixedStream wait ack task, local_id:"
+              << ObjectIDToString(stream_id)
+              << ", remote_id:" << ObjectIDToString(remote_id)
+              << ", addr_list size:" << addr_list.size()
+              << ", blob_size:" << blob_size << ", blob_nums:" << blob_nums
+              << ", local_buffers size:" << local_buffers.size()
+              << ", conn_id:" << conn_id;
+      std::vector<uint64_t> local_buffers_ = std::move(local_buffers);
+      if (create_buffer) {
+        Status status = remote->ActivateRemoteFixedStream(
+            remote_id, addr_list, blob_size, local_buffers_, conn_id);
+        if (!status.ok()) {
+          for (uint64_t addr : addr_list) {
+            self->GetBulkStore()->Delete(addr);
+          }
+          self->GetStreamStore()->SetErrorFlag(stream_id, status);
+          return;
+        }
+      } else {
+        LOG(INFO) << "activate remote addr:" << remote.get();
+        Status status = remote->ActivateRemoteFixedStream(
+            remote_id, addr_list, blob_size, local_buffers_, conn_id);
+        if (!status.ok()) {
+          LOG(ERROR) << "Activate remote fixed stream error: "
+                     << status.ToString()
+                     << ", remote_id is:" << ObjectIDToString(remote_id);
+          self->GetStreamStore()->SetErrorFlag(stream_id, status);
+          return;
+        }
+      }
+      LOG(INFO) << "get next stream chunk remote addr:" << remote.get();
+      for (int i = 0; i < blob_nums; i++) {
+        int index = -1;
+        Status status = remote->GetNextFixedStreamChunk(index);
+        if (!status.ok()) {
+          LOG(ERROR) << "Get next fixed stream chunk error: "
+                     << status.ToString()
+                     << ", remote_id is:" << ObjectIDToString(remote_id);
+          self->GetStreamStore()->SetErrorFlag(stream_id, status);
+          break;
+        }
+
+        status = self->GetStreamStore()->SetBlobReceived(stream_id, index);
+        if (!status.ok()) {
+          self->GetStreamStore()->SetErrorFlag(stream_id, status);
+          break;
+        }
+      }
+    });
+  });
+
+  return Status::OK();
+}
+
+Status VineyardServer::VineyardGetRemoteBlobsWithOffset(
+    std::vector<std::vector<size_t>> local_buffer_vec,
+    std::vector<std::vector<ObjectID>> remote_id_vec,
+    std::vector<std::vector<uint64_t>> sizes_vec, std::string rpc_endpoint,
+    ClientAttributes attr, callback_t<int> callback) {
+  callback(Status::NotImplemented(
+               "VineyardGetRemoteBlobsWithOffset is not implemented yet."),
+           0);
+  return Status::OK();
 }
 
 const std::string VineyardServer::IPCSocket() {

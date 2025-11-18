@@ -87,6 +87,9 @@ class RPCServer : public SocketServer,
 
   void doNothing(VineyardRecvContext* recv_context);
 
+  Status SendDataWithRDMA(int tcp_conn, uint64_t addr, uint64_t local_addr,
+                          size_t size, uint64_t rkey);
+
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;

@@ -22,6 +22,7 @@ limitations under the License.
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -29,7 +30,12 @@ limitations under the License.
 #include "common/memory/payload.h"
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
+#include "common/util/sidecar.h"
 #include "common/util/uuid.h"
+
+#include "common/rdma/rdma_server.h"
+
+#include "thread-pool/thread_pool.h"
 
 namespace vineyard {
 
@@ -52,8 +58,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
  public:
   SocketConnection(stream_protocol::socket socket,
                    std::shared_ptr<VineyardServer> server_ptr,
-                   std::shared_ptr<SocketServer> socket_server_ptr,
-                   int conn_id);
+                   std::shared_ptr<SocketServer> socket_server_ptr, int conn_id,
+                   std::string peer_host = "");
 
   bool Start();
 
@@ -64,6 +70,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
  protected:
   bool doRegister(json const& root);
+  bool doRequireExtraRequestMemory(json const& root);
 
   bool doCreateBuffer(json const& root);
   bool doCreateBuffers(json const& root);
@@ -91,12 +98,16 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doIncreaseReferenceCount(json const& root);
   bool doRelease(json const& root);
   bool doDelDataWithFeedbacks(json const& root);
+  bool doDelHugeData(json const& root);
 
   bool doCreateBufferByPlasma(json const& root);
   bool doGetBuffersByPlasma(json const& root);
   bool doSealPlasmaBlob(json const& root);
   bool doPlasmaRelease(json const& root);
   bool doPlasmaDelData(json const& root);
+  bool doCreateUserBuffers(json const& root);
+  bool doDeleteUserBuffers(json const& root);
+  bool doGetUserBuffers(json const& root);
 
   bool doCreateData(json const& root);
   bool doCreateDatas(json const& root);
@@ -109,19 +120,47 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doLabelObject(json const& root);
   bool doClear(json const& root);
   bool doMemoryTrim(json const& root);
+  bool doBatchPersist(json const& root);
+  bool doCreatehugeDatas(json const& root);
+  bool doGetHugeData(json const& root);
 
   bool doCreateStream(json const& root);
   bool doOpenStream(json const& root);
   bool doGetNextStreamChunk(json const& root);
   bool doPushNextStreamChunk(json const& root);
+  bool doPushNextStreamChunkByOffset(json const& root);
   bool doPullNextStreamChunk(json const& root);
+  bool doCheckFixedStreamReceived(json const& root);
   bool doStopStream(json const& root);
   bool doDropStream(json const& root);
+  bool doAbortStream(json const& root);
+  bool doPutStreamName(json const& root);
+  bool doGetStreamIDByName(json const& root);
+  bool doActivateRemoteFixedStream(const json& root);
+  bool doCreateFixedStream(json const& root);
+  bool doOpenFixedStream(json const& root);
+  bool doCloseStream(json const& root);
+  bool doDeleteStream(json const& root);
+
+  bool doVineyardOpenRemoteFixedStream(const json& root);
+  bool doVineyardActivateRemoteFixedStreamWithOffset(const json& root);
+  bool doVineyardStopStream(const json& root);
+  bool doVineyardDropStream(const json& root);
+  bool doVineyardAbortRemoteStream(const json& root);
+  bool doVineyardCloseRemoteFixedStream(const json& root);
+  bool doVineyardGetMetasByNames(const json& root);
+  bool doVineyardGetRemoteBlobs(const json& root);
+  bool doVineyardGetRemoteBlobsWithOffset(const json& root);
 
   bool doPutName(json const& root);
   bool doGetName(json const& root);
   bool doListName(json const& root);
   bool doDropName(json const& root);
+  bool doGetObjectLocation(const json& root);
+  bool doPutObjectLocation(const json& root);
+  bool doGetNames(json const& root);
+  bool doDropNames(json const& root);
+  bool doPutNames(json const& root);
 
   bool doMakeArena(json const& root);
   bool doFinalizeArena(json const& root);
@@ -136,6 +175,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doIsSpilled(json const& root);
   bool doIsInUse(json const& root);
 
+  bool doGetVineyardMmapFd(json const& root);
   bool doClusterMeta(json const& root);
   bool doInstanceStatus(json const& root);
   bool doMigrateObject(json const& root);
@@ -153,10 +193,11 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   Status MoveBuffers(std::map<FROM, TO> mapping,
                      std::shared_ptr<VineyardServer>& source_session);
 
- private:
   int nativeHandle() { return socket_.native_handle(); }
 
   int getConnId() { return conn_id_; }
+
+  virtual bool sendFd(int fd);
 
   /**
    * @brief Return should be exit after this message.
@@ -170,12 +211,14 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   void doReadBody();
 
-  void doWrite(const std::string& buf);
+  virtual void doWrite(const std::string& buf);
 
-  void doWrite(std::string&& buf);
+  virtual void doWriteWithoutRead(std::string& buf);
 
-  void doWrite(const std::string& buf, callback_t<> callback,
-               const bool partial = false);
+  virtual void doWrite(std::string&& buf);
+
+  virtual void doWrite(const std::string& buf, callback_t<> callback,
+                       const bool partial = false);
 
   /**
    * Being called when the encounter a socket error (in read/write), or by
@@ -190,6 +233,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   void doAsyncWrite(std::string&& buf, callback_t<> callback,
                     const bool partial = false);
 
+  void doAsyncWriteWithoutRead(std::string&& buf);
+
   void switchSession(std::shared_ptr<VineyardServer>& session) {
     this->server_ptr_ = session;
   }
@@ -199,6 +244,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   void UnlockTransmissionObjects(const std::vector<ObjectID>& ids);
 
   void ClearLockedObjects();
+
+  // TODO: remove this
+  void ThrowException();
 
   // whether the connection has been correctly "registered"
   std::atomic_bool registered_;
@@ -213,6 +261,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   int conn_id_;
   std::atomic_bool running_;
+  std::string peer_host;
 
   asio::streambuf buf_;
 
@@ -225,6 +274,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   std::unordered_map<ObjectID, int> locked_objects_;
   std::mutex locked_objects_mutex_;
+
+  int trace_log_level_ = 0;
 
   friend class IPCServer;
   friend class RPCServer;
@@ -259,19 +310,19 @@ class SocketServer {
   /**
    * Check if @conn_id@ exists in the connection pool.
    */
-  bool ExistsConnection(int conn_id) const;
+  virtual bool ExistsConnection(int conn_id) const;
 
   /**
    * Remove @conn_id@ from connection pool, before removing, the "Stop"
    * on the connection has already been called.
    */
-  void RemoveConnection(int conn_id);
+  virtual void RemoveConnection(int conn_id);
 
   /**
    * Invoke the "Stop" on the connection, and then remove it from the
    * connection pool.
    */
-  void CloseConnection(int conn_id);
+  virtual void CloseConnection(int conn_id);
 
   /**
    * Inspect the size of current alive connections.
@@ -285,7 +336,43 @@ class SocketServer {
   virtual Status Register(std::shared_ptr<SocketConnection> conn,
                           const SessionID session_id) = 0;
 
+  virtual Status SendDataWithRDMA(int tcp_conn, uint64_t addr,
+                                  uint64_t local_addr, size_t size,
+                                  uint64_t rkey) {
+    return Status::NotImplemented("SendDataWithRDMA is not implemented");
+  }
+
+  Status SendDataWithRDMA(std::vector<uint64_t>& addr_list, uint64_t local_addr,
+                          size_t offset, std::vector<size_t>& size_list,
+                          size_t& size, std::vector<uint64_t>& rkey_list,
+                          const std::string& peer_host, const int port,
+                          const std::string& advice_device) {
+    return Status::NotImplemented("RDMA is not supported yet.");
+  }
+
+  Status RequireExtraRequestMemory(int conn_id, size_t size, int& fd);
+
+  Status ReleaseExtraRequestMemory(int conn_id);
+
+  Status ReadExtraMessage(void* data, size_t size, int conn_id);
+
+  Status WriteExtraMessage(const void* data, size_t size, int conn_id);
+
+  Status LseekExtraMsgWritePos(uint64_t offset, int conn_id);
+
+  Status LseekExtraMsgReadPos(uint64_t offset, int conn_id);
+
+  Status GetClientAttributeMsg(uint64_t conn_id, ClientAttributes& attr);
+
  protected:
+  struct ExtraRequestMem {
+    void* addr_ = nullptr;
+    size_t size_ = 0;
+    int fd_ = -1;
+    uint64_t write_pos_ = 0;
+    uint64_t read_pos_ = 0;
+  };
+
   std::atomic_bool stopped_;  // if the socket server being stopped.
 
   std::atomic_bool closable_;  // if client want to close the session,
@@ -293,6 +380,8 @@ class SocketServer {
   int next_conn_id_;
   std::unordered_map<int, std::shared_ptr<SocketConnection>> connections_;
   mutable std::recursive_mutex connections_mutex_;  // protect `connections_`
+  std::map<int, ExtraRequestMem> conn_id_to_extra_request_mem_;
+  std::recursive_mutex conn_id_to_extra_request_mem_mutex_;
 
  private:
   virtual void doAccept() = 0;

@@ -13,10 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "client/client_base.h"
-
 #include <sys/socket.h>
 
+#include <set>
+
+#include "client/client_base.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_factory.h"
 #include "client/io.h"
@@ -260,14 +261,50 @@ Status ClientBase::CreateStream(const ObjectID& id) {
   return Status::OK();
 }
 
-Status ClientBase::OpenStream(const ObjectID& id, StreamOpenMode mode) {
+Status ClientBase::CreateFixedStream(ObjectID& id, std::string stream_name,
+                                     int blob_num, size_t blob_size) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WriteOpenStreamRequest(id, static_cast<int64_t>(mode), message_out);
+  WriteCreateFixedStreamRequest(stream_name, blob_num, blob_size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  RETURN_ON_ERROR(ReadOpenStreamReply(message_in));
+  RETURN_ON_ERROR(ReadCreateFixedStreamReply(message_in, id));
+  return Status::OK();
+}
+
+Status ClientBase::PutStreamName(const ObjectID& id, const std::string& name) {
+  std::string message_out;
+  WritePutStreamNameRequest(id, name, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadPutStreamNameReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::GetStreamIDByName(std::string name, ObjectID& id) {
+  std::string message_out;
+  WriteGetStreamIDByNameRequest(name, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadGetStreamIDByNameReply(message_in, id));
+  return Status::OK();
+}
+
+Status ClientBase::OpenStream(const ObjectID& id, StreamOpenMode mode) {
+  ENSURE_CONNECTED(this);
+  ObjectID ret_id;
+  std::string message_out;
+  WriteOpenStreamRequest(id, "", static_cast<int64_t>(mode), false, 0,
+                         message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadOpenStreamReply(message_in, ret_id));
   return Status::OK();
 }
 
@@ -280,6 +317,40 @@ Status ClientBase::PushNextStreamChunk(ObjectID const id,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadPushNextStreamChunkReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::PushNextStreamChunkByOffset(ObjectID const id,
+                                               uint64_t offset) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WritePushNextStreamChunkByOffsetRequest(id, offset, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadPushNextStreamChunkByOffsetReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::CloseStream(ObjectID id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCloseStreamRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCloseStreamReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::DeleteStream(ObjectID id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteDeleteStreamRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDeleteStreamReply(message_in));
   return Status::OK();
 }
 
@@ -346,6 +417,17 @@ Status ClientBase::Persist(const ObjectID id) {
   return Status::OK();
 }
 
+Status ClientBase::Persist(const std::vector<ObjectID>& ids) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteBatchPersistRequest(ids, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadBatchPersistReply(message_in));
+  return Status::OK();
+}
+
 Status ClientBase::IfPersist(const ObjectID id, bool& persist) {
   ENSURE_CONNECTED(this);
   std::string message_out;
@@ -391,10 +473,11 @@ Status ClientBase::ShallowCopy(const ObjectID id, json const& extra_metadata,
   return Status::OK();
 }
 
-Status ClientBase::PutName(const ObjectID id, std::string const& name) {
+Status ClientBase::PutName(const ObjectID id, std::string const& name,
+                           bool overwrite) {
   ENSURE_CONNECTED(this);
   std::string message_out;
-  WritePutNameRequest(id, name, message_out);
+  WritePutNameRequest(id, name, overwrite, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));

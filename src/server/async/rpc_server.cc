@@ -17,11 +17,13 @@ limitations under the License.
 #include <mutex>
 #include <utility>
 
+#include "common/memory/memcpy.h"
 #include "common/rdma/util.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"  // IWYU pragma: keep
 #include "server/async/rpc_server.h"
 #include "server/server/vineyard_server.h"
+#include "server/util/utils.h"
 
 namespace vineyard {
 
@@ -31,6 +33,8 @@ RPCServer::RPCServer(std::shared_ptr<VineyardServer> vs_ptr)
       acceptor_(vs_ptr_->GetContext()),
       socket_(vs_ptr_->GetContext()) {
   auto endpoint = getEndpoint(vs_ptr_->GetContext());
+  VINEYARD_ASSERT(is_port_available(endpoint.port()),
+                  "Use another port for vineyard rpc service.");
   acceptor_.open(endpoint.protocol());
   using reuse_port =
       asio::detail::socket_option::boolean<SOL_SOCKET, SO_REUSEPORT>;
@@ -99,6 +103,12 @@ Status RPCServer::InitRDMA() {
   return Status::OK();
 }
 
+Status RPCServer::SendDataWithRDMA(int tcp_conn, uint64_t addr,
+                                   uint64_t local_addr, size_t size,
+                                   uint64_t rkey) {
+  return Status::NotImplemented("SendDataWithRDMA is not implemented");
+}
+
 void RPCServer::Start() {
   vs_ptr_->RPCReady();
   SocketServer::Start();
@@ -148,10 +158,13 @@ void RPCServer::doAccept() {
       if (self->stopped_.load() || self->closable_.load()) {
         return;
       }
+      self->socket_.set_option(boost::asio::ip::tcp::no_delay(true));
+
+      std::string host = self->socket_.remote_endpoint().address().to_string();
       std::shared_ptr<SocketConnection> conn =
           std::make_shared<SocketConnection>(std::move(self->socket_),
                                              self->vs_ptr_, self,
-                                             self->next_conn_id_);
+                                             self->next_conn_id_, host);
       conn->Start();
       self->connections_.emplace(self->next_conn_id_, conn);
       ++self->next_conn_id_;

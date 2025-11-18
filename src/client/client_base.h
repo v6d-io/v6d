@@ -19,6 +19,7 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -248,6 +249,13 @@ class ClientBase {
    */
   Status CreateStream(const ObjectID& id);
 
+  Status CreateFixedStream(ObjectID& id, std::string stream_name, int blob_num,
+                           size_t blob_size);
+
+  Status PutStreamName(const ObjectID& id, const std::string& name);
+
+  Status GetStreamIDByName(std::string name, ObjectID& id);
+
   /**
    * @brief open a stream on vineyard. Failed if the stream is already opened on
    * the given mode.
@@ -271,6 +279,12 @@ class ClientBase {
    * @return Status that indicates whether the polling has succeeded.
    */
   Status PushNextStreamChunk(ObjectID const id, ObjectID const chunk);
+
+  Status PushNextStreamChunkByOffset(ObjectID const id, uint64_t offset);
+
+  Status CloseStream(ObjectID id);
+
+  Status DeleteStream(ObjectID id);
 
   /**
    * @brief Pull a chunk from a stream. When there's no more chunk available in
@@ -341,6 +355,8 @@ class ClientBase {
    */
   Status Persist(const ObjectID id);
 
+  Status Persist(const std::vector<ObjectID>& ids);
+
   /**
    * @brief Check if the given object has been persist to etcd.
    *
@@ -403,7 +419,8 @@ class ClientBase {
    *
    * @return Status that indicates whether the request has succeeded.
    */
-  Status PutName(const ObjectID id, std::string const& name);
+  Status PutName(const ObjectID id, std::string const& name,
+                 bool overwrite = true);
 
   /**
    * @brief Retrieve the object ID by associated name.
@@ -657,11 +674,11 @@ class ClientBase {
   int get_timeout_seconds() const { return timeout_seconds_; }
 
  protected:
-  Status doWrite(const std::string& message_out);
+  virtual Status doWrite(const std::string& message_out);
 
-  Status doRead(std::string& message_in);
+  virtual Status doRead(std::string& message_in);
 
-  Status doRead(json& root);
+  virtual Status doRead(json& root);
 
   mutable bool connected_;
   std::string ipc_socket_;

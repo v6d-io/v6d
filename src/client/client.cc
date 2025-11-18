@@ -19,6 +19,8 @@ limitations under the License.
 
 #include <cstddef>
 #include <cstdint>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -32,8 +34,11 @@ limitations under the License.
 #include "client/utils.h"
 #include "common/memory/cuda_ipc.h"
 #include "common/memory/fling.h"
+#include "common/memory/memcpy.h"
 #include "common/util/env.h"
+#include "common/util/get_tid.h"
 #include "common/util/protocols.h"
+#include "common/util/sidecar.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 #include "common/util/version.h"
@@ -108,7 +113,14 @@ Status BasicIPCClient::Open(std::string const& ipc_socket,
   return Status::OK();
 }
 
-Client::~Client() { Disconnect(); }
+Client::~Client() {
+  Disconnect();
+  if (extra_request_memory_addr_ != nullptr) {
+    munmap(extra_request_memory_addr_, extra_request_mem_size_);
+    extra_request_memory_addr_ = nullptr;
+    extra_request_mem_size_ = 0;
+  }
+}
 
 Status Client::Connect() {
   auto ep = read_env("VINEYARD_IPC_SOCKET");
@@ -189,6 +201,75 @@ Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
   return Status::OK();
 }
 
+Status Client::CreateHugeMetaData(std::vector<ObjectMeta>& meta_datas,
+                                  std::vector<ObjectID>& ids,
+                                  std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  std::vector<InstanceID> computed_instance_ids(meta_datas.size(),
+                                                this->instance_id_);
+
+  Signature signature;
+  InstanceID instance_id;
+  std::vector<std::string> trees;
+  std::vector<uint64_t> json_lengths;
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  for (auto& meta_data : meta_datas) {
+    meta_data.SetInstanceId(this->instance_id_);
+    // TODO: here do not support k8s
+    trees.emplace_back(std::move(json_to_string(meta_data.MetaData())));
+    json_lengths.emplace_back(trees.back().size());
+  }
+
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+
+  RETURN_ON_ERROR(WriteExtraMsg(json_lengths.data(),
+                                json_lengths.size() * sizeof(uint64_t)));
+  for (size_t i = 0; i < trees.size(); ++i) {
+    RETURN_ON_ERROR(WriteExtraMsg(trees[i].data(), trees[i].size()));
+  }
+
+  std::string message_out;
+  WriteCreateHugeDatasRequest(trees.size(), message_out);
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". CreateHugeMetaData Construct IPC msg cost:" << (end - start)
+          << " us." << std::endl;
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". CreateHugeMetaData IPC cost:" << (end - start) << " us."
+          << std::endl;
+  size_t id_num;
+  RETURN_ON_ERROR(
+      ReadCreateHugeDatasReply(message_in, id_num, signature, instance_id));
+  RETURN_ON_ASSERT(id_num == meta_datas.size(),
+                   "mismatched number of created objects");
+
+  ids.resize(id_num);
+  RETURN_ON_ERROR(LseekExtraMsgReadPos(0));
+  RETURN_ON_ERROR(ReadExtraMsg(ids.data(), id_num * sizeof(ObjectID)));
+
+  for (size_t i = 0; i < meta_datas.size(); ++i) {
+    meta_datas[i].SetId(ids[i]);
+    meta_datas[i].SetSignature(signature);
+    meta_datas[i].SetClient(this);
+    meta_datas[i].SetInstanceId(instance_id);
+  }
+  return Status::OK();
+}
+
 Status Client::FetchAndGetMetaData(const ObjectID id, ObjectMeta& meta,
                                    const bool sync_remote) {
   ObjectID local_object_id = InvalidObjectID();
@@ -227,6 +308,97 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
   return Status::OK();
 }
 
+Status Client::GetHugeMetaData(const std::vector<ObjectID>& ids,
+                               std::vector<ObjectMeta>& metas,
+                               std::string& req_flag, const bool sync_remote,
+                               bool fast_path) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  RETURN_ON_ERROR(WriteExtraMsg(ids.data(), ids.size() * sizeof(ObjectID)));
+
+  std::string message_out;
+  WriteGetHugeDataRequest(ids.size(), sync_remote, false, message_out);
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetHugeMetaData construct IPC msg cost:" << (end - start)
+          << " us." << std::endl;
+
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetHugeMetaData IPC cost:" << (end - start) << " us."
+          << std::endl;
+
+  start = end;
+  size_t json_length;
+  json tree;
+  RETURN_ON_ERROR(ReadGetHugeDataReply(message_in, json_length));
+  std::string json_str(json_length, 0);
+
+  RETURN_ON_ERROR(LseekExtraMsgReadPos(0));
+  RETURN_ON_ERROR(ReadExtraMsg(json_str.data(), json_length));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetHugeMetaData read reply cost:" << (end - start) << " us."
+          << std::endl;
+  start = end;
+  try {
+    tree =
+        json_from_buf(static_cast<const void*>(json_str.data()), json_length);
+  } catch (std::exception& e) {
+    return Status::Invalid("Failed to parse json: " + std::string(e.what()));
+  }
+  auto items = tree.items();
+
+  std::set<ObjectID> blob_ids;
+  for (auto kv = items.begin(); kv != items.end(); ++kv) {
+    ObjectMeta meta;
+    meta.SetMetaData(this, kv.value());
+    metas.emplace_back(meta);
+    if (!fast_path) {
+      for (const auto& id : meta.GetBufferSet()->AllBufferIds()) {
+        blob_ids.emplace(id);
+      }
+    }
+  }
+
+  if (!fast_path) {
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
+    RETURN_ON_ERROR(GetBuffers(blob_ids, buffers));
+
+    for (auto& meta : metas) {
+      for (auto const id : meta.GetBufferSet()->AllBufferIds()) {
+        const auto& buffer = buffers.find(id);
+        if (buffer != buffers.end()) {
+          meta.SetBuffer(id, buffer->second);
+        }
+      }
+    }
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetHugeMetaData decode meta cost:" << (end - start) << " us."
+          << std::endl;
+  return Status::OK();
+}
+
 Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
   ObjectID object_id = InvalidObjectID();
@@ -249,6 +421,117 @@ Status Client::CreateBlobs(const std::vector<size_t>& sizes,
         new BlobWriter(object_ids[i], objects[i], buffers[i]));
     blobs.emplace_back(std::move(blob));
   }
+  return Status::OK();
+}
+
+Status Client::CreateUserBlobs(
+    const std::vector<uint64_t>& offsets, const std::vector<size_t>& sizes,
+    std::vector<std::unique_ptr<UserBlobBuilder>>& blobs,
+    std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  RETURN_ON_ASSERT(offsets.size() == sizes.size(),
+                   "The number of offsets and sizes should be the same");
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::string message_out;
+  WriteCreateUserBuffersRequest(offsets, sizes, message_out);
+
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+
+  RETURN_ON_ERROR(
+      WriteExtraMsg(offsets.data(), offsets.size() * sizeof(uint64_t)));
+  RETURN_ON_ERROR(WriteExtraMsg(sizes.data(), sizes.size() * sizeof(size_t)));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". CreateUserBlobs construct IPC msg cost:" << (end - start)
+          << " us." << std::endl;
+
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". CreateUserBlobs IPC cost:" << (end - start) << " us."
+          << std::endl;
+
+  start = end;
+  std::vector<ObjectID> ids;
+  RETURN_ON_ERROR(ReadCreateUserBuffersReply(message_in, ids));
+
+  RETURN_ON_ERROR(LseekExtraMsgReadPos(0));
+  RETURN_ON_ERROR(ReadExtraMsg(ids.data(), ids.size() * sizeof(ObjectID)));
+
+  RETURN_ON_ASSERT(ids.size() == sizes.size(),
+                   "The number of ids and sizes should be the same");
+  for (size_t i = 0; i < ids.size(); i++) {
+    std::shared_ptr<UserBuffer> buffer =
+        std::make_shared<UserBuffer>(offsets[i], sizes[i]);
+    std::unique_ptr<UserBlobBuilder> blob = std::unique_ptr<UserBlobBuilder>(
+        new UserBlobBuilder(ids[i], sizes[i], offsets[i]));
+    blobs.emplace_back(std::move(blob));
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". CreateUserBlobs total cost:" << (end - start) << " us."
+          << std::endl;
+  return Status::OK();
+}
+
+Status Client::GetUserBlobs(std::vector<ObjectID>& ids,
+                            std::vector<std::shared_ptr<UserBlob>>& blobs) {
+  ENSURE_CONNECTED(this);
+  if (ids.empty()) {
+    return Status::OK();
+  }
+
+  std::string message_out;
+  WriteGetUserBuffersRequest(ids, message_out);
+  json message_in;
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  std::vector<Payload> payloads;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadGetUserBuffersReply(message_in, payloads));
+  RETURN_ON_ASSERT(payloads.size() == ids.size(),
+                   "The number of payloads and ids should be the same");
+  for (size_t i = 0; i < ids.size(); ++i) {
+    std::shared_ptr<UserBlob> blob = std::shared_ptr<UserBlob>(new UserBlob{});
+    blob->id_ = ids[i];
+    blob->offset_ = payloads[i].user_offset;
+    blob->size_ = payloads[i].data_size;
+    blobs.push_back(blob);
+  }
+
+  return Status::OK();
+}
+
+Status Client::DeleteUserBlobs(std::vector<ObjectID>& ids,
+                               std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  if (ids.empty()) {
+    return Status::OK();
+  }
+  std::string message_out;
+  WriteDeleteUserBuffersRequest(ids, message_out);
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  RETURN_ON_ERROR(WriteExtraMsg(ids.data(), ids.size() * sizeof(ObjectID)));
+
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDeleteUserBuffersReply(message_in));
   return Status::OK();
 }
 
@@ -386,6 +669,329 @@ Status Client::PullNextStreamChunk(ObjectID const id,
   }
   return Status::Invalid("Expect buffer, but got '" +
                          buffer->meta().GetTypeName() + "'");
+}
+
+Status Client::AbortStream(ObjectID const id, bool& success) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteAbortStreamRequest(id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadAbortStreamReply(message_in, success));
+  return Status::OK();
+}
+
+Status Client::CheckFixedStreamReceived(ObjectID const id, int index,
+                                        bool& finished) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCheckFixedStreamReceivedRequest(id, index, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCheckFixedStreamReceivedReply(finished, message_in));
+  return Status::OK();
+}
+
+Status Client::VineyardOpenRemoteFixedStream(ObjectID remote_id,
+                                             ObjectID local_id, int& fd,
+                                             int blob_nums, size_t size,
+                                             std::string remote_endpoint,
+                                             StreamOpenMode mode, bool wait,
+                                             uint64_t timeout) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteVineyardOpenRemoteFixedStreamRequest(
+      remote_id, "", local_id, blob_nums, size, remote_endpoint,
+      static_cast<uint64_t>(mode), wait, timeout, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  ObjectID id;
+  RETURN_ON_ERROR(ReadVineyardOpenRemoteFixedStreamReply(message_in, id));
+
+  fd = recv_fd(vineyard_conn_);
+  return Status::OK();
+}
+
+Status Client::VineyardOpenRemoteFixedStream(std::string remote_stream_name,
+                                             ObjectID local_id, int& fd,
+                                             int blob_nums, size_t size,
+                                             std::string remote_endpoint,
+                                             StreamOpenMode mode, bool wait,
+                                             uint64_t timeout) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteVineyardOpenRemoteFixedStreamRequest(
+      InvalidObjectID(), remote_stream_name, local_id, blob_nums, size,
+      remote_endpoint, static_cast<uint64_t>(mode), wait, timeout, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  ObjectID id;
+  RETURN_ON_ERROR(ReadVineyardOpenRemoteFixedStreamReply(message_in, id));
+  fd = recv_fd(vineyard_conn_);
+  return Status::OK();
+}
+
+Status Client::VineyardActivateRemoteFixedStream(ObjectID local_id,
+                                                 std::vector<void*>& buffers) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  std::vector<ObjectID> blob_list;
+  WriteVineyardActivateRemoteFixedStreamRequest(local_id, true, blob_list,
+                                                message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  std::vector<Payload> payload_list;
+  std::vector<int> fds_sent, fds_recv;
+  RETURN_ON_ERROR(ReadVineyardActivateRemoteFixedStreamReply(
+      message_in, payload_list, fds_sent));
+
+  std::set<int> fds_recv_set;
+  for (size_t i = 0; i < payload_list.size(); ++i) {
+    int fd_recv = shm_->PreMmap(payload_list[i].store_fd);
+    if (fd_recv != -1) {
+      fds_recv_set.emplace(fd_recv);
+    }
+  }
+  fds_recv.assign(fds_recv_set.begin(), fds_recv_set.end());
+
+  if (message_in.contains("fds") && fds_recv != fds_sent) {
+    json error = json::object();
+    error["error"] =
+        "VineyardActivateRemoteFixedStream: the fds are not matched "
+        "between client and server";
+    error["fds_sent"] = fds_sent;
+    error["fds_recv"] = fds_recv;
+    error["response"] = message_in;
+    return Status::Invalid(error.dump());
+  }
+
+  for (size_t i = 0; i < payload_list.size(); ++i) {
+    uint8_t *shared = nullptr, *dist = nullptr;
+    RETURN_ON_ERROR(
+        shm_->Mmap(payload_list[i].store_fd, payload_list[i].object_id,
+                   payload_list[i].map_size, payload_list[i].data_size,
+                   payload_list[i].data_offset,
+                   payload_list[i].pointer - payload_list[i].data_offset, false,
+                   false, &shared));
+    dist = shared + payload_list[i].data_offset;
+    buffers.push_back(reinterpret_cast<void*>(dist));
+  }
+
+  return Status::OK();
+}
+
+Status Client::VineyardActivateRemoteFixedStream(
+    ObjectID local_id, std::vector<ObjectID>& blob_list) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteVineyardActivateRemoteFixedStreamRequest(local_id, false, blob_list,
+                                                message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  std::vector<Payload> payload_list;
+  std::vector<int> fds_sent, fds_recv;
+  RETURN_ON_ERROR(ReadVineyardActivateRemoteFixedStreamReply(
+      message_in, payload_list, fds_sent));
+  return Status::OK();
+}
+
+Status Client::VineyardActivateRemoteFixedStreamWithOffset(
+    ObjectID local_id, std::vector<uint64_t>& offset_list) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteVineyardActivateRemoteFixedStreamWithOffsetRequest(local_id, offset_list,
+                                                          message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(
+      ReadVineyardActivateRemoteFixedStreamWithOffsetReply(message_in));
+  return Status::OK();
+}
+
+Status Client::OpenFixedStream(ObjectID stream_id, StreamOpenMode mode,
+                               int& fd) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteOpenFixedStreamRequest(stream_id, static_cast<uint64_t>(mode),
+                              message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadOpenFixedStreamReply(message_in));
+  fd = recv_fd(vineyard_conn_);
+  return Status::OK();
+}
+
+Status Client::VineyardCloseRemoteFixedStream(ObjectID local_id) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteVineyardCloseRemoteFixedStreamRequest(local_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadVineyardCloseRemoteFixedStreamReply(message_in));
+  return Status::OK();
+}
+
+Status Client::GetVineyardMmapFd(int& fd, size_t& size, size_t& offset) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteGetVineyardMmapFdRequest(message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadGetVineyardMmapFdReply(message_in, size, offset));
+  fd = recv_fd(vineyard_conn_);
+  return Status::OK();
+}
+
+Status Client::VineyardStopStream(ObjectID local_id) {
+  // TBD
+  return Status::NotImplemented("Not implemented yet");
+}
+
+Status Client::VineyardDropStream(ObjectID local_id) {
+  // TBD
+  return Status::NotImplemented("Not implemented yet");
+}
+
+Status Client::VineyardAbortRemoteStream(ObjectID local_id, bool& success) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteVineyardAbortRemoteStreamRequest(local_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadVineyardAbortRemoteStreamReply(message_in, success));
+  return Status::OK();
+}
+
+Status Client::VineyardGetNextFixedStreamChunk(int& index) {
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadStreamReadyAckReply(message_in, index));
+  return Status::OK();
+}
+
+Status Client::VineyardGetMetasByNames(std::vector<std::string>& names,
+                                       std::string rpc_encpoint,
+                                       std::vector<ObjectMeta>& metas,
+                                       std::string req_flag) {
+  ENSURE_CONNECTED(this);
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+
+  std::string message_out;
+  WriteVineyardGetMetasByNamesRequest(names, rpc_encpoint, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  std::vector<json> contents;
+  RETURN_ON_ERROR(ReadVineyardGetMetasByNamesReply(message_in, contents));
+  for (auto const& content : contents) {
+    ObjectMeta meta;
+    meta.SetMetaData(this, content);
+    metas.emplace_back(meta);
+  }
+  return Status::OK();
+}
+
+Status Client::VineyardGetRemoteBlobs(
+    std::vector<std::vector<ObjectID>> local_id_vec,
+    std::vector<std::vector<ObjectID>> remote_id_vec, std::string rpc_endpoint,
+    int& fd, std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::string message_out;
+  WriteVineyardGetRemoteBlobsWithRDMARequest(local_id_vec, remote_id_vec,
+                                             rpc_endpoint, message_out);
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". VineyardGetRemoteBlobsWithRDMA Construct IPC msg cost:"
+          << (end - start) << " us." << std::endl;
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". VineyardGetRemoteBlobsWithRDMA IPC cost:" << (end - start)
+          << " us." << std::endl;
+  RETURN_ON_ERROR(ReadVineyardGetRemoteBlobsWithRDMAReply(message_in));
+
+  fd = recv_fd(vineyard_conn_);
+  return Status::OK();
+}
+
+Status Client::VineyardGetRemoteBlobsWithOffset(
+    std::vector<std::vector<size_t>>& local_offset_vec,
+    std::vector<std::vector<ObjectID>>& remote_id_vec,
+    std::vector<std::vector<size_t>>& size_vec, std::string rpc_endpoint,
+    int& fd, std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+  size_t batch_num = 0, batch_size = 0;
+  batch_num = local_offset_vec.size();
+  if (batch_num == 0) {
+    return Status::OK();
+  }
+  batch_size = local_offset_vec[0].size();
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::string message_out;
+  WriteVineyardGetRemoteBlobsWithOffsetRequest(batch_num, batch_size,
+                                               rpc_endpoint, message_out);
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  for (size_t i = 0; i < batch_num; ++i) {
+    RETURN_ON_ERROR(WriteExtraMsg(local_offset_vec[i].data(),
+                                  local_offset_vec[i].size() * sizeof(size_t)));
+    RETURN_ON_ERROR(WriteExtraMsg(remote_id_vec[i].data(),
+                                  remote_id_vec[i].size() * sizeof(ObjectID)));
+    RETURN_ON_ERROR(
+        WriteExtraMsg(size_vec[i].data(), size_vec[i].size() * sizeof(size_t)));
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". VineyardGetRemoteBlobsWithOffset Construct IPC msg cost:"
+          << (end - start) << " us." << std::endl;
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". VineyardGetRemoteBlobsWithOffset IPC cost:" << (end - start)
+          << " us." << std::endl;
+  RETURN_ON_ERROR(ReadVineyardGetRemoteBlobsWithOffsetReply(message_in));
+
+  fd = recv_fd(vineyard_conn_);
+  return Status::OK();
 }
 
 std::shared_ptr<Object> Client::GetObject(const ObjectID id,
@@ -965,6 +1571,32 @@ Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
   return Status::OK();
 }
 
+Status Client::DelHugeData(const std::vector<ObjectID>& ids,
+                           const bool release_blob, const bool force,
+                           const bool deep, std::string req_flag) {
+  ENSURE_CONNECTED(this);
+  if (release_blob) {
+    for (auto id : ids) {
+      // May contain duplicated blob ids.
+      VINEYARD_DISCARD(Release(id));
+    }
+  }
+
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  RETURN_ON_ERROR(WriteExtraMsg(ids.data(), ids.size() * sizeof(ObjectID)));
+
+  std::string message_out;
+  WriteDelHugeDataRequest(ids.size(), force, deep, /*memory_trim*/ false,
+                          /*fastpath=*/false, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadDelHugeDataReply(message_in));
+
+  return Status::OK();
+}
+
 Status Client::GetBufferSizes(const std::set<ObjectID>& ids,
                               std::map<ObjectID, size_t>& sizes) {
   return this->GetBufferSizes(ids, false, sizes);
@@ -1064,6 +1696,19 @@ Status Client::Seal(ObjectID const& object_id) {
   return Status::OK();
 }
 
+Status Client::SealUserBlob(ObjectID const& object_id) {
+  ENSURE_CONNECTED(this);
+  RETURN_ON_ASSERT(IsBlob(object_id));
+  std::string message_out;
+  WriteSealRequest(object_id, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadSealReply(message_in));
+  return Status::OK();
+}
+
 Status Client::ShallowCopy(ObjectID const id, ObjectID& target_id,
                            Client& source_client) {
   ENSURE_CONNECTED(this);
@@ -1150,6 +1795,194 @@ Status Client::ShallowCopy(PlasmaID const plasma_id, ObjectID& target_id,
   return Status::OK();
 }
 
+Status Client::GetObjectLocation(const std::vector<std::string>& names,
+                                 std::vector<std::set<std::string>>& locations,
+                                 std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::string message_out;
+  WriteGetObjectLocationRequest(names, message_out);
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetObjectLocation prepare cost:" << (end - start) << " us."
+          << std::endl;
+
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetObjectLocation IPC cost:" << (end - start) << " us."
+          << std::endl;
+
+  start = end;
+  std::vector<std::vector<std::string>> location_vector;
+  RETURN_ON_ERROR(ReadGetObjectLocationReply(message_in, location_vector));
+  for (size_t i = 0; i < location_vector.size(); i++) {
+    std::set<std::string> location_set;
+    for (auto const& location : location_vector[i]) {
+      location_set.insert(location);
+    }
+    locations.push_back(location_set);
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetObjectLocation parse cost:" << (end - start) << " us."
+          << std::endl;
+
+  return Status::OK();
+}
+
+Status Client::PutObjectLocation(const std::vector<std::string>& names,
+                                 const std::vector<std::string>& locations,
+                                 int ttl_seconds, std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  std::string message_out;
+  WritePutObjectLocationRequest(names, locations, ttl_seconds, message_out);
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". PutObjectLocation prepare cost:" << (end - start) << " us."
+          << std::endl;
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". PutObjectLocation IPC cost:" << (end - start) << " us."
+          << std::endl;
+  RETURN_ON_ERROR(ReadPutObjectLocationReply(message_in));
+  return Status::OK();
+}
+
+Status Client::PutNames(const std::vector<ObjectID>& ids,
+                        const std::vector<std::string>& names,
+                        std::string& req_flag, const bool overwrite) {
+  ENSURE_CONNECTED(this);
+  RETURN_ON_ASSERT(ids.size() == names.size(),
+                   "ids and names should have the same size");
+  uint64_t start = 0, end = 0;
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+
+  std::string message_out;
+  WritePutNamesRequest(ids, names, overwrite, message_out);
+
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". PutNames IPC cost:" << (end - start) << " us" << std::endl;
+  RETURN_ON_ERROR(ReadPutNamesReply(message_in));
+  return Status::OK();
+}
+
+Status Client::GetNames(const std::vector<std::string>& name_vec,
+                        std::vector<ObjectID>& id_vec, std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  std::string message_out;
+  WriteGetNamesRequest(name_vec, false, message_out);
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetNames write msg cost:" << (end - start) << " us."
+          << std::endl;
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetNames IPC cost:" << (end - start) << " us." << std::endl;
+  start = end;
+  RETURN_ON_ERROR(ReadGetNamesReply(message_in, id_vec));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". GetNames parse cost:" << (end - start) << " us." << std::endl;
+  return Status::OK();
+}
+
+Status Client::DropNames(std::vector<std::string>& names,
+                         std::string& req_flag) {
+  ENSURE_CONNECTED(this);
+  uint64_t start = 0, end = 0;
+  start = std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::system_clock::now().time_since_epoch())
+              .count();
+  std::string message_out;
+  WriteDropNamesRequest(names, message_out);
+  std::vector<size_t> name_lengths(names.size());
+  for (size_t i = 0; i < names.size(); ++i) {
+    name_lengths[i] = names[i].size();
+  }
+
+  RETURN_ON_ERROR(LseekExtraMsgWritePos(0));
+  RETURN_ON_ERROR(AttachReqFlag(req_flag));
+  RETURN_ON_ERROR(
+      WriteExtraMsg(name_lengths.data(), name_lengths.size() * sizeof(size_t)));
+
+  for (size_t i = 0; i < names.size(); ++i) {
+    RETURN_ON_ERROR(WriteExtraMsg(names[i].data(), names[i].size()));
+  }
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". DropNames prepare msg cost:" << (end - start) << " us."
+          << std::endl;
+  start = end;
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  end = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
+  logger_ << LogPrefix() << "Request: " << req_flag
+          << ". DropNames IPC cost:" << (end - start) << " us." << std::endl;
+  RETURN_ON_ERROR(ReadDropNamesReply(message_in));
+  return Status::OK();
+}
+
 Status Client::IsInUse(ObjectID const& id, bool& is_in_use) {
   ENSURE_CONNECTED(this);
 
@@ -1201,6 +2034,108 @@ Status Client::TryReleaseLock(std::string key, bool& result) {
   VINEYARD_CHECK_OK(doRead(message_in));
   VINEYARD_CHECK_OK(ReadTryReleaseLockReply(message_in, result));
   return Status::OK();
+}
+
+Status Client::RequireExtraRequestMemory(size_t size) {
+  ENSURE_CONNECTED(this);
+
+  std::string message_out;
+  WriteRequireExtraRequestMemoryRequest(size, message_out);
+  VINEYARD_CHECK_OK(doWrite(message_out));
+
+  json message_in;
+  VINEYARD_CHECK_OK(doRead(message_in));
+  VINEYARD_CHECK_OK(ReadRequireExtraRequestMemoryReply(message_in));
+
+  int fd = recv_fd(vineyard_conn_);
+  void* mmap_addr =
+      mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (mmap_addr == MAP_FAILED) {
+    return Status::IOError("mmap failed");
+  }
+  extra_request_memory_addr_ = mmap_addr;
+  extra_request_mem_size_ = size;
+
+  std::cout << "Extra request memory addr: " << extra_request_memory_addr_
+            << ", size: " << extra_request_mem_size_ << std::endl;
+  close(fd);
+  return Status::OK();
+}
+
+Status Client::WriteExtraMsg(const void* data, size_t size) {
+  if (!extra_request_memory_addr_ || size > extra_request_mem_size_) {
+    return Status::Invalid("Invalid extra request memory");
+  }
+  if (write_pos_ + size > extra_request_mem_size_) {
+    return Status::Invalid("Invalid extra request memory");
+  }
+  memory::concurrent_memcpy(
+      static_cast<char*>(extra_request_memory_addr_) + write_pos_, data, size);
+  write_pos_ += size;
+  return Status::OK();
+}
+
+Status Client::ReadExtraMsg(void* data, size_t size) {
+  if (!extra_request_memory_addr_ || size > extra_request_mem_size_) {
+    return Status::Invalid("Invalid extra request memory");
+  }
+  if (read_pos_ + size > extra_request_mem_size_) {
+    return Status::Invalid("Invalid extra request memory");
+  }
+  memory::concurrent_memcpy(
+      data, static_cast<char*>(extra_request_memory_addr_) + read_pos_, size);
+  read_pos_ += size;
+  return Status::OK();
+}
+
+Status Client::LseekExtraMsgWritePos(uint64_t offset) {
+  if (!extra_request_memory_addr_ || offset > extra_request_mem_size_) {
+    return Status::Invalid("Invalid extra request memory");
+  }
+  write_pos_ = offset;
+  return Status::OK();
+}
+
+Status Client::LseekExtraMsgReadPos(uint64_t offset) {
+  if (!extra_request_memory_addr_ || offset > extra_request_mem_size_) {
+    return Status::Invalid("Invalid extra request memory");
+  }
+  read_pos_ = offset;
+  return Status::OK();
+}
+
+Status Client::AttachReqFlag(const std::string& req_flag) {
+  std::string attr_str =
+      ClientAttributes::Default().SetReqName(req_flag).ToJsonString();
+  size_t length = attr_str.length();
+  RETURN_ON_ERROR(WriteExtraMsg(&length, sizeof(size_t)));
+  RETURN_ON_ERROR(WriteExtraMsg(attr_str.data(), length));
+  return Status::OK();
+}
+
+std::string Client::LogPrefix() {
+  auto now = std::chrono::system_clock::now();
+  auto now_time_t = std::chrono::system_clock::to_time_t(now);
+  auto now_tm = *std::localtime(&now_time_t);
+
+  auto time_since_epoch = now.time_since_epoch();
+  auto microseconds =
+      std::chrono::duration_cast<std::chrono::microseconds>(time_since_epoch)
+          .count() %
+      1000000;
+
+  std::stringstream log_prefix_ss;
+  log_prefix_ss << 'I';
+  log_prefix_ss << std::put_time(&now_tm, "%Y%m%d %H:%M:%S");
+  log_prefix_ss << '.' << std::setw(6) << std::setfill('0') << microseconds;
+  log_prefix_ss << ' ' << gettid();
+  std::string file_name = (__FILE__);
+  size_t pos = file_name.find_last_of('/');
+  if (pos != std::string::npos) {
+    file_name = file_name.substr(pos + 1);
+  }
+  log_prefix_ss << ' ' << file_name << ':' << __LINE__ << "] ";
+  return log_prefix_ss.str();
 }
 
 PlasmaClient::~PlasmaClient() {}

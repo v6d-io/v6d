@@ -364,6 +364,34 @@ void bind_client(py::module& mod) {
           },
           "stream"_a, py::arg("drop_metadata") = true)
       .def(
+          "create_fixed_stream",
+          [](ClientBase* self, std::string stream_name, int blob_num,
+             size_t blob_size) -> ObjectIDWrapper {
+            ObjectID stream_id;
+            throw_on_error(self->CreateFixedStream(stream_id, stream_name,
+                                                   blob_num, blob_size));
+            return stream_id;
+          },
+          "stream_name"_a, "blob_num"_a, "blob_size"_a)
+      .def(
+          "push_next_stream_chunk_by_offset",
+          [](ClientBase* self, ObjectID const id, uint64_t offset) {
+            throw_on_error(self->PushNextStreamChunkByOffset(id, offset));
+          },
+          "id"_a, "offset"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "close_stream",
+          [](ClientBase* self, ObjectID const id) {
+            throw_on_error(self->CloseStream(id));
+          },
+          "id"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "delete_stream",
+          [](ClientBase* self, ObjectID const id) {
+            throw_on_error(self->DeleteStream(id));
+          },
+          "id"_a)
+      .def(
           "persist",
           [](ClientBase* self, const ObjectIDWrapper object_id) {
             throw_on_error(self->Persist(object_id));
@@ -759,6 +787,113 @@ void bind_client(py::module& mod) {
             }
           },
           "stream"_a)
+      .def(
+          "vineyard_open_remote_fixed_stream_with_id",
+          [](Client* self, ObjectID remote_id, ObjectID local_id, int blob_nums,
+             size_t size, std::string remote_endpoint, std::string mode,
+             bool wait, uint64_t timeout) {
+            int fd = -1;
+            if (mode == "r") {
+              throw_on_error(self->VineyardOpenRemoteFixedStream(
+                  remote_id, local_id, fd, blob_nums, size, remote_endpoint,
+                  StreamOpenMode::read, wait, timeout));
+            } else {
+              throw_on_error(Status::AssertionFailed("Mode can only be 'r'"));
+            }
+            return fd;
+          },
+          "remote_id"_a, "local_id"_a, "blob_nums"_a, "sizes"_a,
+          "remote_endpoint"_a, "mode"_a, "wait"_a, "timeout"_a,
+          py::call_guard<py::gil_scoped_release>())
+      .def(
+          "vineyard_open_remote_fixed_stream_with_name",
+          [](Client* self, std::string remote_stream_name, ObjectID local_id,
+             int blob_nums, size_t size, std::string remote_endpoint,
+             std::string mode, bool wait, uint64_t timeout) {
+            int fd = -1;
+            if (mode == "r") {
+              throw_on_error(self->VineyardOpenRemoteFixedStream(
+                  remote_stream_name, local_id, fd, blob_nums, size,
+                  remote_endpoint, StreamOpenMode::read, wait, timeout));
+            } else {
+              throw_on_error(Status::AssertionFailed("Mode can only be 'r'"));
+            }
+            return fd;
+          },
+          "remote_stream_name"_a, "local_id"_a, "blob_nums"_a, "sizes"_a,
+          "remote_endpoint"_a, "mode"_a, "wait"_a, "timeout"_a,
+          py::call_guard<py::gil_scoped_release>())
+      .def(
+          "vineyard_activate_remote_fixed_stream_with_offset",
+          [](Client* self, ObjectID local_id, std::vector<uint64_t>& offsets) {
+            throw_on_error(self->VineyardActivateRemoteFixedStreamWithOffset(
+                local_id, offsets));
+          },
+          "local_id"_a, "offsets"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "vineyard_get_next_fixed_stream_chunk",
+          [](Client* self) -> int {
+            int index = -1;
+            throw_on_error(self->VineyardGetNextFixedStreamChunk(index));
+            return index;
+          },
+          py::call_guard<py::gil_scoped_release>())
+      .def(
+          "open_fixed_stream",
+          [](Client* self, ObjectID stream_id, std::string mode) {
+            int fd = -1;
+            if (mode == "w") {
+              throw_on_error(
+                  self->OpenFixedStream(stream_id, StreamOpenMode::write, fd));
+            } else {
+              throw_on_error(Status::AssertionFailed("Mode can only be 'w'"));
+            }
+            return fd;
+          },
+          "stream"_a, "mode"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "vineyard_close_remote_fixed_stream",
+          [](Client* self, ObjectID local_id) {
+            throw_on_error(self->VineyardCloseRemoteFixedStream(local_id));
+          },
+          "local_id"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "vineyard_abort_remote_stream",
+          [](Client* self, ObjectID local_id) {
+            bool success = false;
+            throw_on_error(self->VineyardAbortRemoteStream(local_id, success));
+            return success;
+          },
+          "local_id"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "abort_stream",
+          [](Client* self, ObjectID local_id) {
+            bool success = false;
+            throw_on_error(self->AbortStream(local_id, success));
+            return success;
+          },
+          "local_id"_a, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "check_fixed_stream_received",
+          [](Client* self, ObjectID local_id, int index) -> bool {
+            bool received = false;
+            throw_on_error(
+                self->CheckFixedStreamReceived(local_id, index, received));
+            return received;
+          },
+          "local_id"_a, "index"_a)
+      .def("get_vineyard_mmap_fd",
+           [](Client* self) -> std::vector<int64_t> {
+             int fd = -1;
+             size_t size = 0;
+             size_t offset = 0;
+             std::vector<int64_t> ret;
+             throw_on_error(self->GetVineyardMmapFd(fd, size, offset));
+             ret.push_back(fd);
+             ret.push_back(size);
+             ret.push_back(offset);
+             return ret;
+           })
       .def(
           "allocated_size",
           [](Client* self, const ObjectID id) -> size_t {

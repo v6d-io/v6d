@@ -65,7 +65,9 @@ class ILock {
   const unsigned rev_;
 };
 
+#if defined(BUILD_VINEYARDD_ETCD)
 class EtcdMetaService;
+#endif  // BUILD_VINEYARDD_ETCD
 
 /**
  * @brief IMetaService is the base class of EtcdMetaService
@@ -118,9 +120,23 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   void RequestToDirectUpdate(std::vector<op_t> const& ops,
                              const bool from_remote = false);
 
-  void RequestToPersist(
+  virtual void RequestToPersist(
       callback_t<const json&, std::vector<op_t>&> callback_after_ready,
       callback_t<> callback_after_finish);
+
+  virtual void DirectGetFromMetaService(const std::vector<std::string>& keys,
+                                        callback_t<const json&> callback) {
+    callback(Status::NotImplemented("DirectGetFromMetaService is not "
+                                    "implemented in this meta service."),
+             json());
+  }
+
+  virtual void DirectPutToMetaService(const std::vector<std::string>& keys,
+                                      const std::vector<std::string>& values,
+                                      int ttl_seconds, callback_t<> callback) {
+    callback(Status::NotImplemented(
+        "DirectPutToMetaService is not implemented in this meta service."));
+  }
 
   void RequestToGetData(const bool sync_remote,
                         callback_t<const json&> callback);
@@ -149,14 +165,18 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   virtual void TryReleaseLock(std::string key, callback_t<bool> callback) = 0;
 
+#if defined(BUILD_VINEYARDD_ETCD)
   Status RemoveEtcdMember(const uint64_t& member_id);
 
   const uint64_t GetEtcdMemberID();
 
   Status UpdateEtcdEndpoint();
+#endif  // BUILD_VINEYARDD_ETCD
 
  private:
+#if defined(BUILD_VINEYARDD_ETCD)
   void registerToEtcd();
+#endif  // BUILD_VINEYARDD_ETCD
 
   /**
    * Watch rules:
@@ -203,6 +223,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   // validate the liveness of the underlying meta service.
   virtual Status probe() = 0;
 
+#if defined(BUILD_VINEYARDD_ETCD)
   template <typename Func, typename ReturnType = void>
   ReturnType callIfEtcdMetaService(Func&& func,
                                    ReturnType defaultValue = ReturnType()) {
@@ -213,6 +234,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     }
     return defaultValue;
   }
+#endif  // BUILD_VINEYARDD_ETCD
 
   void printDepsGraph();
 
@@ -249,16 +271,22 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   void delVal(const kv_t& kv);
   void delVal(ObjectID const& target, std::set<ObjectID>& blobs);
 
+ protected:
   template <class RangeT>
   void metaUpdate(const RangeT& ops, bool const from_remote,
                   const bool memory_trim = false);
 
+ private:
+#if defined(BUILD_VINEYARDD_ETCD)
   void instanceUpdate(const op_t& op, const bool from_remote = true);
+#endif  // defined(BUILD_VINEYARDD_ETCD)
 
+#if defined(BUILD_VINEYARDD_ETCD)
   static Status daemonWatchHandler(std::shared_ptr<IMetaService> self,
                                    const Status& status,
                                    const std::vector<op_t>& ops, unsigned rev,
                                    callback_t<unsigned> callback_after_update);
+#endif  // defined(BUILD_VINEYARDD_ETCD)
 
   std::unique_ptr<asio::steady_timer> heartbeat_timer_;
   std::set<InstanceID> instances_list_;

@@ -32,12 +32,16 @@ limitations under the License.
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"
+#include "common/util/sidecar.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
+#include "server/async/rpc_server.h"
 #include "server/memory/memory.h"
-
 #include "server/memory/stream_store.h"
+#include "server/util/remote_pool.h"
+
 #include "server/server/vineyard_runner.h"
+#include "server/util/remote.h"
 
 namespace vineyard {
 
@@ -46,7 +50,6 @@ namespace asio = boost::asio;
 class IMetaService;
 
 class IPCServer;
-class RPCServer;
 
 /**
  * @brief DeferredReq aims to defer a socket request such that the request
@@ -147,6 +150,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status Persist(const ObjectID id, callback_t<> callback);
 
+  Status Persist(const std::vector<ObjectID>& ids, callback_t<> callback);
+
   Status IfPersist(const ObjectID id, callback_t<const bool> callback);
 
   Status Exists(const ObjectID id, callback_t<const bool> callback);
@@ -168,13 +173,31 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status DeleteAllAt(const json& meta, InstanceID const instance_id);
 
   Status PutName(const ObjectID object_id, const std::string& name,
-                 callback_t<> callback);
+                 bool overwrite, callback_t<> callback);
+
+  Status PutNames(const std::vector<ObjectID>& object_ids,
+                  const std::vector<std::string>& names, bool overwrite,
+                  callback_t<> callback);
 
   Status GetName(const std::string& name, const bool wait,
                  DeferredReq::alive_t alive,  // if connection is still alive
                  callback_t<const ObjectID&> callback);
 
+  Status GetNames(const std::vector<std::string>& name_vec, const bool wait,
+                  DeferredReq::alive_t alive,  // if connection is still alive
+                  callback_t<std::vector<ObjectID>> callback);
+
+  Status GetObjectLocation(
+      const std::vector<std::string>& names,
+      callback_t<std::vector<std::vector<std::string>>&> callback);
+
+  Status PutObjectLocation(const std::vector<std::string>& names,
+                           const std::vector<std::string>& locations,
+                           int ttl_seconds, callback_t<> callback);
+
   Status DropName(const std::string& name, callback_t<> callback);
+
+  Status DropNames(std::vector<std::string>& name_vec, callback_t<> callback);
 
   Status MigrateObject(
       const ObjectID object_id,
@@ -207,7 +230,42 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   Status TryReleaseLock(std::string& key, callback_t<bool> callback);
 
-  inline SessionID session_id() const { return session_id_; }
+  // stream
+  Status VineyardOpenRemoteFixedStream(
+      ObjectID remote_id, std::string stream_name, ObjectID local_id,
+      int blob_nums, size_t size, std::string& endpoint, uint64_t mode,
+      std::string owner, bool wait, uint64_t timeout, callback_t<> callback);
+
+  Status VineyardActivateRemoteFixedStream(
+      ObjectID stream_id, int conn_id, bool create_buffer,
+      std::vector<ObjectID>& blob_list,
+      void_callback_t<Status&, std::vector<std::shared_ptr<Payload>>&>
+          callback);
+
+  Status VineyardCloseRemoteFixedStream(ObjectID stream_id,
+                                        callback_t<> callback);
+
+  Status VineyardAbortRemoteStream(ObjectID stream_id,
+                                   callback_t<bool> callback);
+
+  Status VineyardGetMetasByNames(std::vector<std::string>& names,
+                                 std::string rpc_endpoint,
+                                 ClientAttributes attr,
+                                 callback_t<const std::vector<json>&> callback);
+
+  Status VineyardGetRemoteBlobs(
+      std::vector<std::vector<ObjectID>> local_id_vec,
+      std::vector<std::vector<ObjectID>> remote_id_vec,
+      std::string rpc_endpoint, ClientAttributes attr,
+      callback_t<int> callback);
+
+  Status VineyardGetRemoteBlobsWithOffset(
+      std::vector<std::vector<size_t>> local_buffer_vec,
+      std::vector<std::vector<ObjectID>> remote_id_vec,
+      std::vector<std::vector<size_t>> sizes_vec, std::string rpc_endpoint,
+      ClientAttributes attr, callback_t<int> callback);
+
+  virtual inline SessionID session_id() const { return session_id_; }
   inline InstanceID instance_id() { return instance_id_; }
   inline std::string instance_name() { return instance_name_; }
   inline void set_instance_id(InstanceID id) {
@@ -238,6 +296,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   const std::string RDMAEndpoint();
 
+  int GetTraceLogLevel() { return trace_log_level_; }
+
   void LockTransmissionObjects(std::vector<ObjectID> const& ids) {
     std::lock_guard<std::mutex> lock(transmission_objects_mutex_);
     for (auto const& id : ids) {
@@ -259,6 +319,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
           }
         }
       }
+      VLOG(3) << "locked transmission objects size: "
+              << transmission_objects_.size();
     }
     DeletePendingObjects();
   }
@@ -328,9 +390,35 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
     }
   }
 
+  Status GetBulkStoreBasePointer(void*& pointer) {
+    if (bulk_store_ == nullptr) {
+      return Status::ObjectNotExists("bulk store is not ready");
+    }
+    pointer = bulk_store_->GetBasePointer();
+    return Status::OK();
+  }
+
+  virtual Status GetBulkStoreMmapAddr(void*& addr) {
+    if (bulk_store_ == nullptr) {
+      return Status::ObjectNotExists("bulk store is not ready");
+    }
+    addr = reinterpret_cast<void*>(
+        reinterpret_cast<uint64_t>(bulk_store_->GetBasePointer()) -
+        bulk_store_->GetBaseOffset());
+    return Status::OK();
+  }
+
+  virtual Status GetBulkStoreBaseSize(size_t& size) {
+    if (bulk_store_ == nullptr) {
+      return Status::ObjectNotExists("bulk store is not ready");
+    }
+    size = bulk_store_->GetBaseSize();
+    return Status::OK();
+  }
+
   ~VineyardServer();
 
- private:
+ protected:
   json spec_;
   SessionID session_id_;
 
@@ -381,6 +469,9 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   // It must be blob.
   std::unordered_set<ObjectID> pendding_to_delete_objects_;
   std::mutex pendding_to_delete_objects_mutex_;
+  std::shared_ptr<RemoteClientPool> remote_client_pool_;
+
+  int trace_log_level_ = 0;
 };
 
 }  // namespace vineyard

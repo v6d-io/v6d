@@ -345,6 +345,70 @@ Status BlobWriter::_Seal(Client& client, std::shared_ptr<Object>& object) {
   return Status::OK();
 }
 
+void UserBlob::Construct(ObjectMeta const& meta) {
+  std::string __type_name = type_name<Blob>();
+  VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
+                  "Expect typename '" + __type_name + "', but got '" +
+                      meta.GetTypeName() + "'");
+  this->meta_ = meta;
+  this->id_ = meta.GetId();
+  if (this->buffer_ != nullptr) {
+    return;
+  }
+  if (this->id_ == EmptyBlobID()) {
+    this->size_ = 0;
+    return;
+  }
+  if (!meta.IsLocal()) {
+    return;
+  }
+  auto buffer = std::dynamic_pointer_cast<Buffer>(this->buffer_);
+  if (meta.GetBuffer(meta.GetId(), buffer).ok()) {
+    if (this->buffer_ == nullptr) {
+      throw std::runtime_error(
+          "Blob::Construct(): Invalid internal state: local blob found but it "
+          "is nullptr: " +
+          ObjectIDToString(meta.GetId()));
+    }
+    this->size_ = this->buffer_->size();
+  } else {
+    throw std::runtime_error(
+        "Blob::Construct(): Invalid internal state: failed to construct local "
+        "blob since payload is missing: " +
+        ObjectIDToString(meta.GetId()));
+  }
+}
+
+Status UserBlobBuilder::_Seal(Client& client, std::shared_ptr<Object>& object) {
+  RETURN_ON_ASSERT(!this->sealed(),
+                   "The user blob builder has been already sealed.");
+  auto buffer = std::make_shared<UserBuffer>(this->offset_, this->size_);
+
+  std::shared_ptr<UserBlob> blob(new UserBlob());
+  object = blob;
+
+  blob->id_ = object_id_;
+  blob->size_ = size();
+  blob->meta_.SetId(object_id_);  // blob's id is the address
+
+  // create meta in vineyardd
+  blob->meta_.SetTypeName(type_name<Blob>());
+  blob->meta_.AddKeyValue("length", size());
+  blob->meta_.SetNBytes(size());
+  blob->meta_.AddKeyValue("instance_id", client.instance_id());
+  blob->meta_.AddKeyValue("transient", true);
+
+  blob->buffer_ = buffer;  // assign the readonly buffer.
+
+  RETURN_ON_ERROR(client.SealUserBlob(object_id_));
+  // associate extra key-value metadata
+  for (auto const& kv : metadata_) {
+    blob->meta_.AddKeyValue(kv.first, kv.second);
+  }
+  this->set_sealed(true);
+  return Status::OK();
+}
+
 Status BufferSet::EmplaceBuffer(ObjectID const id) {
   auto p = buffers_.find(id);
   if (p != buffers_.end() && p->second != nullptr) {
