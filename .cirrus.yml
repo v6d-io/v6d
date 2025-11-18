@@ -1,0 +1,237 @@
+# only run for releases
+only_if: $CIRRUS_TAG != ''
+
+env:
+  MACOSX_DEPLOYMENT_TARGET: "10.15"
+
+macosx_arm64_wheel_task:
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-monterey-base:latest
+
+  checkout_script:
+    - git submodule init
+    - git submodule update
+
+  install_deps_script:
+    - brew update
+    # go 1.22 doesn't work, see also: https://github.com/golang/go/issues/37602
+    - brew install coreutils go@1.21 pyenv python
+
+  install_various_python_script:
+    - pyenv install 3.8.18
+    - pyenv install 3.9.18
+    - pyenv install 3.10.13
+    - pyenv install 3.11.8
+    - pyenv install 3.12.2
+
+  install_apache_arrow_script: |
+    echo "Installing apache-arrow ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.1.tar.gz --output apache-arrow-8.0.1.tar.gz
+    tar zxf apache-arrow-8.0.1.tar.gz
+    cd arrow-apache-arrow-8.0.1
+    mkdir -p build-dir
+    cd build-dir
+    cmake ../cpp \
+        -DARROW_COMPUTE=OFF \
+        -DARROW_WITH_UTF8PROC=OFF \
+        -DARROW_CSV=OFF \
+        -DARROW_CUDA=OFF \
+        -DARROW_DATASET=OFF \
+        -DARROW_FILESYSTEM=ON \
+        -DARROW_FLIGHT=OFF \
+        -DARROW_GANDIVA=OFF \
+        -DARROW_GANDIVA_JAVA=OFF \
+        -DARROW_HDFS=OFF \
+        -DARROW_HIVESERVER2=OFF \
+        -DARROW_JSON=OFF \
+        -DARROW_ORC=OFF \
+        -DARROW_PARQUET=OFF \
+        -DARROW_PLASMA=OFF \
+        -DARROW_PLASMA_JAVA_CLIENT=OFF \
+        -DARROW_PYTHON=OFF \
+        -DARROW_S3=OFF \
+        -DARROW_WITH_BZ2=OFF \
+        -DARROW_WITH_ZLIB=OFF \
+        -DARROW_WITH_LZ4=OFF \
+        -DARROW_WITH_SNAPPY=OFF \
+        -DARROW_WITH_ZSTD=OFF \
+        -DARROW_WITH_BROTLI=OFF \
+        -DARROW_IPC=ON \
+        -DARROW_BUILD_BENCHMARKS=OFF \
+        -DARROW_BUILD_EXAMPLES=OFF \
+        -DARROW_BUILD_INTEGRATION=OFF \
+        -DARROW_BUILD_UTILITIES=OFF \
+        -DARROW_BUILD_TESTS=OFF \
+        -DARROW_ENABLE_TIMING_TESTS=OFF \
+        -DARROW_FUZZING=OFF \
+        -DARROW_USE_ASAN=OFF \
+        -DARROW_USE_TSAN=OFF \
+        -DARROW_USE_UBSAN=OFF \
+        -DARROW_JEMALLOC=OFF \
+        -DARROW_BUILD_SHARED=OFF \
+        -DARROW_BUILD_STATIC=ON
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_boost_script: |
+    echo "Installing boost ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    wget -q https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz
+    tar zxf boost_1_75_0.tar.gz
+    cd boost_1_75_0
+    ./bootstrap.sh
+    sudo ./b2 install -j`nproc` variant=release threading=multi \
+        --with-atomic \
+        --with-chrono \
+        --with-date_time \
+        --with-filesystem \
+        --with-random \
+        --with-regex \
+        --with-system \
+        --with-thread
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_gflags_script: |
+    echo "Installing gflags ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
+    tar zxf gflags-v2.2.2.tar.gz
+    cd gflags-2.2.2
+    mkdir -p build-dir
+    cd build-dir
+    cmake .. -DBUILD_SHARED_LIBS=OFF
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_glog_script: |
+    echo "Installing glog ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    curl -L https://github.com/google/glog/archive/v0.6.0.tar.gz --output glog-v0.6.0.tar.gz
+    tar zxf glog-v0.6.0.tar.gz
+    cd glog-0.6.0
+    mkdir -p build-dir
+    cd build-dir
+    cmake .. -DBUILD_SHARED_LIBS=OFF \
+              -DWITH_GFLAGS=OFF \
+              -DBUILD_TESTING=OFF
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_protobuf_grpc_script: |
+    echo "Installing protobuf & grpc ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz
+    tar zxf grpc-grpc-1.36.x.tar.gz
+    cd grpc-grpc-1.36.x
+    mkdir -p cmake-build
+    cd cmake-build
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DgRPC_INSTALL=ON \
+             -DgRPC_BUILD_TESTS=OFF \
+             -DgRPC_BUILD_CSHARP_EXT=OFF \
+             -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
+             -DgRPC_SSL_PROVIDER=package \
+             -DgRPC_ZLIB_PROVIDER=package \
+             -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) \
+             -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  build_vineyardctl_script:
+    - |
+      export PATH=$(brew --prefix go@1.21)/bin:$PATH
+      make -C k8s vineyardctl
+
+  vineyardctl_artifacts:
+    path: k8s/vineyardctl
+
+  build_vineyardd_script:
+    - mkdir -p build
+    - cd build
+    - |
+      pyenv global 3.11.8
+      cmake .. -DCMAKE_BUILD_TYPE=Release \
+               -DCMAKE_CXX_STANDARD=17 \
+               -DCMAKE_CXX_STANDARD_REQUIRED=TRUE \
+               -DBUILD_SHARED_LIBS=OFF \
+               -DBUILD_VINEYARD_SERVER=ON \
+               -DBUILD_VINEYARD_CLIENT=OFF \
+               -DBUILD_VINEYARD_PYTHON_BINDINGS=OFF \
+               -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
+               -DBUILD_VINEYARD_BASIC=OFF \
+               -DBUILD_VINEYARD_GRAPH=OFF \
+               -DBUILD_VINEYARD_IO=OFF \
+               -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+               -DBUILD_VINEYARD_TESTS=OFF \
+               -DBUILD_VINEYARD_TESTS_ALL=OFF \
+               -DBUILD_VINEYARD_PROFILING=OFF
+      make vineyardd -j$(sysctl -n hw.ncpu)
+
+  vineyardd_artifacts:
+    path: build/bin/vineyardd
+
+  build_vineyard_bdist_script:
+    - pyenv global 3.11.8
+    - cp k8s/vineyardctl ./python/vineyard/bdist/vineyardctl
+    - cp build/bin/vineyardd ./python/vineyard/bdist/vineyardd
+    - strip ./python/vineyard/bdist/vineyardctl
+    - strip ./python/vineyard/bdist/vineyardd
+    - python3 setup_bdist.py bdist_wheel --plat=macosx_11_0_arm64
+
+  build_vineyard_python_script:
+    - |
+      for py in 3.8.18 3.9.18 3.10.13 3.11.8 3.12.2; do
+        current_python=$(pyenv root)/versions/$py/bin/python
+        echo "Python is: $current_python, $($current_python --version)"
+        $current_python -m pip install delocate setuptools wheel
+        rm -rf build/lib* build/bdist.* python/vineyard/*.dylib python/vineyard/*.so
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release \
+                 -DCMAKE_CXX_STANDARD=17 \
+                 -DCMAKE_CXX_STANDARD_REQUIRED=TRUE \
+                 -DBUILD_SHARED_LIBS=OFF \
+                 -DBUILD_VINEYARD_SERVER=OFF \
+                 -DBUILD_VINEYARD_CLIENT=ON \
+                 -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+                 -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
+                 -DPYTHON_EXECUTABLE=$current_python \
+                 -DBUILD_VINEYARD_BASIC=OFF \
+                 -DBUILD_VINEYARD_GRAPH=OFF \
+                 -DBUILD_VINEYARD_IO=OFF \
+                 -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+                 -DBUILD_VINEYARD_TESTS=OFF \
+                 -DBUILD_VINEYARD_TESTS_ALL=OFF \
+                 -DBUILD_VINEYARD_PROFILING=OFF
+        make vineyard_client_python -j$(sysctl -n hw.ncpu)
+        cd ..
+        $current_python setup.py bdist_wheel
+      done
+
+  delocate_wheel_script:
+    - |
+      $(brew --prefix python)/bin/python3 -m pip install delocate wheel
+      for wheel in dist/*.whl; do
+        delocate-wheel -w fixed_wheels -v $wheel
+      done
+      ls -la ./fixed_wheels
+
+  macosx_arm64_wheel_artifacts:
+    path: fixed_wheels/*.whl
