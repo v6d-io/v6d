@@ -41,4 +41,19 @@ webhookService:
     protocol: TCP
     targetPort: 9443
   type: ClusterIP
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetMemoryUtilization: 50
+  
+  scaleUp:
+    pods: 2
+    periodSeconds: 15
+    stabilizationWindowSeconds: 0
+  
+  scaleDown:
+    percent: 50
+    periodSeconds: 60
+    stabilizationWindowSeconds: 300
 fullnameOverride: vineyard
