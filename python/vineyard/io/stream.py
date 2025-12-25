@@ -264,6 +264,12 @@ class BaseStream:
             self._resolver = resolver
             self._client.open_stream(stream, 'r')
 
+        def next_chunk_id(self) -> ObjectID:
+            try:
+                return self._client.next_chunk_id(self._stream)
+            except StreamDrainedException as e:
+                raise StopIteration('No more chunks') from e
+
         def next(self) -> object:
             try:
                 chunk = self._client.next_chunk(self._stream)
