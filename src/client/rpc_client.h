@@ -88,7 +88,8 @@ class RPCClient final : public ClientBase {
    */
   Status Connect(const std::string& rpc_endpoint, std::string const& username,
                  std::string const& password,
-                 const std::string& rdma_endpoint = "");
+                 const std::string& rdma_endpoint = "",
+                 std::string src_rdma_ednpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
@@ -104,7 +105,8 @@ class RPCClient final : public ClientBase {
   Status Connect(const std::string& rpc_endpoint, const SessionID session_id,
                  std::string const& username = "",
                  std::string const& password = "",
-                 const std::string& rdma_endpoint = "");
+                 const std::string& rdma_endpoint = "",
+                 std::string src_rdma_ednpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
@@ -117,7 +119,8 @@ class RPCClient final : public ClientBase {
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& host, uint32_t port,
-                 const std::string& rdma_host = "", uint32_t rdma_port = -1);
+                 const std::string& rdma_host = "", uint32_t rdma_port = -1,
+                 std::string src_rdma_ednpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
@@ -131,7 +134,8 @@ class RPCClient final : public ClientBase {
    */
   Status Connect(const std::string& host, uint32_t port,
                  std::string const& username, std::string const& password,
-                 const std::string& rdma_host = "", uint32_t rdma_port = -1);
+                 const std::string& rdma_host = "", uint32_t rdma_port = -1,
+                 std::string src_rdma_ednpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
@@ -147,7 +151,8 @@ class RPCClient final : public ClientBase {
   Status Connect(const std::string& host, uint32_t port,
                  const SessionID session_id, std::string const& username = "",
                  std::string const& password = "",
-                 const std::string& rdma_host = "", uint32_t rdma_port = -1);
+                 const std::string& rdma_host = "", uint32_t rdma_port = -1,
+                 std::string src_rdma_ednpoint = "");
 
   /**
    * @brief Create a new client using self endpoint.
@@ -436,7 +441,8 @@ class RPCClient final : public ClientBase {
   const std::string rdma_endpoint() { return rdma_endpoint_; }
 
  private:
-  Status ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port);
+  Status ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port,
+                     std::string src_rdma_endpoint = "");
 
   Status StopRDMA();
 
@@ -479,6 +485,7 @@ class RPCClient final : public ClientBase {
   std::string rdma_endpoint_;
   std::shared_ptr<RDMAClient> rdma_client_;
   mutable bool rdma_connected_ = false;
+  std::string src_rdma_endpoint_ = "";
 
   friend class Client;
 };

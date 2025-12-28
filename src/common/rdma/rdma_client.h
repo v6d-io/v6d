@@ -105,12 +105,17 @@ class RDMAClient : public IRDMA {
 
 class RDMAClientCreator {
  public:
-  static Status Create(std::shared_ptr<RDMAClient>& ptr,
-                       std::string server_address, int port);
+  static Status Create(std::shared_ptr<RDMAClient>& ptr, std::string dst_addr,
+                       int port, std::string src_endpoint = "");
 
   static Status Release(std::string rdma_endpoint);
 
   static Status Clear();
+
+  static std::string buildConnectionKey(std::string rdma_endpoint,
+                                        std::string src_endpoint = "") {
+    return src_endpoint + "->" + rdma_endpoint;
+  }
 
  private:
 #if defined(__linux__)
@@ -121,10 +126,12 @@ class RDMAClientCreator {
 
   static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
                                          fi_info* hints,
-                                         std::string server_address, int port);
+                                         std::string server_address, int port,
+                                         std::string src_endpoint = "");
 
   static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
-                                         std::string server_address, int port);
+                                         std::string server_address, int port,
+                                         std::string src_endpoint = "");
 
   static std::map<std::string, RDMARemoteNodeInfo> servers_;
   static std::mutex servers_mtx_;

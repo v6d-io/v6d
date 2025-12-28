@@ -153,10 +153,11 @@ void CheckBlobValue(
 
 // Test 512K~512M blob
 int main(int argc, const char** argv) {
-  if (argc < 7) {
+  if (argc < 8) {
     LOG(ERROR) << "usage: " << argv[0] << " <ipc_socket>"
                << " <rpc_endpoint>"
                << " <rdma_endpoint>"
+               << " <rdma_src_endpoint>"
                << " <min_size>"
                << " <max_size>"
                << " <parallel>";
@@ -165,17 +166,21 @@ int main(int argc, const char** argv) {
   std::string ipc_socket = std::string(argv[1]);
   std::string rpc_endpoint = std::string(argv[2]);
   std::string rdma_endpoint = std::string(argv[3]);
-  int parallel = std::stoi(argv[6]);
+  std::string rdma_src_endpoint = std::string(argv[4]);
+  std::cout << "rdma_src_endpoint: " << rdma_src_endpoint << std::endl;
+  int parallel = std::stoi(argv[7]);
   std::vector<std::shared_ptr<RPCClient>> clients;
   for (int i = 0; i < parallel; i++) {
     clients.push_back(std::make_shared<RPCClient>());
-    VINEYARD_CHECK_OK(clients[i]->Connect(rpc_endpoint, "", "", rdma_endpoint));
+    VINEYARD_CHECK_OK(clients[i]->Connect(
+        rpc_endpoint, "", "", rdma_endpoint,
+        rdma_src_endpoint + ":" + std::to_string(i + 5111)));
   }
 
   uint64_t min_size = 1024 * 1024 * 2;  // 512K
   uint64_t max_size = 1024 * 1024 * 2;  // 64M
-  min_size = std::stoull(argv[4]) * 1024 * 1024;
-  max_size = std::stoull(argv[5]) * 1024 * 1024;
+  min_size = std::stoull(argv[5]) * 1024 * 1024;
+  max_size = std::stoull(argv[6]) * 1024 * 1024;
   if (min_size == 0) {
     min_size = 1024 * 512;
   }

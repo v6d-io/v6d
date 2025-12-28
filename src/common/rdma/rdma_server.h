@@ -18,6 +18,7 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <vector>
 
 #include "common/rdma/rdma.h"
@@ -35,7 +36,8 @@ class RDMAServer : public IRDMA {
 
   ~RDMAServer() {}
 
-  static Status Make(std::shared_ptr<RDMAServer>& ptr, int port);
+  static Status Make(std::shared_ptr<RDMAServer>& ptr, int port,
+                     std::string host = "");
 
   Status Send(uint64_t clientID, void* buf, size_t size, void* ctx);
 
@@ -89,8 +91,8 @@ class RDMAServer : public IRDMA {
 
  private:
 #if defined(__linux__)
-  static Status Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
-                     int port);
+  static Status Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints, int port,
+                     std::string host);
 
   Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
                         void*& mr_desc);

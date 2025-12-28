@@ -55,7 +55,7 @@ class IRDMA {
 
   static int GetCompletion(fid_cq* cq, int timeout, void** context);
 
-  static void FreeInfo(fi_info* info);
+  static void FreeInfo(fi_info* info, bool is_hints);
 
   template <typename FIDType>
   static Status CloseResource(FIDType* res, const char* resource_name) {
