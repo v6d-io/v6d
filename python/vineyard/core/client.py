@@ -42,6 +42,7 @@ from vineyard._C import RPCClient
 from vineyard._C import VineyardException
 from vineyard._C import _connect
 from vineyard.core.builder import BuilderContext
+from vineyard.core.builder import get_current_builders
 from vineyard.core.builder import put
 from vineyard.core.resolver import ResolverContext
 from vineyard.core.resolver import get
@@ -168,6 +169,7 @@ class Client:
         session: int = None,
         username: str = None,
         password: str = None,
+        max_workers: int = 8,
         config: str = None,
     ):
         """Connects to the vineyard IPC socket and RPC socket.
@@ -211,6 +213,8 @@ class Client:
                       is enabled.
             password: Optional, the required password of vineyardd when authentication
                       is enabled.
+            max_workers: Optional, the maximum number of threads that can be used to
+                        asynchronously put objects to vineyard. Default is 8.
             config: Optional, can either be a path to a YAML configuration file or
                     a path to a directory containing the default config file
                     `vineyard-config.yaml`. Also, the environment variable
@@ -290,6 +294,9 @@ class Client:
             except VineyardException:
                 continue
 
+        self._max_workers = max_workers
+        self._put_thread_pool = None
+
         self._spread = False
         self._compression = True
         if self._ipc_client is None and self._rpc_client is None:
@@ -346,6 +353,13 @@ class Client:
     def rpc_client(self) -> RPCClient:
         assert self._rpc_client is not None, "RPC client is not available."
         return self._rpc_client
+
+    @property
+    def put_thread_pool(self) -> ThreadPoolExecutor:
+        """Lazy initialization of the thread pool for asynchronous put."""
+        if self._put_thread_pool is None:
+            self._put_thread_pool = ThreadPoolExecutor(max_workers=self._max_workers)
+        return self._put_thread_pool
 
     def has_ipc_client(self):
         return self._ipc_client is not None
@@ -820,17 +834,17 @@ class Client:
     ):
         return get(self, object_id, name, resolver, fetch, **kwargs)
 
-    @_apply_docstring(put)
-    def put(
+    def _put_internal(
         self,
         value: Any,
         builder: Optional[BuilderContext] = None,
         persist: bool = False,
         name: Optional[str] = None,
+        as_async: bool = False,
         **kwargs,
     ):
         try:
-            return put(self, value, builder, persist, name, **kwargs)
+            return put(self, value, builder, persist, name, as_async, **kwargs)
         except NotEnoughMemoryException as exec:
             with envvars(
                 {'VINEYARD_RPC_SKIP_RETRY': '1', 'VINEYARD_IPC_SKIP_RETRY': '1'}
@@ -856,7 +870,45 @@ class Client:
                     host, port = meta[instance_id]['rpc_endpoint'].split(':')
                     self._rpc_client = _connect(host, port)
                     self.compression = previous_compression_state
-            return put(self, value, builder, persist, name, **kwargs)
+            return put(self, value, builder, persist, name, as_async, **kwargs)
+
+    @_apply_docstring(put)
+    def put(
+        self,
+        value: Any,
+        builder: Optional[BuilderContext] = None,
+        persist: bool = False,
+        name: Optional[str] = None,
+        as_async: bool = False,
+        **kwargs,
+    ):
+        if as_async:
+
+            def _default_callback(future):
+                try:
+                    result = future.result()
+                    if isinstance(result, ObjectID):
+                        print(f"Successfully put object {result}", flush=True)
+                    elif isinstance(result, ObjectMeta):
+                        print(f"Successfully put object {result.id}", flush=True)
+                except Exception as e:
+                    print(f"Failed to put object: {e}", flush=True)
+
+            current_builder = builder or get_current_builders()
+
+            thread_pool = self.put_thread_pool
+            result = thread_pool.submit(
+                self._put_internal,
+                value,
+                current_builder,
+                persist,
+                name,
+                as_async=True,
+                **kwargs,
+            )
+            result.add_done_callback(_default_callback)
+            return result
+        return self._put_internal(value, builder, persist, name, **kwargs)
 
     @contextlib.contextmanager
     def with_compression(self, enabled: bool = True):

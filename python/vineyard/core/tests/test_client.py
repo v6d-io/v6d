@@ -19,8 +19,10 @@
 import itertools
 import multiprocessing
 import random
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
 
 import numpy as np
 
@@ -317,3 +319,40 @@ def test_memory_trim(vineyard_client):
 
     # there might be some fragmentation overhead
     assert parse_shared_memory_usage() <= original_memory_usage + 2 * data_kbytes
+
+
+def test_async_put_and_get(vineyard_client):
+    data = np.ones((100, 100, 16))
+    object_nums = 100
+
+    def producer(vineyard_client):
+        start_time = time.time()
+        client = vineyard_client.fork()
+        for i in range(object_nums):
+            client.put(data, name="test" + str(i), as_async=True, persist=True)
+            client.put(data)
+        end_time = time.time()
+        print("Producer time: ", end_time - start_time)
+
+    def consumer(vineyard_client):
+        start_time = time.time()
+        client = vineyard_client.fork()
+        for i in range(object_nums):
+            object_id = client.get_name(name="test" + str(i), wait=True)
+            client.get(object_id)
+        end_time = time.time()
+        print("Consumer time: ", end_time - start_time)
+
+    producer_thread = Thread(target=producer, args=(vineyard_client,))
+    consumer_thread = Thread(target=consumer, args=(vineyard_client,))
+
+    start_time = time.time()
+
+    producer_thread.start()
+    consumer_thread.start()
+
+    producer_thread.join()
+    consumer_thread.join()
+
+    end_time = time.time()
+    print("Total time: ", end_time - start_time)
