@@ -57,6 +57,23 @@ namespace vineyard {
   } while (0)
 #endif  // ENSURE_VINEYARDD_READY
 
+bool is_all_digits(const std::string& name) {
+  for (char ch : name) {
+    if (!std::isdigit(static_cast<unsigned char>(ch))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Helper function to adjust the name if it's all digits.
+std::string AdjustName(const std::string& name) {
+  if (is_all_digits(name)) {
+    return "_" + name;
+  }
+  return name;
+}
+
 bool DeferredReq::Alive() const { return alive_fn_(); }
 
 bool DeferredReq::TestThenCall(const json& meta) const {
@@ -871,13 +888,22 @@ Status VineyardServer::PutName(const ObjectID object_id,
                                const std::string& name, callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
   auto self(shared_from_this());
+  // if the name is all digits, prefix it with '_'
+  // as the nlohmann/json can't convert '/names/1234: 12345' to 'names:{"1234",
+  // "12345"}'
+  std::string new_name = AdjustName(name);
+
   meta_service_ptr_->RequestToPersist(
-      [object_id, name](const Status& status, const json& meta,
-                        std::vector<meta_tree::op_t>& ops) {
+      [object_id, name = new_name](const Status& status, const json& meta,
+                                   std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           // TODO: do proper validation:
           // 1. global objects can have name, local ones cannot.
-          // 2. the name-object_id mapping shouldn't be overwrite.
+
+          auto names = meta.value("names", json(nullptr));
+          if (names.is_object() && names.contains(name)) {
+            return Status::ObjectExists("name " + name + " already exists");
+          }
 
           // blob cannot have name
           if (IsBlob(object_id)) {
@@ -928,9 +954,11 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
                                callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
   auto self(shared_from_this());
-  meta_service_ptr_->RequestToGetData(true, [self, name, wait, alive, callback](
-                                                const Status& status,
-                                                const json& meta) {
+  std::string new_name = AdjustName(name);
+
+  meta_service_ptr_->RequestToGetData(true, [self, name = new_name, wait, alive,
+                                             callback](const Status& status,
+                                                       const json& meta) {
     if (status.ok()) {
       auto test_task = [name](const json& meta) -> bool {
         auto names = meta.value("names", json(nullptr));
@@ -967,10 +995,12 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
 Status VineyardServer::DropName(const std::string& name,
                                 callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
+  std::string new_name = AdjustName(name);
+
   auto self(shared_from_this());
   meta_service_ptr_->RequestToPersist(
-      [name](const Status& status, const json& meta,
-             std::vector<meta_tree::op_t>& ops) {
+      [name = new_name](const Status& status, const json& meta,
+                        std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           auto names = meta.value("names", json(nullptr));
           if (names.is_object()) {
