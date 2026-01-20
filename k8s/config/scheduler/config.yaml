@@ -9,6 +9,12 @@ leaderElection:
 profiles:
   - schedulerName: vineyard-scheduler
     plugins:
+      filter:
+        disabled:
+          - name: "*"
+      preScore:
+        disabled:
+          - name: "*"
       score:
         enabled:
           - name: Vineyard

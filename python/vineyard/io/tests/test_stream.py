@@ -47,7 +47,7 @@ def test_recordbatch_stream(vineyard_client):
     total_chunks = 10
 
     def producer(stream: RecordBatchStream, dtypes, produced: List):
-        writer = stream.writer
+        writer = stream.open_writer(vineyard_client)
         for idx in range(total_chunks):
             time.sleep(idx)
             chunk = generate_random_dataframe(dtypes, 2)  # np.random.randint(10, 100))
@@ -57,7 +57,7 @@ def test_recordbatch_stream(vineyard_client):
         writer.finish()
 
     def consumer(stream: RecordBatchStream, produced: List):
-        reader = stream.reader
+        reader = stream.open_reader(vineyard_client)
         index = 0
         while True:
             try:
