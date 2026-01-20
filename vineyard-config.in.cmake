@@ -65,6 +65,12 @@ if(BUILD_VINEYARD_GRAPH AND BUILD_VINEYARD_GRAPH_WITH_GAR)
     endif()
 endif()
 
+if(@glog_FOUND@)
+    if(NOT TARGET glog::glog)
+        find_dependency(glog)
+    endif()
+endif()
+
 if(USE_LIBUNWIND)
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
     if(NOT LIBUNWIND_LIBRARIES)

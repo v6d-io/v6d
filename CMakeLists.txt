@@ -414,7 +414,12 @@ macro(find_mimalloc)
 endmacro()
 
 macro(find_glog)
-    include("cmake/FindGlog.cmake")
+    find_package(glog QUIET)
+    if(glog_FOUND)
+        set(GLOG_LIBRARIES glog::glog)
+    else()
+        include("cmake/FindGlog.cmake")
+    endif()
 endmacro()
 
 macro(find_gflags)
