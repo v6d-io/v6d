@@ -47,6 +47,13 @@ foreach(testfile ${TEST_FILES})
     message(STATUS "Found unit_test - " ${testname})
     add_test_case(${testname} ${testfile})
 
+    if(${testname} STREQUAL "meta_tree_test")
+        target_sources(${testname} PRIVATE
+                       ${PROJECT_SOURCE_DIR}/src/server/util/meta_tree.cc)
+        target_include_directories(${testname} PRIVATE ${GFLAGS_INCLUDE_DIR})
+        target_link_libraries(${testname} PRIVATE ${GFLAGS_LIBRARIES})
+    endif()
+
     if(USE_CUDA)
         target_compile_options(${testname} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe "--diag_suppress=284 --diag_suppress=815 --diag_suppress=997">)
     endif()
