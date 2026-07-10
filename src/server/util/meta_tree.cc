@@ -486,19 +486,31 @@ Status DelDataOps(const json& tree, const std::string& name,
       }
       ops.emplace_back(op_t::Del(data_prefix + "/" + name));
 
-      // delete signature as well
-      std::string instance_name =
-          std::to_string(data["instance_id"].get<InstanceID>());
-      std::string signature =
-          SignatureToString(data["signature"].get<Signature>());
-      ops.emplace_back(
-          op_t::Del("/signatures/i" + instance_name + "/" + signature));
-      // record deletion of object
-      LOG_SUMMARY(
-          "object",
-          instance_name + " " +
-              data.value("typename", json(nullptr)).dump().replace(1, 2, "v"),
-          -1);
+      // Delete the secondary signature index when the object has a complete
+      // index coordinate. A partially observed or stale object can contain a
+      // null instance_id/signature. That must not prevent the authoritative
+      // /data entry above from being deleted.
+      auto const instance_id = data.find("instance_id");
+      auto const signature = data.find("signature");
+      if (instance_id != data.end() && instance_id->is_number_unsigned() &&
+          signature != data.end() && signature->is_number_unsigned()) {
+        const std::string instance_name =
+            std::to_string(instance_id->get<InstanceID>());
+        ops.emplace_back(op_t::Del(
+            "/signatures/i" + instance_name + "/" +
+            SignatureToString(signature->get<Signature>())));
+        LOG_SUMMARY(
+            "object",
+            instance_name + " " +
+                data.value("typename", json(nullptr)).dump().replace(1, 2, "v"),
+            -1);
+      } else {
+        LOG_SUMMARY(
+            "object",
+            "unknown " +
+                data.value("typename", json(nullptr)).dump().replace(1, 2, "v"),
+            -1);
+      }
       return Status::OK();
     }
   }
