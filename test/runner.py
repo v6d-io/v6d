@@ -509,6 +509,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'stream_test')
         run_test(tests, 'tensor_test')
         run_test(tests, 'typename_test')
+        run_test(tests, 'unsealed_blob_leak_test')
         run_test(tests, 'version_test')
         run_test(tests, 'kv_cache_radix_tree_test')
         run_test(tests, 'kv_cache_hash_test')

@@ -219,6 +219,10 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   std::unordered_set<int> used_fds_;
   // the associated reader of the stream
   std::unordered_set<ObjectID> associated_streams_;
+  // blobs created by this connection that haven't been sealed yet, they
+  // will be reclaimed when the connection is closed to avoid leaking the
+  // memory reservation.
+  std::unordered_set<ObjectID> unsealed_blobs_;
 
   size_t read_msg_header_;
   std::string read_msg_body_;
