@@ -78,6 +78,14 @@ class BulkStoreBase {
 
   Status Delete(ID const& object_id, const bool memory_trim = false);
 
+  /**
+   * @brief Delete the object if and only if it is still unsealed, used to
+   * reclaim created-but-unsealed blobs when the client connection that
+   * created them is closed. Deleting a sealed or non-existing object is
+   * a no-op.
+   */
+  Status DeleteUnsealed(ID const& object_id);
+
   Status DeleteGPU(ID const& object_id);
 
   object_map_t& List() { return objects_; }
@@ -123,6 +131,9 @@ class BulkStoreBase {
   }
 
  protected:
+  Status DeleteImpl(ID const& object_id, const bool memory_trim,
+                    const bool unsealed_only);
+
   uint8_t* AllocateMemory(size_t size, int* fd, int64_t* map_size,
                           ptrdiff_t* offset);
   /**

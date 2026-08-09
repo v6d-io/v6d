@@ -83,6 +83,19 @@ bool SocketConnection::Stop() {
       LOG(WARNING) << "Failed to release the connection '" << this->getConnId()
                    << "' from object dependency: " << status.ToString();
     }
+
+    // reclaim blobs that were created by this connection but never sealed,
+    // otherwise their memory reservation would be leaked until the daemon
+    // is restarted.
+    for (auto const& object_id : unsealed_blobs_) {
+      auto status = bulk_store_->DeleteUnsealed(object_id);
+      if (!status.ok()) {
+        LOG(WARNING) << "Failed to reclaim the unsealed blob '"
+                     << ObjectIDToString(object_id) << "' of connection '"
+                     << this->getConnId() << "': " << status.ToString();
+      }
+    }
+    unsealed_blobs_.clear();
   }
 
   // do cleanup: clean up streams associated with this client
@@ -415,6 +428,9 @@ bool SocketConnection::doCreateBuffer(const json& root) {
   TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+  if (!IsEmptyBlobID(object_id)) {
+    unsealed_blobs_.emplace(object_id);
+  }
 
   int fd_to_send = -1;
   if (object->data_size > 0 &&
@@ -456,6 +472,11 @@ bool SocketConnection::doCreateBuffers(const json& root) {
     }
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
+  }
+  for (auto const& object_id : object_ids) {
+    if (!IsEmptyBlobID(object_id)) {
+      unsealed_blobs_.emplace(object_id);
+    }
   }
 
   std::set<int> fds_to_send_set;
@@ -499,6 +520,9 @@ bool SocketConnection::doCreateDiskBuffer(const json& root) {
 
   ObjectID object_id;
   RESPONSE_ON_ERROR(bulk_store_->CreateDisk(size, path, object_id, object));
+  if (!IsEmptyBlobID(object_id)) {
+    unsealed_blobs_.emplace(object_id);
+  }
 
   int fd_to_send = -1;
   if (object->data_size > 0 &&
@@ -558,6 +582,7 @@ bool SocketConnection::doSealBlob(json const& root) {
   ObjectID id;
   TRY_READ_REQUEST(ReadSealRequest, root, id);
   RESPONSE_ON_ERROR(bulk_store_->Seal(id));
+  unsealed_blobs_.erase(id);
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
   std::string message_out;
   WriteSealReply(message_out);
@@ -650,6 +675,7 @@ bool SocketConnection::doDropBuffer(const json& root) {
   auto status = bulk_store_->OnDelete(object_id);
   std::string message_out;
   if (status.ok()) {
+    unsealed_blobs_.erase(object_id);
     WriteDropBufferReply(message_out);
   } else {
     WriteErrorReply(status, message_out);

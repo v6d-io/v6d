@@ -304,13 +304,34 @@ Status BulkStoreBase<ID, P>::GetUnsafe(
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::Delete(ID const& object_id,
                                     const bool memory_trim) {
+  return DeleteImpl(object_id, memory_trim, /* unsealed_only */ false);
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::DeleteUnsealed(ID const& object_id) {
+  auto status =
+      DeleteImpl(object_id, /* memory_trim */ false, /* unsealed_only */ true);
+  if (status.IsObjectNotExists()) {
+    // the blob has already been dropped, e.g., by an explicit delete request
+    return Status::OK();
+  }
+  return status;
+}
+
+template <typename ID, typename P>
+Status BulkStoreBase<ID, P>::DeleteImpl(ID const& object_id,
+                                        const bool memory_trim,
+                                        const bool unsealed_only) {
   if (object_id == EmptyBlobID<ID>() ||
       object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
     return Status::OK();
   }
   std::shared_ptr<Payload> target;
   bool accessed = objects_.erase_fn(
-      object_id, [&target](std::shared_ptr<P>& object) -> bool {
+      object_id, [&target, unsealed_only](std::shared_ptr<P>& object) -> bool {
+        if (unsealed_only && object->IsSealed()) {
+          return false;
+        }
         if (!object->IsOwner()) {
           return false;
         }
