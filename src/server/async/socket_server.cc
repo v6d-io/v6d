@@ -35,6 +35,22 @@ limitations under the License.
 
 namespace vineyard {
 
+namespace {
+// A failed SCM_RIGHTS fd pass (e.g. the blob's memfd was closed by a
+// concurrent delete inside the doWrite callback's async gap — the classic
+// "Error in send_fd (errno = 9: Bad file descriptor)") leaves the client
+// with a reply but NO fd and an OPEN connection: the pyvineyard client
+// blocks in the native recv HOLDING THE GIL forever, freezing the whole
+// interpreter. Teardown the connection so the client's next recv returns
+// EOF and the failure re-surfaces as a clean client-side error instead of
+// an unbounded block.
+void send_fd_checked(SocketConnection& conn, int fd) {
+  if (fd != -1 && send_fd(conn.nativeHandle(), fd) < 0) {
+    conn.doStop();
+  }
+}
+}  // namespace
+
 // We set a hard limit for the message buffer size, since an evil client,
 // e.g., telnet.
 //
@@ -427,7 +443,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      send_fd_checked(*self, fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 bulk_store_->Footprint());
@@ -473,7 +489,7 @@ bool SocketConnection::doCreateBuffers(const json& root) {
   this->doWrite(message_out, [this, self, fds_to_send](const Status& status) {
     for (auto const& fd_to_send : fds_to_send) {
       if (fd_to_send != -1) {
-        send_fd(self->nativeHandle(), fd_to_send);
+        send_fd_checked(*self, fd_to_send);
       }
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
@@ -511,7 +527,7 @@ bool SocketConnection::doCreateDiskBuffer(const json& root) {
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      send_fd_checked(*self, fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 bulk_store_->Footprint());
@@ -606,7 +622,7 @@ bool SocketConnection::doGetBuffers(const json& root) {
    */
   this->doWrite(message_out, [self, objects, fd_to_send](const Status& status) {
     for (int store_fd : fd_to_send) {
-      send_fd(self->nativeHandle(), store_fd);
+      send_fd_checked(*self, store_fd);
     }
     return Status::OK();
   });
@@ -934,7 +950,7 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      send_fd_checked(*self, fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 plasma_bulk_store_->Footprint());
@@ -976,7 +992,7 @@ bool SocketConnection::doGetBuffersByPlasma(json const& root) {
       if (data_size > 0 &&
           self->used_fds_.find(store_fd) == self->used_fds_.end()) {
         self->used_fds_.emplace(store_fd);
-        send_fd(self->nativeHandle(), store_fd);
+        send_fd_checked(*self, store_fd);
       }
     }
     return Status::OK();
@@ -1346,7 +1362,7 @@ bool SocketConnection::doGetNextStreamChunk(const json& root) {
           WriteGetNextStreamChunkReply(object, fd_to_send, message_out);
           self->doWrite(message_out, [self, fd_to_send](const Status& status) {
             if (fd_to_send != -1) {
-              send_fd(self->nativeHandle(), fd_to_send);
+              send_fd_checked(*self, fd_to_send);
             }
             return Status::OK();
           });
@@ -1563,7 +1579,7 @@ bool SocketConnection::doMakeArena(const json& root) {
 
   this->doWrite(message_out, [self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
+      send_fd_checked(*self, fd_to_send);
     }
     return Status::OK();
   });
